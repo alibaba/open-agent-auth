@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authorize Access - Agent Operation Authorization</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary-50: #0A0E27;
+            --color-primary-100: #151932;
+            --color-primary-200: #1F2440;
+            --color-primary-300: #2D3456;
+            --color-primary-400: #3D4A6D;
+            --color-primary-500: #00F0FF;
+            --color-primary-600: #00C8D6;
+            --color-primary-700: #00A0AD;
+            --color-primary-800: #007884;
+            --color-primary-900: #00505A;
+            
+            --color-success: #00FFA3;
+            --color-warning: #FFD700;
+            --color-error: #FF0055;
+            --color-info: #00F0FF;
+            
+            --color-gray-50: #0D1117;
+            --color-gray-100: #161B22;
+            --color-gray-200: #21262D;
+            --color-gray-300: #30363D;
+            --color-gray-400: #484F58;
+            --color-gray-500: #6E7681;
+            --color-gray-600: #8B949E;
+            --color-gray-700: #B1BAC4;
+            --color-gray-800: #C9D1D9;
+            --color-gray-900: #E6EDF3;
+            
+            --font-family-base: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --font-family-mono: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+            
+            --font-size-xs: 0.75rem;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.25rem;
+            
+            --font-weight-medium: 500;
+            --font-weight-semibold: 600;
+            --font-weight-bold: 700;
+            
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-5: 1.25rem;
+            --space-6: 1.5rem;
+            
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+            --radius-full: 9999px;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 240, 255, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 240, 255, 0.15);
+            --shadow-neon: 0 0 20px rgba(0, 240, 255, 0.3);
+            
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-family-base);
+            background: linear-gradient(135deg, #0A0E27 0%, #151932 50%, #0D1117 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-4);
+            color: var(--color-gray-700);
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(138, 43, 226, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(0, 255, 163, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .consent-wrapper {
+            width: 100%;
+            max-width: 1400px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .consent-container {
+            background: var(--color-gray-100);
+            border: 1px solid var(--color-gray-300);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl), 0 0 60px rgba(0, 240, 255, 0.05);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            min-height: 600px;
+            max-height: 90vh;
+            height: 90vh;
+        }
+        
+        .sidebar {
+            background: var(--color-gray-100);
+            border-right: 1px solid var(--color-gray-300);
+            padding: var(--space-6);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: var(--space-6);
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+            border-radius: var(--radius-xl);
+            margin: 0 auto var(--space-4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            font-weight: bold;
+            box-shadow: var(--shadow-neon);
+            position: relative;
+        }
+        
+        .logo::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-info) 100%);
+            border-radius: var(--radius-xl);
+            z-index: -1;
+            opacity: 0.3;
+            filter: blur(8px);
+        }
+        
+        .sidebar-header h1 {
+            color: var(--color-gray-800);
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            margin-bottom: var(--space-2);
+        }
+        
+        .sidebar-header p {
+            color: var(--color-gray-500);
+            font-size: var(--font-size-sm);
+        }
+        
+        .app-info-section {
+            background: rgba(0, 240, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+        }
+        
+        .section-label {
+            color: var(--color-gray-500);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-semibold);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .section-label i {
+            color: var(--color-primary-600);
+        }
+        
+        .info-item {
+            margin-bottom: var(--space-3);
+        }
+        
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            color: var(--color-gray-500);
+            font-size: var(--font-size-xs);
+            margin-bottom: var(--space-2);
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .info-value {
+            color: var(--color-gray-800);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            word-break: break-word;
+        }
+        
+        .scope-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-2);
+        }
+        
+        .scope {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.15) 0%, rgba(0, 200, 214, 0.15) 100%);
+            color: var(--color-primary-700);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            padding: 3px 10px;
+            border-radius: var(--radius-full);
+            font-size: 11px;
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .content {
+            padding: var(--space-6);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        .content-header {
+            margin-bottom: var(--space-6);
+            padding-bottom: var(--space-4);
+            border-bottom: 1px solid var(--color-gray-300);
+        }
+        
+        .content-header h2 {
+            color: var(--color-gray-800);
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: var(--space-2);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .content-header h2 i {
+            color: var(--color-primary-600);
+        }
+        
+        .content-header p {
+            color: var(--color-gray-500);
+            font-size: var(--font-size-sm);
+        }
+        
+        .auth-details {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .auth-section {
+            background: rgba(0, 240, 255, 0.02);
+            border: 1px solid var(--color-gray-300);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+        }
+        
+        .auth-section-title {
+            color: var(--color-gray-700);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .auth-section-title i {
+            color: var(--color-primary-600);
+            font-size: var(--font-size-base);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-4);
+        }
+        
+        .info-grid .info-item {
+            background: var(--color-gray-50);
+            padding: var(--space-3);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-gray-200);
+        }
+        
+        .code-block {
+            background: var(--color-gray-50);
+            color: var(--color-gray-700);
+            padding: var(--space-4);
+            border-radius: var(--radius-lg);
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-sm);
+            line-height: 1.6;
+            overflow-x: auto;
+            border: 1px solid var(--color-gray-300);
+            word-break: break-word;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .code-block .policy-keyword {
+            color: var(--color-primary-700);
+            font-weight: var(--font-weight-semibold);
+        }
+        
+        .code-block .policy-string {
+            color: var(--color-success);
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .code-block .policy-number {
+            color: var(--color-info);
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .code-block .policy-boolean {
+            color: var(--color-primary-600);
+            font-weight: var(--font-weight-semibold);
+        }
+        
+        .jwt-block {
+            background: rgba(255, 215, 0, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            padding: var(--space-3);
+            border-radius: var(--radius-md);
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-xs);
+            line-height: 1.5;
+            word-break: break-all;
+            max-height: 120px;
+            overflow-y: auto;
+            color: var(--color-gray-700);
+        }
+        
+        .collapsible {
+            margin-top: var(--space-3);
+        }
+        
+        .collapsible-header {
+            background: var(--color-gray-200);
+            border: 1px solid var(--color-gray-300);
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--color-gray-700);
+            transition: all var(--transition-fast);
+        }
+        
+        .collapsible-header:hover {
+            background: var(--color-gray-300);
+            border-color: var(--color-gray-400);
+        }
+        
+        .collapsible-content {
+            display: none;
+            margin-top: var(--space-2);
+        }
+        
+        .collapsible-content.show {
+            display: block;
+        }
+        
+        .collapsible-header .arrow {
+            transition: transform var(--transition-fast);
+            color: var(--color-gray-500);
+        }
+        
+        .collapsible-header.active .arrow {
+            transform: rotate(180deg);
+            color: var(--color-primary-600);
+        }
+        
+        .warning-box {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+            font-size: var(--font-size-sm);
+            color: var(--color-warning);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-3);
+        }
+        
+        .warning-box i {
+            font-size: var(--font-size-lg);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: var(--space-3);
+            margin-top: var(--space-4);
+            padding-top: var(--space-4);
+            border-top: 1px solid var(--color-gray-300);
+        }
+        
+        .btn {
+            padding: var(--space-3) var(--space-5);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+            min-width: 120px;
+        }
+        
+        .btn-approve {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 200, 214, 0.2) 100%);
+            color: var(--color-primary-700);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 240, 255, 0.1);
+            margin-left: auto;
+        }
+        
+        .btn-approve:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.2);
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.3) 0%, rgba(0, 200, 214, 0.3) 100%);
+        }
+        
+        .btn-deny {
+            background: var(--color-gray-200);
+            color: var(--color-gray-700);
+            border: 1px solid var(--color-gray-300);
+        }
+        
+        .btn-deny:hover {
+            background: var(--color-gray-300);
+            border-color: var(--color-gray-400);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: var(--space-4);
+            color: var(--color-gray-500);
+            font-size: var(--font-size-xs);
+        }
+        
+        .content::-webkit-scrollbar,
+        .auth-details::-webkit-scrollbar,
+        .code-block::-webkit-scrollbar,
+        .jwt-block::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .content::-webkit-scrollbar-track,
+        .auth-details::-webkit-scrollbar-track,
+        .code-block::-webkit-scrollbar-track,
+        .jwt-block::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .content::-webkit-scrollbar-thumb,
+        .auth-details::-webkit-scrollbar-thumb,
+        .code-block::-webkit-scrollbar-thumb,
+        .jwt-block::-webkit-scrollbar-thumb {
+            background: var(--color-gray-300);
+            border-radius: var(--radius-full);
+        }
+        
+        .content::-webkit-scrollbar-thumb:hover,
+        .auth-details::-webkit-scrollbar-thumb:hover,
+        .code-block::-webkit-scrollbar-thumb:hover,
+        .jwt-block::-webkit-scrollbar-thumb:hover {
+            background: var(--color-gray-400);
+        }
+        
+        @media (max-width: 1024px) {
+            .consent-container {
+                grid-template-columns: 1fr;
+                max-height: 95vh;
+            }
+            
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--color-gray-300);
+                padding: var(--space-5);
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .consent-wrapper {
+                padding: 0;
+            }
+            
+            .consent-container {
+                border-radius: 0;
+                max-height: 100vh;
+                border: none;
+            }
+            
+            .sidebar,
+            .content {
+                padding: var(--space-4);
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="consent-wrapper">
+        <div class="consent-container">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="logo">AO</div>
+                    <h1>Authorization</h1>
+                    <p>Agent Operation Access</p>
+                </div>
+                
+                <div class="app-info-section">
+                    <div class="section-label">
+                        <i class="bi bi-app-indicator"></i>
+                        <span>Application Request</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Client ID</div>
+                        <div class="info-value" th:text="${clientId ?: 'Unknown'}">client-id</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">User</div>
+                        <div class="info-value" th:text="${subject ?: 'Unknown'}">user@example.com</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Permissions</div>
+                        <div class="scope-list">
+                            <span class="scope" th:each="scope : ${scopes != null ? scopes.split(' ') : {}}" th:text="${scope}">openid</span>
+                            <span class="scope" th:if="${scopes == null or scopes.isEmpty()}">openid</span>
+                            <span class="scope" th:if="${scopes == null or scopes.isEmpty()}">profile</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="warning-box" style="background: rgba(255, 215, 0, 0.05); border-color: rgba(255, 215, 0, 0.2);">
+                    <i class="bi bi-shield-exclamation"></i>
+                    <div>
+                        <strong>Security Notice</strong><br>
+                        <span style="font-size: 12px;">Only approve if you trust this application</span>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>&copy; 2025 Agent Operation Authorization</p>
+                </div>
+            </div>
+            
+            <div class="content">
+                <div class="content-header">
+                    <h2><i class="bi bi-shield-lock"></i> Operation Authorization Details</h2>
+                    <p>Review the agent operation details before approving</p>
+                </div>
+                
+                <div class="auth-details" th:if="${parClaims != null}">
+                    <div class="auth-section" th:if="${parClaims.operationProposal != null}">
+                        <div class="auth-section-title">
+                            <i class="bi bi-gear"></i> Operation Policy
+                        </div>
+                        <div class="code-block" th:text="${parClaims.operationProposal}">operation proposal</div>
+                    </div>
+                    
+                    <div class="auth-section" th:if="${parClaims.evidence != null and parClaims.evidence.sourcePromptCredential != null}">
+                        <div class="auth-section-title">
+                            <i class="bi bi-file-text"></i> User Original Input (JWT-VC)
+                        </div>
+                        <div class="collapsible">
+                            <div class="collapsible-header" onclick="toggleCollapse(this)">
+                                <span><i class="bi bi-key"></i> Source Prompt Credential</span>
+                                <span class="arrow"><i class="bi bi-chevron-down"></i></span>
+                            </div>
+                            <div class="collapsible-content">
+                                <div class="jwt-block" th:text="${parClaims.evidence.sourcePromptCredential}">jwt-vc</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-section" th:if="${parClaims.context != null}">
+                        <div class="auth-section-title">
+                            <i class="bi bi-globe"></i> Request Context
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item" th:if="${parClaims.context.channel != null}">
+                                <div class="info-label">Channel</div>
+                                <div class="info-value" th:text="${parClaims.context.channel}">web</div>
+                            </div>
+                            <div class="info-item" th:if="${parClaims.context.language != null}">
+                                <div class="info-label">Language</div>
+                                <div class="info-value" th:text="${parClaims.context.language}">en-US</div>
+                            </div>
+                            <div class="info-item" th:if="${parClaims.context.deviceFingerprint != null}">
+                                <div class="info-label">Device Fingerprint</div>
+                                <div class="info-value" th:text="${parClaims.context.deviceFingerprint}">device-id</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-section" th:if="${parClaims.context != null and parClaims.context.user != null}">
+                        <div class="auth-section-title">
+                            <i class="bi bi-person"></i> User Information
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item" th:if="${parClaims.context.user.id != null}">
+                                <div class="info-label">User ID</div>
+                                <div class="info-value" th:text="${parClaims.context.user.id}">user-id</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-section" th:if="${parClaims.context != null and parClaims.context.agent != null}">
+                        <div class="auth-section-title">
+                            <i class="bi bi-robot"></i> Agent Information
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item" th:if="${parClaims.context.agent.instance != null}">
+                                <div class="info-label">Instance</div>
+                                <div class="info-value" th:text="${parClaims.context.agent.instance}">agent-instance</div>
+                            </div>
+                            <div class="info-item" th:if="${parClaims.context.agent.platform != null}">
+                                <div class="info-label">Platform</div>
+                                <div class="info-value" th:text="${parClaims.context.agent.platform}">platform</div>
+                            </div>
+                            <div class="info-item" th:if="${parClaims.context.agent.client != null}">
+                                <div class="info-label">Client</div>
+                                <div class="info-value" th:text="${parClaims.context.agent.client}">client</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-section" th:if="${parClaims.agentUserBindingProposal != null}">
+                        <div class="auth-section-title">
+                            <i class="bi bi-link-45deg"></i> Identity Binding Proposal
+                        </div>
+                        
+                        <div class="collapsible" th:if="${parClaims.agentUserBindingProposal.userIdentityToken != null}">
+                            <div class="collapsible-header" onclick="toggleCollapse(this)">
+                                <span><i class="bi bi-key"></i> User Identity Token (JWT)</span>
+                                <span class="arrow"><i class="bi bi-chevron-down"></i></span>
+                            </div>
+                            <div class="collapsible-content">
+                                <div class="jwt-block" th:text="${parClaims.agentUserBindingProposal.userIdentityToken}">jwt-token</div>
+                            </div>
+                        </div>
+                        
+                        <div class="collapsible" th:if="${parClaims.agentUserBindingProposal.agentWorkloadToken != null}">
+                            <div class="collapsible-header" onclick="toggleCollapse(this)">
+                                <span><i class="bi bi-lightning"></i> Agent Workload Token (JWT)</span>
+                                <span class="arrow"><i class="bi bi-chevron-down"></i></span>
+                            </div>
+                            <div class="collapsible-content">
+                                <div class="jwt-block" th:text="${parClaims.agentUserBindingProposal.agentWorkloadToken}">jwt-token</div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item" th:if="${parClaims.agentUserBindingProposal.deviceFingerprint != null}">
+                            <div class="info-label">Device Fingerprint</div>
+                            <div class="info-value" th:text="${parClaims.agentUserBindingProposal.deviceFingerprint}">device-fingerprint</div>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-section" style="margin-bottom: 0;">
+                        <div class="auth-section-title">
+                            <i class="bi bi-info-circle"></i> Request Metadata
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item" th:if="${parClaims.issuer != null}">
+                                <div class="info-label">Issuer</div>
+                                <div class="info-value" th:text="${parClaims.issuer}">issuer</div>
+                            </div>
+                            <div class="info-item" th:if="${parClaims.subject != null}">
+                                <div class="info-label">Subject</div>
+                                <div class="info-value" th:text="${parClaims.subject}">subject</div>
+                            </div>
+                            <div class="info-item" th:if="${parClaims.jwtId != null}">
+                                <div class="info-label">Request ID</div>
+                                <div class="info-value" th:text="${parClaims.jwtId}">jti</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="warning-box" style="margin-top: auto;">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <div>
+                        <strong>Security Notice:</strong> This authorization grants the application access to perform agent operations on your behalf. Only approve if you trust the application.
+                    </div>
+                </div>
+                
+                <form method="post" action="/oauth2/consent">
+                    <input type="hidden" name="requestUri" th:value="${requestUri}" />
+                    
+                    <div class="button-group">
+                        <button type="submit" name="action" value="deny" class="btn btn-deny">
+                            <i class="bi bi-x-lg"></i> Deny
+                        </button>
+                        <button type="submit" name="action" value="approve" class="btn btn-approve">
+                            <i class="bi bi-check-lg"></i> Approve
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleCollapse(header) {
+            header.classList.toggle('active');
+            const content = header.nextElementSibling;
+            content.classList.toggle('show');
+        }
+    </script>
+</body>
+</html>

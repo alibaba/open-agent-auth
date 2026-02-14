@@ -1,0 +1,99 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: sample-agent-user-idp
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+
+open-agent-auth:
+  enabled: true
+  
+  # Infrastructure configuration
+  infrastructures:
+    trust-domain: wimse://default.trust.domain
+    
+    key-management:
+      providers:
+        local:
+          type: in-memory
+      keys:
+        id-token-signing:
+          key-id: agent-user-id-token-signing-key
+          algorithm: ES256
+          provider: local
+    
+    jwks:
+      provider:
+        enabled: true
+  
+  # Capabilities configuration
+  capabilities:
+    oauth2-server:
+      enabled: true
+      token:
+        id-token-expiry: 3600
+      auto-register-clients:
+        enabled: true
+        clients:
+          - client-name: sample-agent
+            client-id: sample-agent
+            client-secret: sample-agent-secret
+            redirect-uris:
+              - http://localhost:8081/oauth/callback
+              - http://localhost:8081/callback
+            grant-types:
+              - authorization_code
+            response-types:
+              - code
+            token-endpoint-auth-method: client_secret_basic
+            scopes:
+              - openid
+              - profile
+              - email
+
+    user-authentication:
+      enabled: true
+      login-page:
+        enabled: true
+        page-title: "Agent User IDP - Login"
+        title: "Agent User Identity Provider"
+        subtitle: "Sign in to authenticate your AI Agent"
+        username-label: "Agent Username"
+        password-label: "Agent Password"
+        button-text: "Authenticate Agent"
+        show-demo-users: true
+        demo-users: "alice:password123;bob:password456"
+        footer-text: "Agent User IDP - Powered by Open Agent Auth"
+      user-registry:
+        enabled: true
+        type: in-memory
+        preset-users:
+          - username: alice
+            password: password123
+            subject: user_agent_001
+            email: alice@agent.idp
+            name: Alice Smith
+          - username: bob
+            password: password456
+            subject: user_agent_002
+            email: bob@agent.idp
+            name: Bob Johnson
+  
+  # Roles configuration
+  roles:
+    agent-user-idp:
+      enabled: true
+      instance-id: agent-user-idp-1
+      issuer: http://localhost:8083
+      capabilities:
+        - oauth2-server
+        - user-authentication
+
+logging:
+  level:
+    com.alibaba.openagentauth: DEBUG
+    org.springframework.web: INFO

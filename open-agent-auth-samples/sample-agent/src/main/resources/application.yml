@@ -1,0 +1,193 @@
+server:
+  port: 8081
+  servlet:
+    session:
+      timeout: 3600
+      tracking-modes: cookie
+      cookie:
+        http-only: true
+        secure: false
+        same-site: lax
+        max-age: 7200
+
+spring:
+  application:
+    name: sample-agent
+  
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+
+open-agent-auth:
+  enabled: true
+  
+  # Infrastructure configuration
+  infrastructures:
+    trust-domain: wimse://default.trust.domain
+    
+    key-management:
+      providers:
+        local:
+          type: in-memory
+      keys:
+        # Signing keys (stored locally, contain private keys)
+        par-jwt-signing:
+          key-id: par-jwt-signing-key
+          algorithm: RS256
+          provider: local
+        vc-signing:
+          key-id: vc-signing-key
+          algorithm: ES256
+          provider: local
+        jwe-encryption:
+          key-id: jwe-encryption-key-001
+          algorithm: RS256
+          jwks-consumer: authorization-server  # Public key fetched from JWKS for encryption
+        
+        # Verification keys (public keys fetched from JWKS)
+        wit-verification:
+          key-id: wit-signing-key
+          algorithm: ES256
+          jwks-consumer: agent-idp  # Public key fetched from JWKS for verification
+    
+    jwks:
+      provider:
+        enabled: true
+      consumers:
+        agent-user-idp:
+          enabled: true
+          issuer: http://localhost:8083
+        agent-idp:
+          enabled: true
+          issuer: http://localhost:8082
+        authorization-server:
+          enabled: true
+          issuer: http://localhost:8085
+
+    service-discovery:
+      services:
+        agent-user-idp:
+          base-url: http://localhost:8083
+        agent-idp:
+          base-url: http://localhost:8082
+        authorization-server:
+          base-url: http://localhost:8085
+  
+  # Capabilities configuration
+  capabilities:
+    oauth2-client:
+      enabled: true
+      authentication:
+        enabled: true
+      callback:
+        enabled: true
+        client-id: sample-agent
+        client-secret: sample-agent-secret
+    
+    operation-authorization:
+      enabled: true
+      # Prompt encryption configuration (technical implementation)
+      prompt-encryption:
+        enabled: true
+        jwks-consumer: authorization-server
+      # Prompt protection configuration (business logic)
+      prompt-protection:
+        enabled: true
+        encryption-enabled: true
+        sanitization-level: MEDIUM
+      # Agent context configuration (runtime information)
+      # These values serve as defaults and can be overridden at runtime
+      agent-context:
+        default-client: sample-agent-client
+        default-channel: web
+        default-language: zh-CN
+        default-platform: sample-agent.platform
+        default-device-fingerprint: sample-device
+      # OAuth2 client configuration (authentication credentials)
+      oauth2-client:
+        client-id: sample-agent
+        client-secret: sample-agent-secret
+        oauth-callbacks-redirect-uri: http://localhost:8081/callback
+      # Authorization behavior configuration (authorization policy)
+      authorization:
+        require-user-interaction: false
+        expiration-seconds: 3600
+  
+  # Roles configuration
+  roles:
+    agent:
+      enabled: true
+      instance-id: agent-1
+      issuer: http://localhost:8081
+      capabilities:
+        - oauth2-client
+        - operation-authorization
+
+# Agent configuration
+agent:
+  tools:
+    mcp:
+      enabled: true
+  mcp-servers:
+    - name: shopping
+      url: http://localhost:8086/mcp
+      description: "Shopping service MCP Server"
+      enabled: true
+  api-servers:
+    - name: payment
+      baseUrl: http://localhost:8085/api
+      description: "Payment service API"
+      authToken: ${PAYMENT_API_TOKEN:}
+
+  # Mock LLM configuration
+  mock:
+    enabled: false
+    strategies:
+      - name: shopping-search
+        intent: "search products"
+        keywords: [ "search", "find", "look for", "show" ]
+        tool-server: "shopping"
+        tool-name: "search_products"
+        param-rules:
+          - param: "keywords"
+            source: "user_input"
+            pattern: "search\\s+(.+)"
+        response-template: "Found the following products: {result}"
+        error-template: "Search failed: {error}"
+      - name: shopping-purchase
+        intent: "purchase products"
+        keywords: [ "purchase", "buy", "order" ]
+        tool-server: "shopping"
+        tool-name: "purchase_product"
+        param-rules:
+          - param: "productId"
+            source: "user_input"
+            pattern: "purchase\\s+(\\w+)"
+          - param: "quantity"
+            defaultValue: "1"
+        response-template: "Successfully purchased {productId}, quantity: {quantity}"
+        error-template: "Purchase failed: {error}"
+      - name: greeting
+        intent: "greeting"
+        keywords: [ "hello", "hi", "hey" ]
+        no-tool: true
+        response: "Hello! I can help you search for products and make purchases."
+      - name: default
+        intent: "default"
+        no-tool: true
+        response: "I didn't understand your request. Please try searching for products or making a purchase."
+
+# Qwen configuration
+qwen:
+  model: qwen3-coder-plus
+  timeout: 120
+
+logging:
+  level:
+    root: INFO
+    com.alibaba.openagentauth: DEBUG
+    io.modelcontextprotocol: DEBUG
+    org.springframework.boot.web.servlet.error: DEBUG
+    org.springframework.web.servlet: DEBUG
+    jakarta.servlet: DEBUG

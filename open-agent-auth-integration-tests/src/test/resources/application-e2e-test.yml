@@ -1,0 +1,15 @@
+# E2E Test Configuration
+# This configuration is used for full end-to-end tests with all services enabled
+
+server:
+  port: ${TEST_SERVER_PORT:8081}
+
+spring:
+  application:
+    name: sample-agent-e2e-test
+
+# Logging configuration
+logging:
+  level:
+    root: WARN
+    org.springframework.web: INFO

@@ -1,0 +1,7 @@
+# Mock LLM Profile Configuration
+# This profile enables Mock LLM for testing purposes
+# It only overrides the agent.mock.enabled setting
+
+agent:
+  mock:
+    enabled: true  # Enable Mock LLM for testing

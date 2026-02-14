@@ -1,0 +1,2652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Open Agent Auth Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* ============================================
+           Design System - Design Tokens
+           ============================================ */
+        :root {
+            /* Color Palette - Primary (Cyberpunk/Neon Theme) */
+            --color-primary-50: #0A0E27;
+            --color-primary-100: #151932;
+            --color-primary-200: #1F2440;
+            --color-primary-300: #2D3456;
+            --color-primary-400: #3D4A6D;
+            --color-primary-500: #00F0FF;
+            --color-primary-600: #00C8D6;
+            --color-primary-700: #00A0AD;
+            --color-primary-800: #007884;
+            --color-primary-900: #00505A;
+            
+            /* Color Palette - Semantic (Neon Accents) */
+            --color-success: #00FFA3;
+            --color-success-light: rgba(0, 255, 163, 0.15);
+            --color-warning: #FFD700;
+            --color-warning-light: rgba(255, 215, 0, 0.15);
+            --color-error: #FF0055;
+            --color-error-light: rgba(255, 0, 85, 0.15);
+            --color-info: #00F0FF;
+            --color-info-light: rgba(0, 240, 255, 0.15);
+            
+            /* Color Palette - Neutral (Dark Theme) */
+            --color-gray-50: #0D1117;
+            --color-gray-100: #161B22;
+            --color-gray-200: #21262D;
+            --color-gray-300: #30363D;
+            --color-gray-400: #484F58;
+            --color-gray-500: #6E7681;
+            --color-gray-600: #8B949E;
+            --color-gray-700: #B1BAC4;
+            --color-gray-800: #C9D1D9;
+            --color-gray-900: #E6EDF3;
+            
+            /* Typography */
+            --font-family-base: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --font-family-mono: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+            
+            --font-size-xs: 0.75rem;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.25rem;
+            --font-size-2xl: 1.5rem;
+            
+            --font-weight-normal: 400;
+            --font-weight-medium: 500;
+            --font-weight-semibold: 600;
+            --font-weight-bold: 700;
+            
+            --line-height-tight: 1.25;
+            --line-height-normal: 1.5;
+            --line-height-relaxed: 1.75;
+            
+            /* Spacing */
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-5: 1.25rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-10: 2.5rem;
+            --space-12: 3rem;
+            
+            /* Border Radius */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+            --radius-full: 9999px;
+            
+            /* Shadows (Neon Glow Effect) */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 240, 255, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 240, 255, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+            --shadow-neon: 0 0 20px rgba(0, 240, 255, 0.3), 0 0 40px rgba(0, 240, 255, 0.1);
+            --shadow-neon-purple: 0 0 20px rgba(138, 43, 226, 0.3), 0 0 40px rgba(138, 43, 226, 0.1);
+            
+            /* Transitions */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* ============================================
+           Base Styles
+           ============================================ */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0A0E27 0%, #151932 50%, #0D1117 100%);
+            font-family: var(--font-family-base);
+            font-size: var(--font-size-base);
+            line-height: var(--line-height-normal);
+            color: var(--color-gray-700);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background particles effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(138, 43, 226, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(0, 255, 163, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* ============================================
+           Layout - Three Column Layout
+           ============================================ */
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Left Sidebar - Session History */
+        .sidebar-left {
+            width: 280px;
+            background: var(--color-gray-100);
+            border-right: 1px solid var(--color-gray-300);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: all var(--transition-base);
+            z-index: 20;
+            position: relative;
+        }
+        
+        /* Left sidebar glowing border effect */
+        .sidebar-left::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: 1px;
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                rgba(0, 240, 255, 0.3) 20%, 
+                rgba(0, 240, 255, 0.5) 50%, 
+                rgba(0, 240, 255, 0.3) 80%, 
+                transparent 100%);
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        
+        .sidebar-left.collapsed {
+            width: 0;
+            overflow: hidden;
+        }
+        
+        /* Center - Chat Container */
+        .chat-container {
+            flex: 1;
+            background: var(--color-gray-100);
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-width: 400px;
+            position: relative;
+            z-index: 10;
+            max-height: none;
+            min-height: auto;
+            height: 100%;
+        }
+        
+        /* Right Sidebar - Tool Call History */
+        .sidebar-right {
+            width: 320px;
+            background: var(--color-gray-100);
+            border-left: 1px solid var(--color-gray-300);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: all var(--transition-base);
+            z-index: 20;
+            position: relative;
+        }
+        
+        /* Right sidebar glowing border effect */
+        .sidebar-right::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 1px;
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                rgba(0, 255, 163, 0.3) 20%, 
+                rgba(0, 255, 163, 0.5) 50%, 
+                rgba(0, 255, 163, 0.3) 80%, 
+                transparent 100%);
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        
+        .sidebar-right.collapsed {
+            width: 0;
+            overflow: hidden;
+        }
+        
+        @media (max-width: 1200px) {
+            .sidebar-left {
+                width: 240px;
+            }
+            
+            .sidebar-right {
+                width: 280px;
+            }
+            
+            .chat-container {
+                min-width: 320px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-layout {
+                flex-direction: column;
+            }
+            
+            .sidebar-left,
+            .sidebar-right {
+                width: 100%;
+                max-height: 200px;
+                border-right: none;
+                border-bottom: 1px solid var(--color-gray-300);
+                border-left: none;
+            }
+            
+            .sidebar-left.collapsed,
+            .sidebar-right.collapsed {
+                max-height: 0;
+            }
+            
+            .chat-container {
+                flex: 1;
+                min-width: 100%;
+            }
+        }
+        
+        /* ============================================
+           Left Sidebar - Session History Styles
+           ============================================ */
+        .sidebar-header {
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--color-gray-300);
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-3);
+        }
+        
+        .sidebar-header h2 {
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-800);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .sidebar-toggle-btn {
+            background: var(--color-gray-200);
+            border: 1px solid var(--color-gray-300);
+            border-radius: var(--radius-md);
+            padding: var(--space-2);
+            color: var(--color-gray-700);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+        }
+        
+        .sidebar-toggle-btn:hover {
+            background: rgba(0, 240, 255, 0.1);
+            border-color: var(--color-primary-500);
+            color: var(--color-primary-600);
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-3);
+        }
+        
+        .sidebar-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: var(--color-gray-300);
+            border-radius: var(--radius-full);
+        }
+        
+        /* Session List */
+        .session-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+        
+        .session-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--color-gray-300);
+            border-radius: var(--radius-lg);
+            padding: var(--space-3) var(--space-4);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+        
+        .session-item:hover {
+            background: rgba(0, 240, 255, 0.05);
+            border-color: rgba(0, 240, 255, 0.2);
+            transform: translateX(2px);
+        }
+        
+        .session-item.active {
+            background: rgba(0, 240, 255, 0.08);
+            border-color: var(--color-primary-400);
+            box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.15);
+        }
+        
+        .session-item-title {
+            font-weight: var(--font-weight-medium);
+            color: var(--color-gray-800);
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--space-1);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .session-item-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-2);
+            font-size: var(--font-size-xs);
+            color: var(--color-gray-500);
+        }
+        
+        .session-item-time {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+        }
+        
+        .session-item-actions {
+            display: none;
+            gap: var(--space-1);
+        }
+        
+        .session-item:hover .session-item-actions {
+            display: flex;
+        }
+        
+        .session-action-btn {
+            background: transparent;
+            border: none;
+            color: var(--color-gray-500);
+            padding: var(--space-1);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-xs);
+        }
+        
+        .session-action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--color-gray-700);
+        }
+        
+        .session-action-btn.delete:hover {
+            background: rgba(255, 0, 85, 0.1);
+            color: var(--color-error);
+        }
+        
+        /* New Session Button */
+        .new-session-btn {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: var(--radius-lg);
+            padding: var(--space-3) var(--space-4);
+            color: var(--color-gray-800);
+            font-weight: var(--font-weight-semibold);
+            transition: all var(--transition-base);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+            margin-bottom: var(--space-3);
+        }
+        
+        .new-session-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+        }
+        
+        .empty-sessions {
+            text-align: center;
+            padding: var(--space-8) var(--space-4);
+            color: var(--color-gray-500);
+            font-size: var(--font-size-sm);
+        }
+        
+        .empty-sessions i {
+            font-size: var(--font-size-2xl);
+            margin-bottom: var(--space-3);
+            opacity: 0.5;
+        }
+        
+        /* ============================================
+           Right Sidebar - Tool Call History Styles
+           ============================================ */
+        .tool-call-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+        
+        .tool-call-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--color-gray-300);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: all var(--transition-fast);
+        }
+        
+        .tool-call-item:hover {
+            background: rgba(0, 240, 255, 0.05);
+            border-color: rgba(0, 240, 255, 0.2);
+            transform: translateX(-2px);
+        }
+        
+        .tool-call-item-header {
+            padding: var(--space-3) var(--space-4);
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--color-gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-2);
+            cursor: pointer;
+        }
+        
+        .tool-call-item-header:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        
+        .tool-call-item-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-weight: var(--font-weight-medium);
+            color: var(--color-gray-800);
+            font-size: var(--font-size-xs);
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .tool-call-item-title .tool-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .tool-call-item-title .tool-icon {
+            font-size: var(--font-size-sm);
+            color: var(--color-primary-600);
+            flex-shrink: 0;
+        }
+        
+        .tool-call-item-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-full);
+        }
+        
+        .tool-call-item-status.success {
+            background: rgba(0, 255, 163, 0.15);
+            color: var(--color-success);
+        }
+        
+        .tool-call-item-status.error {
+            background: rgba(255, 0, 85, 0.15);
+            color: var(--color-error);
+        }
+        
+        .tool-call-item-status.pending {
+            background: rgba(255, 215, 0, 0.15);
+            color: var(--color-warning);
+        }
+        
+        .tool-call-item-body {
+            padding: var(--space-3) var(--space-4);
+            display: none;
+            animation: slideDown var(--transition-base) ease-out;
+        }
+        
+        .tool-call-item-body.show {
+            display: block;
+        }
+        
+        .tool-call-detail {
+            margin-bottom: var(--space-2);
+        }
+        
+        .tool-call-detail:last-child {
+            margin-bottom: 0;
+        }
+        
+        .tool-call-detail-label {
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-600);
+            margin-bottom: var(--space-1);
+            font-size: var(--font-size-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tool-call-detail-content {
+            background: var(--color-gray-50);
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--radius-md);
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-xs);
+            color: var(--color-gray-700);
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--color-gray-200);
+        }
+        
+        .tool-call-detail-content::-webkit-scrollbar {
+            width: 3px;
+        }
+        
+        .tool-call-detail-content::-webkit-scrollbar-thumb {
+            background: var(--color-gray-300);
+            border-radius: var(--radius-full);
+        }
+        
+        .tool-call-timestamp {
+            font-size: var(--font-size-xs);
+            color: var(--color-gray-500);
+            margin-top: var(--space-2);
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+        }
+        
+        .empty-tool-calls {
+            text-align: center;
+            padding: var(--space-8) var(--space-4);
+            color: var(--color-gray-500);
+            font-size: var(--font-size-sm);
+        }
+        
+        .empty-tool-calls i {
+            font-size: var(--font-size-2xl);
+            margin-bottom: var(--space-3);
+            opacity: 0.5;
+        }
+        
+        .tool-call-item-toggle {
+            transition: transform var(--transition-base);
+            color: var(--color-gray-400);
+            font-size: var(--font-size-xs);
+            flex-shrink: 0;
+        }
+        
+        .tool-call-item-toggle.rotated {
+            transform: rotate(90deg);
+            color: var(--color-primary-600);
+        }
+        
+        /* ============================================
+           Header
+           ============================================ */
+        .chat-header {
+            background: rgba(22, 27, 34, 0.95);
+            color: var(--color-gray-800);
+            padding: var(--space-4) var(--space-5);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+            border-bottom: 1px solid var(--color-gray-300);
+            backdrop-filter: blur(10px);
+        }
+        
+        .chat-header .header-actions {
+            display: flex;
+            gap: var(--space-2);
+        }
+        
+        .chat-header .header-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-base);
+        }
+        
+        .chat-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.03) 0%, transparent 50%, rgba(0, 255, 163, 0.02) 100%);
+            pointer-events: none;
+        }
+        
+        .chat-header .header-content {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+        
+        .chat-header .header-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-xl);
+            color: white;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+        
+        .chat-header .header-title {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            margin: 0;
+        }
+        
+        .chat-header .header-subtitle {
+            font-size: var(--font-size-sm);
+            opacity: 0.9;
+            margin: 0;
+        }
+        
+        .chat-header .header-actions {
+            display: flex;
+            gap: var(--space-2);
+        }
+        
+        .chat-header .header-btn {
+            background: var(--color-gray-200);
+            border: 1px solid var(--color-gray-300);
+            color: var(--color-gray-700);
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-base);
+        }
+        
+        .chat-header .header-btn:hover {
+            background: rgba(0, 240, 255, 0.1);
+            border-color: var(--color-primary-500);
+            color: var(--color-primary-600);
+            transform: translateY(-1px);
+        }
+        
+        .chat-header .header-btn:active {
+            transform: translateY(0);
+        }
+        
+        @media (max-width: 768px) {
+            .chat-header {
+                padding: var(--space-4);
+            }
+            
+            .chat-header .header-subtitle {
+                display: none;
+            }
+        }
+        
+        /* ============================================
+           Chat Messages
+           ============================================ */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-6);
+            background: var(--color-gray-100);
+            scroll-behavior: smooth;
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--color-gray-300);
+            border-radius: var(--radius-full);
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: var(--color-gray-400);
+        }
+        
+        @media (max-width: 768px) {
+            .chat-messages {
+                padding: var(--space-4);
+            }
+        }
+        
+        /* ============================================
+           Message Styles
+           ============================================ */
+        .message {
+            margin-bottom: var(--space-5);
+            animation: messageSlideIn var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+            gap: var(--space-3);
+        }
+        
+        .message-user .message-avatar {
+            order: 2;
+            margin-left: 0;
+        }
+        
+        .message-user .message-bubble {
+            order: 1;
+            max-width: calc(100% - 48px);
+            min-width: fit-content;
+        }
+        
+        .message-assistant {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            gap: var(--space-3);
+        }
+        
+        .message-tool {
+            display: flex;
+            justify-content: center;
+            margin: var(--space-4) 0;
+        }
+        
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-lg);
+            flex-shrink: 0;
+        }
+        
+        .message-user .message-avatar {
+            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+            color: white;
+        }
+        
+        .message-assistant .message-avatar {
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-light) 100%);
+            color: white;
+        }
+        
+        .message-bubble {
+            display: inline-block;
+            max-width: calc(100% - 48px);
+            min-width: 200px;
+            padding: var(--space-4) var(--space-5);
+            border-radius: var(--radius-2xl);
+            word-wrap: break-word;
+            position: relative;
+            box-shadow: var(--shadow-sm);
+            white-space: normal;
+            line-height: 1.5;
+        }
+        
+        .message-user .message-bubble {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            color: var(--color-gray-800);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-bottom-right-radius: var(--radius-md);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+        
+        .message-user .message-bubble a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: underline;
+        }
+        
+        .message-assistant .message-bubble {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--color-gray-800);
+            border: 1px solid var(--color-gray-300);
+            border-bottom-left-radius: var(--radius-md);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message-assistant .message-bubble a {
+            color: var(--color-primary-500);
+            text-decoration: none;
+        }
+        
+        .message-assistant .message-bubble a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .message-bubble {
+                max-width: 85%;
+                padding: var(--space-3) var(--space-4);
+            }
+            
+            .message-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: var(--font-size-base);
+            }
+        }
+        
+        /* ============================================
+           Markdown Styles
+           ============================================ */
+        .message-assistant .message-bubble h1,
+        .message-assistant .message-bubble h2,
+        .message-assistant .message-bubble h3,
+        .message-assistant .message-bubble h4,
+        .message-assistant .message-bubble h5,
+        .message-assistant .message-bubble h6 {
+            margin-top: var(--space-4);
+            margin-bottom: var(--space-2);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-900);
+            line-height: var(--line-height-tight);
+        }
+        
+        .message-assistant .message-bubble h1:first-child,
+        .message-assistant .message-bubble h2:first-child,
+        .message-assistant .message-bubble h3:first-child {
+            margin-top: 0;
+        }
+        
+        .message-assistant .message-bubble h1 {
+            font-size: var(--font-size-2xl);
+            border-bottom: 2px solid var(--color-gray-200);
+            padding-bottom: var(--space-2);
+        }
+        
+        .message-assistant .message-bubble h2 {
+            font-size: var(--font-size-xl);
+            border-bottom: 1px solid var(--color-gray-200);
+            padding-bottom: var(--space-2);
+        }
+        
+        .message-assistant .message-bubble h3 {
+            font-size: var(--font-size-lg);
+        }
+        
+        .message-assistant .message-bubble h4 {
+            font-size: var(--font-size-base);
+        }
+        
+        .message-assistant .message-bubble p {
+            margin: var(--space-3) 0;
+            line-height: var(--line-height-relaxed);
+        }
+        
+        .message-assistant .message-bubble p:first-child {
+            margin-top: 0;
+        }
+        
+        .message-assistant .message-bubble p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .message-assistant .message-bubble ul,
+        .message-assistant .message-bubble ol {
+            margin: var(--space-3) 0;
+            padding-left: var(--space-8);
+        }
+        
+        .message-assistant .message-bubble li {
+            margin: var(--space-2) 0;
+            line-height: var(--line-height-relaxed);
+        }
+        
+        .message-assistant .message-bubble ul {
+            list-style-type: disc;
+        }
+        
+        .message-assistant .message-bubble ul ul {
+            list-style-type: circle;
+        }
+        
+        .message-assistant .message-bubble ol {
+            list-style-type: decimal;
+        }
+        
+        .message-assistant .message-bubble code {
+            background: var(--color-gray-100);
+            padding: 0.2em 0.5em;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-family-mono);
+            font-size: 0.9em;
+            color: var(--color-primary-700);
+            border: 1px solid var(--color-gray-200);
+        }
+        
+        .message-assistant .message-bubble pre {
+            background: var(--color-gray-900);
+            color: var(--color-gray-100);
+            padding: var(--space-4);
+            border-radius: var(--radius-lg);
+            overflow-x: auto;
+            margin: var(--space-4) 0;
+            border: 1px solid var(--color-gray-800);
+        }
+        
+        .message-assistant .message-bubble pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+            font-size: 0.9em;
+            border: none;
+        }
+        
+        .message-assistant .message-bubble blockquote {
+            border-left: 4px solid var(--color-primary-500);
+            padding-left: var(--space-4);
+            margin: var(--space-4) 0;
+            color: var(--color-gray-600);
+            font-style: italic;
+            background: var(--color-gray-50);
+            padding: var(--space-3) var(--space-4);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        }
+        
+        .message-assistant .message-bubble table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: var(--space-4) 0;
+            overflow: hidden;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-gray-200);
+        }
+        
+        .message-assistant .message-bubble th,
+        .message-assistant .message-bubble td {
+            border: 1px solid var(--color-gray-200);
+            padding: var(--space-3);
+            text-align: left;
+        }
+        
+        .message-assistant .message-bubble th {
+            background: var(--color-gray-100);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-700);
+        }
+        
+        .message-assistant .message-bubble tr:hover {
+            background: var(--color-gray-50);
+        }
+        
+        .message-assistant .message-bubble hr {
+            border: none;
+            border-top: 2px solid var(--color-gray-200);
+            margin: var(--space-6) 0;
+        }
+        
+        .message-assistant .message-bubble img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--radius-md);
+            margin: var(--space-4) 0;
+        }
+            /* ============================================
+           Unified Action Card Styles (Tool Call + Authorization)
+           ============================================ */
+        .action-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-gray-300);
+            border-radius: var(--radius-lg);
+            padding: 0;
+            max-width: 90%;
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(0, 240, 255, 0.1);
+            transition: all var(--transition-base);
+            margin: var(--space-3) 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Dynamic gradient border effect */
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: var(--radius-lg);
+            padding: 1px;
+            background: linear-gradient(135deg, var(--color-info) 0%, var(--color-primary-500) 50%, var(--color-info) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        /* Status-based glow effects */
+        .action-card.required::before {
+            background: linear-gradient(135deg, var(--color-warning) 0%, #FFA500 50%, var(--color-warning) 100%);
+            opacity: 0.7;
+        }
+        
+        .action-card.initiated::before {
+            background: linear-gradient(135deg, var(--color-info) 0%, var(--color-primary-500) 50%, var(--color-info) 100%);
+            opacity: 0.7;
+        }
+        
+        .action-card.authorized::before {
+            background: linear-gradient(135deg, var(--color-success) 0%, #00FF7F 50%, var(--color-success) 100%);
+            opacity: 0.7;
+        }
+        
+        .action-card.denied::before,
+        .action-card.failed::before {
+            background: linear-gradient(135deg, var(--color-error) 0%, #FF3399 50%, var(--color-error) 100%);
+            opacity: 0.7;
+        }
+        
+        .action-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .action-card:hover::before {
+            opacity: 1;
+        }
+        
+        /* Status indicator dot in corner */
+        .action-card::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--color-info);
+            box-shadow: 0 0 10px var(--color-info), 0 0 20px var(--color-info);
+            animation: pulse 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+        }
+        
+        .action-card.required::after {
+            background: var(--color-warning);
+            box-shadow: 0 0 10px var(--color-warning), 0 0 20px var(--color-warning);
+        }
+        
+        .action-card.initiated::after {
+            background: var(--color-info);
+            box-shadow: 0 0 10px var(--color-info), 0 0 20px var(--color-info);
+        }
+        
+        .action-card.authorized::after {
+            background: var(--color-success);
+            box-shadow: 0 0 10px var(--color-success), 0 0 20px var(--color-success);
+            animation: none;
+        }
+        
+        .action-card.denied::after,
+        .action-card.failed::after {
+            background: var(--color-error);
+            box-shadow: 0 0 10px var(--color-error), 0 0 20px var(--color-error);
+            animation: none;
+        }
+        
+        .action-card-header {
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--color-gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-3);
+            cursor: pointer;
+            transition: background var(--transition-base);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .action-card-header:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        
+        .action-card-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-800);
+            font-size: var(--font-size-sm);
+            flex: 1;
+        }
+        
+        .action-card-title .icon {
+            font-size: var(--font-size-lg);
+        }
+        
+        .action-card-title .icon.tool {
+            color: var(--color-primary-600);
+        }
+        
+        /* Auth badge in header */
+        .auth-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            margin-left: var(--space-2);
+        }
+        
+        .auth-badge.required {
+            background: rgba(255, 215, 0, 0.2);
+            color: var(--color-warning);
+        }
+        
+        .auth-badge.initiated {
+            background: rgba(0, 240, 255, 0.2);
+            color: var(--color-info);
+        }
+        
+        .auth-badge.authorized {
+            background: rgba(0, 255, 163, 0.2);
+            color: var(--color-success);
+        }
+        
+        .auth-badge.denied,
+        .auth-badge.failed {
+            background: rgba(255, 0, 85, 0.2);
+            color: var(--color-error);
+        }
+        
+        .action-card-toggle {
+            transition: transform var(--transition-base);
+            color: var(--color-gray-400);
+            font-size: var(--font-size-sm);
+        }
+        
+        .action-card-toggle.rotated {
+            transform: rotate(90deg);
+            color: var(--color-primary-600);
+        }
+        
+        .action-card-body {
+            padding: var(--space-4);
+            display: none;
+            animation: slideDown var(--transition-base) ease-out;
+        }
+        
+        .action-card-body.show {
+            display: block;
+        }
+        
+        .action-card-section {
+            margin-bottom: var(--space-4);
+        }
+        
+        .action-card-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .action-card-section-title {
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-600);
+            margin-bottom: var(--space-2);
+            font-size: var(--font-size-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .action-card-section-title i {
+            font-size: var(--font-size-sm);
+            color: var(--color-gray-500);
+        }
+        
+        /* Authorization section specific styles */
+        .action-card-section.auth-section {
+            background: rgba(0, 240, 255, 0.03);
+            border-radius: var(--radius-md);
+            padding: var(--space-3);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+        }
+        
+        .auth-status-content {
+            background: var(--color-gray-50);
+            border: 1px solid var(--color-gray-200);
+        }
+        
+        .auth-status-badge {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--radius-md);
+            font-weight: var(--font-weight-medium);
+            font-size: var(--font-size-sm);
+        }
+        
+        .auth-status-badge.required {
+            background: rgba(255, 215, 0, 0.15);
+            color: var(--color-warning);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+        
+        .auth-status-badge.initiated {
+            background: rgba(0, 240, 255, 0.15);
+            color: var(--color-info);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+        
+        .auth-status-badge.authorized {
+            background: rgba(0, 255, 163, 0.15);
+            color: var(--color-success);
+            border: 1px solid rgba(0, 255, 163, 0.3);
+        }
+        
+        .auth-status-badge.denied,
+        .auth-status-badge.failed {
+            background: rgba(255, 0, 85, 0.15);
+            color: var(--color-error);
+            border: 1px solid rgba(255, 0, 85, 0.3);
+        }
+        
+        .action-card-section-content {
+            background: var(--color-gray-50);
+            padding: var(--space-3);
+            border-radius: var(--radius-md);
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-sm);
+            color: var(--color-gray-700);
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--color-gray-200);
+        }
+        
+        .action-card-section-content.result-content {
+            background: rgba(0, 255, 163, 0.05);
+            border-color: rgba(0, 255, 163, 0.2);
+        }
+        
+        .action-card-section-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .action-card-section-content::-webkit-scrollbar-thumb {
+            background: var(--color-gray-300);
+            border-radius: var(--radius-full);
+        }
+        
+        .action-card-auth-external {
+            padding: var(--space-3) var(--space-4);
+            background: rgba(0, 240, 255, 0.03);
+            border-top: 1px solid rgba(0, 240, 255, 0.1);
+            border-bottom: 1px solid var(--color-gray-200);
+        }
+        
+        .action-card-auth-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3) var(--space-5);
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 200, 214, 0.2) 100%);
+            color: var(--color-primary-700);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            transition: all var(--transition-base);
+            box-shadow: 0 2px 8px rgba(0, 240, 255, 0.1);
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .action-card-auth-link:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.15);
+        }
+        
+        .authorization-status .status-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .authorization-status .status-icon {
+            font-size: var(--font-size-xl);
+        }
+        
+        .authorization-status .status-text {
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-800);
+        }
+        
+        .authorization-status .auth-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-4);
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 200, 214, 0.2) 100%);
+            color: var(--color-primary-700);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            transition: all var(--transition-base);
+            box-shadow: 0 2px 8px rgba(0, 240, 255, 0.1);
+        }
+        
+        .authorization-status .auth-link:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.15);
+        }
+        
+        .authorization-status .auth-link:active {
+            transform: translateY(0);
+        }
+        
+        .tool-call .tool-name {
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-800);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-2);
+            transition: color var(--transition-fast);
+        }
+        
+        .tool-call .tool-name:hover {
+            color: var(--color-primary-600);
+        }
+        
+        .tool-call .tool-name .tool-icon {
+            font-size: var(--font-size-lg);
+            color: var(--color-warning);
+        }
+        
+        .tool-call .tool-details {
+            margin-top: var(--space-4);
+            padding-top: var(--space-4);
+            border-top: 1px solid var(--color-gray-200);
+            display: none;
+            animation: slideDown var(--transition-base) ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .tool-call .tool-details.show {
+            display: block;
+        }
+        
+        .tool-call .tool-details .detail-item {
+            margin-bottom: var(--space-3);
+        }
+        
+        .tool-call .tool-details .detail-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .tool-call .tool-details .detail-label {
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-gray-600);
+            margin-bottom: var(--space-2);
+            font-size: var(--font-size-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tool-call .tool-details .detail-content {
+            background: var(--color-gray-50);
+            padding: var(--space-3);
+            border-radius: var(--radius-md);
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-sm);
+            color: var(--color-gray-700);
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--color-gray-200);
+        }
+        
+        .tool-call .tool-details .detail-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .tool-call .tool-details .detail-content::-webkit-scrollbar-thumb {
+            background: var(--color-gray-300);
+            border-radius: var(--radius-full);
+        }
+        
+        .tool-call .toggle-icon {
+            transition: transform var(--transition-base);
+            color: var(--color-gray-400);
+        }
+        
+        .tool-call .toggle-icon.rotated {
+            transform: rotate(90deg);
+            color: var(--color-primary-600);
+        }
+        
+        /* ============================================
+           Chat Input Area
+           ============================================ */
+        .chat-input {
+            padding: var(--space-5) var(--space-6);
+            border-top: 1px solid var(--color-gray-300);
+            background: var(--color-gray-100);
+            flex-shrink: 0;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: var(--space-3);
+            align-items: center;
+        }
+        
+        .form-control {
+            flex: 1;
+            border-radius: var(--radius-full);
+            padding: var(--space-4) var(--space-5);
+            border: 1px solid var(--color-gray-300);
+            font-size: var(--font-size-base);
+            transition: all var(--transition-fast);
+            background: rgba(28, 33, 40, 0.9);
+            color: #ffffff !important;
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-control:focus {
+            outline: none !important;
+            border-color: var(--color-primary-600) !important;
+            background: rgba(28, 33, 40, 0.9);
+            color: #ffffff !important;
+            box-shadow: none !important;
+        }
+        
+        .form-control::placeholder {
+            color: #8b949e;
+        }
+        
+        .btn-send {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: var(--radius-full);
+            padding: var(--space-4) var(--space-8);
+            color: var(--color-gray-800);
+            font-weight: var(--font-weight-semibold);
+            transition: all var(--transition-base);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            white-space: nowrap;
+        }
+        
+        .btn-send:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+        }
+        
+        .btn-send:active {
+            transform: translateY(0);
+        }
+        
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.05);
+        }
+        
+        .btn-clear,
+        .btn-new-session {
+            border: 1px solid var(--color-gray-300);
+            border-radius: var(--radius-full);
+            padding: var(--space-4) var(--space-5);
+            background: var(--color-gray-200);
+            color: var(--color-gray-700);
+            font-weight: var(--font-weight-medium);
+            transition: all var(--transition-base);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            white-space: nowrap;
+        }
+        
+        .btn-clear:hover,
+        .btn-new-session:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--color-primary-500);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.1);
+        }
+        
+        .btn-clear:active,
+        .btn-new-session:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        @media (max-width: 768px) {
+            .chat-input {
+                padding: var(--space-4);
+            }
+            
+            .input-group {
+                gap: var(--space-2);
+            }
+            
+            .form-control {
+                padding: var(--space-3) var(--space-4);
+                font-size: var(--font-size-sm);
+            }
+            
+            .btn-send {
+                padding: var(--space-3) var(--space-6);
+                font-size: var(--font-size-sm);
+            }
+            
+            .btn-clear,
+            .btn-new-session {
+                padding: var(--space-3);
+                font-size: var(--font-size-sm);
+            }
+            
+            .btn-clear span,
+            .btn-new-session span {
+                display: none;
+            }
+        }
+        
+        /* ============================================
+           Timestamp & Loading
+           ============================================ */
+        .timestamp {
+            font-size: var(--font-size-xs);
+            color: var(--color-gray-500);
+            margin-top: var(--space-2);
+            font-weight: var(--font-weight-normal);
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: var(--font-size-base);
+            color: var(--color-gray-700);
+            line-height: 1.5;
+        }
+        
+        .loading-icon {
+            animation: spin 1s linear infinite;
+            font-size: var(--font-size-sm);
+            opacity: 0.7;
+        }
+        
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--color-gray-300);
+            border-top-color: var(--color-primary-500);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* ============================================
+           Responsive Utilities
+           ============================================ */
+        @media (max-width: 480px) {
+            .message-bubble {
+                max-width: 90%;
+            }
+            
+            .tool-call,
+            .authorization-status {
+                max-width: 95%;
+            }
+        }
+        
+        /* ============================================
+           Accessibility
+           ============================================ */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        /* Focus styles for keyboard navigation */
+        button:focus-visible,
+        .form-control:focus-visible {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-layout">
+            <!-- Left Sidebar - Session History -->
+            <div class="sidebar-left" id="sidebarLeft">
+                <div class="sidebar-header">
+                    <h2><i class="bi bi-clock-history"></i> Sessions</h2>
+                    <button class="sidebar-toggle-btn" onclick="toggleSidebar('left')" title="Toggle Sidebar">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="sidebar-content">
+                    <button class="new-session-btn" onclick="newSession()">
+                        <i class="bi bi-plus-lg"></i> New Session
+                    </button>
+                    <div class="session-list" id="sessionList">
+                        <div class="empty-sessions">
+                            <i class="bi bi-inbox"></i>
+                            <p>No sessions yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Center - Chat Container -->
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="header-content">
+                        <button class="sidebar-toggle-btn" onclick="toggleSidebar('left')" title="Toggle Sessions" style="margin-right: var(--space-2);">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        <div class="header-icon">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div>
+                            <h1 class="header-title">Open Agent Auth Chat</h1>
+                            <p class="header-subtitle">Intelligent Assistant - Always at Your Service</p>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="sidebar-toggle-btn" onclick="toggleSidebar('right')" title="Toggle Tool Calls">
+                            <i class="bi bi-layout-sidebar-reverse"></i>
+                        </button>
+                        <button class="header-btn" onclick="clearConversation()" title="Clear Conversation">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Welcome message -->
+                    <div class="message message-assistant">
+                        <div class="message-avatar">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="message-bubble">
+                            Hello! I'm an intelligent assistant that can help you query products, manage orders, and more. How can I help you today?
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input">
+                    <div class="input-group">
+                        <button class="btn-clear" onclick="clearConversation()" title="Clear Conversation">
+                            <i class="bi bi-trash3"></i>
+                            <span>Clear</span>
+                        </button>
+                        <input type="text" class="form-control" id="messageInput" 
+                               placeholder="Type your message..." 
+                               onkeypress="handleKeyPress(event)"
+                               aria-label="Message input">
+                        <button class="btn-send" onclick="sendMessage()" title="Send message">
+                            <i class="bi bi-send-fill"></i>
+                            <span>Send</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Sidebar - Tool Call History -->
+            <div class="sidebar-right" id="sidebarRight">
+                <div class="sidebar-header">
+                    <h2><i class="bi bi-gear-fill"></i> Tool Calls</h2>
+                    <button class="sidebar-toggle-btn" onclick="toggleSidebar('right')" title="Toggle Sidebar">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="sidebar-content">
+                    <div class="tool-call-list" id="toolCallList">
+                        <div class="empty-tool-calls">
+                            <i class="bi bi-box-seam"></i>
+                            <p>No tool calls yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // Page load: Load conversation history and sessions
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadConversationHistory();
+            await loadSessions();
+            await loadToolCalls();
+        });
+
+        async function loadConversationHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const messages = await response.json();
+                
+                if (messages && messages.length > 0) {
+                    const chatMessages = document.getElementById('chatMessages');
+                    // Clear welcome message
+                    chatMessages.innerHTML = '';
+                    
+                    // Group related messages to avoid duplicate cards
+                    // Skip messages that are part of a tool call sequence (they'll be rendered together)
+                    const renderedToolCallKeys = new Set();
+                    
+                    // Render each message
+                    messages.forEach(msg => {
+                        // Skip tool-related messages that are part of a sequence
+                        // We'll render only the final AUTHORIZED message with all information
+                        if (msg.toolCall) {
+                            const toolKey = `${msg.toolCall.serverName}.${msg.toolCall.toolName}`;
+                            
+                            // If this is the final AUTHORIZED message with content, render it with all info
+                            if (msg.authorizationStatus === 'AUTHORIZED' && msg.content) {
+                                // Check if we haven't rendered this tool call yet
+                                if (!renderedToolCallKeys.has(toolKey)) {
+                                    renderedToolCallKeys.add(toolKey);
+                                    addToolCallWithAuthorization(msg.toolCall, msg.toolResult, msg.authorizationStatus, msg.authorizationUrl);
+                                }
+                            }
+                            // Skip INITIATED and intermediate messages
+                            else if (msg.authorizationStatus === 'INITIATED' || msg.authorizationStatus === 'REQUIRED') {
+                                // Skip these, they'll be replaced by the AUTHORIZED message
+                                return;
+                            }
+                        }
+                        // Render authorization status only (if no tool call)
+                        else if (msg.authorizationStatus && msg.authorizationStatus !== 'NOT_REQUIRED') {
+                            addAuthorizationStatus(msg.authorizationStatus, msg.authorizationUrl);
+                        }
+                        
+                        // Render user or assistant message with content
+                        if (msg.content && (msg.role === 'user' || msg.role === 'assistant')) {
+                            addMessage(msg.role, msg.content, msg.timestamp);
+                        }
+                    });
+                    
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    
+                    // IMPORTANT: After loading conversation history, check if there's a pending tool request
+                    // This happens when user was redirected to login during a tool call
+                    await resumePendingToolRequest();
+                }
+            } catch (error) {
+                console.error('Failed to load conversation history:', error);
+            }
+        }
+        
+        async function resumePendingToolRequest() {
+            try {
+                // Show loading indicator first
+                const loadingId = addLoading();
+                
+                try {
+                    // Execute the tool call
+                    const response = await fetch('/api/resumePendingTool', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Remove loading state
+                    removeLoading(loadingId);
+                    
+                    // If there was no pending tool request, just return
+                    if (data && data.content && data.content.includes('No pending tool request')) {
+                        return;
+                    }
+                    
+                    // Check if this tool call already exists in the chat
+                    // This prevents duplicate cards when resumePendingToolRequest is called
+                    // after loadConversationHistory has already rendered the AUTHORIZED message
+                    const chatMessages = document.getElementById('chatMessages');
+                    const toolKey = data.toolCall ? `${data.toolCall.serverName}.${data.toolCall.toolName}` : null;
+                    let toolCallExists = false;
+                    
+                    if (toolKey) {
+                        const existingToolCards = chatMessages.querySelectorAll('.action-card-title');
+                        for (const cardTitle of existingToolCards) {
+                            const titleText = cardTitle.textContent;
+                            if (titleText.includes(toolKey)) {
+                                toolCallExists = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Only add tool call if it doesn't already exist
+                    if (!toolCallExists) {
+                        // Display tool call with authorization (if both present)
+                        if (data.toolCall && data.authorizationStatus && data.authorizationStatus !== 'NOT_REQUIRED') {
+                            addToolCallWithAuthorization(data.toolCall, data.toolResult, data.authorizationStatus, data.authorizationUrl);
+                        }
+                        // Display tool call only (if no authorization needed)
+                        else if (data.toolCall) {
+                            addToolCall(data.toolCall, data.toolResult);
+                        }
+                        // Display authorization status only (if no tool call)
+                        else if (data.authorizationStatus && data.authorizationStatus !== 'NOT_REQUIRED') {
+                            addAuthorizationStatus(data.authorizationStatus, data.authorizationUrl);
+                        }
+                    }
+                    
+                    // Display assistant message
+                    if (data.content) {
+                        addMessage('assistant', data.content);
+                    }
+                } catch (error) {
+                    removeLoading(loadingId);
+                    console.error('Failed to execute pending tool request:', error);
+                    addMessage('assistant', 'Sorry, an error occurred: ' + error.message);
+                }
+            } catch (error) {
+                console.error('Failed to resume pending tool request:', error);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Display user message
+            addMessage('user', message);
+            input.value = '';
+            
+            // Display loading state
+            const loadingId = addLoading();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const data = await response.json();
+                
+                // Remove loading state
+                removeLoading(loadingId);
+                
+                // Display tool call with authorization status in unified card
+                if (data.toolCall) {
+                    addToolCallWithAuthorization(data.toolCall, data.toolResult, data.authorizationStatus, data.authorizationUrl);
+                }
+                // Display authorization status only (if no tool call but authorization required)
+                else if (data.authorizationStatus && data.authorizationStatus !== 'NOT_REQUIRED') {
+                    addAuthorizationStatus(data.authorizationStatus, data.authorizationUrl);
+                }
+                
+                // Display assistant message
+                addMessage('assistant', data.content);
+                
+                // Refresh tool calls sidebar
+                await loadToolCalls();
+                
+            } catch (error) {
+                removeLoading(loadingId);
+                addMessage('assistant', 'Sorry, an error occurred: ' + error.message);
+            }
+        }
+
+        function addMessage(role, content, timestamp) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message message-' + role;
+            
+            // Use provided timestamp or generate current time
+            const displayTimestamp = timestamp || new Date().toLocaleTimeString();
+            
+            // Determine avatar icon based on role
+            const avatarIcon = role === 'user' ? 'bi-person-circle' : 'bi-robot';
+            
+            // Render assistant messages using Markdown
+            let renderedContent;
+            if (role === 'assistant') {
+                renderedContent = marked.parse(content);
+            } else {
+                renderedContent = escapeHtml(content);
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="bi ${avatarIcon}"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        ${renderedContent}
+                    </div>
+                    <div class="timestamp">${displayTimestamp}</div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addToolCall(toolCall, toolResult) {
+            const chatMessages = document.getElementById('chatMessages');
+            const toolDiv = document.createElement('div');
+            toolDiv.className = 'message message-tool';
+            
+            const cardId = 'action-card-' + Date.now();
+            
+            toolDiv.innerHTML = `
+                <div class="action-card" id="${cardId}">
+                    <div class="action-card-header" onclick="toggleActionCard('${cardId}')">
+                        <div class="action-card-title">
+                            <i class="bi bi-gear-fill icon tool"></i>
+                            <span>Tool Call: ${escapeHtml(toolCall.serverName)}.${escapeHtml(toolCall.toolName)}</span>
+                        </div>
+                        <i class="bi bi-chevron-right action-card-toggle"></i>
+                    </div>
+                    <div class="action-card-body">
+                        <div class="action-card-section">
+                            <div class="action-card-section-title">Server</div>
+                            <div class="action-card-section-content">${escapeHtml(toolCall.serverName)}</div>
+                        </div>
+                        <div class="action-card-section">
+                            <div class="action-card-section-title">Tool Name</div>
+                            <div class="action-card-section-content">${escapeHtml(toolCall.toolName)}</div>
+                        </div>
+                        <div class="action-card-section">
+                            <div class="action-card-section-title">Arguments</div>
+                            <div class="action-card-section-content">${escapeHtml(toolCall.arguments)}</div>
+                        </div>
+                        ${toolResult ? `
+                        <div class="action-card-section">
+                            <div class="action-card-section-title">Result</div>
+                            <div class="action-card-section-content">${escapeHtml(toolResult)}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(toolDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function addToolCallWithAuthorization(toolCall, toolResult, authorizationStatus, authorizationUrl) {
+            const chatMessages = document.getElementById('chatMessages');
+            const toolDiv = document.createElement('div');
+            toolDiv.className = 'message message-tool';
+            
+            const cardId = 'action-card-' + Date.now();
+            
+            // Determine authorization info - default to NOT_REQUIRED if not provided
+            const authStatus = authorizationStatus || 'NOT_REQUIRED';
+            
+            // Determine card status class and icon
+            let statusClass = '';
+            let authIcon = '';
+            let authText = '';
+            let authLink = '';
+            let showAuthSection = false;
+            
+            switch (authStatus) {
+                case 'REQUIRED':
+                    authIcon = 'bi-lock-fill';
+                    authText = 'Authorization Required';
+                    statusClass = 'required';
+                    authLink = authorizationUrl ? 
+                        `<a href="${escapeHtml(authorizationUrl)}" target="_blank" class="action-card-auth-link"><i class="bi bi-box-arrow-up-right"></i> Complete Authorization</a>` : '';
+                    showAuthSection = true;
+                    break;
+                case 'INITIATED':
+                    authIcon = 'bi-hourglass-split';
+                    authText = 'Authorization Pending';
+                    statusClass = 'initiated';
+                    authLink = authorizationUrl ? 
+                        `<a href="${escapeHtml(authorizationUrl)}" target="_blank" class="action-card-auth-link"><i class="bi bi-box-arrow-up-right"></i> Complete Authorization</a>` : '';
+                    showAuthSection = true;
+                    break;
+                case 'AUTHORIZED':
+                    authIcon = 'bi-check-circle-fill';
+                    authText = 'Authorized';
+                    statusClass = 'authorized';
+                    showAuthSection = true;
+                    break;
+                case 'DENIED':
+                    authIcon = 'bi-x-circle-fill';
+                    authText = 'Authorization Denied';
+                    statusClass = 'denied';
+                    showAuthSection = true;
+                    break;
+                case 'FAILED':
+                    authIcon = 'bi-exclamation-triangle-fill';
+                    authText = 'Authorization Failed';
+                    statusClass = 'failed';
+                    showAuthSection = true;
+                    break;
+                default:
+                    // NOT_REQUIRED or other - no auth section needed
+                    statusClass = '';
+                    showAuthSection = false;
+            }
+            
+            // Build the authorization section HTML
+            const authSectionHtml = showAuthSection ? `
+                <div class="action-card-section auth-section">
+                    <div class="action-card-section-title">
+                        <i class="bi bi-shield-lock"></i> Authorization
+                    </div>
+                    <div class="action-card-section-content auth-status-content">
+                        <div class="auth-status-badge ${statusClass}">
+                            <i class="bi ${authIcon}"></i>
+                            <span>${authText}</span>
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+            
+            toolDiv.innerHTML = `
+                <div class="action-card ${statusClass}" id="${cardId}">
+                    <div class="action-card-header" onclick="toggleActionCard('${cardId}')">
+                        <div class="action-card-title">
+                            <i class="bi bi-gear-fill icon tool"></i>
+                            <span>${escapeHtml(toolCall.serverName)}.${escapeHtml(toolCall.toolName)}</span>
+                            ${showAuthSection ? `<span class="auth-badge ${statusClass}"><i class="bi ${authIcon}"></i></span>` : ''}
+                        </div>
+                        <i class="bi bi-chevron-right action-card-toggle"></i>
+                    </div>
+                    ${authLink ? `<div class="action-card-auth-external">${authLink}</div>` : ''}
+                    <div class="action-card-body">
+                        ${authSectionHtml}
+                        <div class="action-card-section">
+                            <div class="action-card-section-title">
+                                <i class="bi bi-server"></i> Server
+                            </div>
+                            <div class="action-card-section-content">${escapeHtml(toolCall.serverName)}</div>
+                        </div>
+                        <div class="action-card-section">
+                            <div class="action-card-section-title">
+                                <i class="bi bi-tools"></i> Tool
+                            </div>
+                            <div class="action-card-section-content">${escapeHtml(toolCall.toolName)}</div>
+                        </div>
+                        <div class="action-card-section">
+                            <div class="action-card-section-title">
+                                <i class="bi bi-code-slash"></i> Arguments
+                            </div>
+                            <div class="action-card-section-content">${escapeHtml(toolCall.arguments)}</div>
+                        </div>
+                        ${toolResult ? `
+                        <div class="action-card-section">
+                            <div class="action-card-section-title">
+                                <i class="bi bi-terminal"></i> Result
+                            </div>
+                            <div class="action-card-section-content result-content">${escapeHtml(toolResult)}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(toolDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function toggleActionCard(cardId) {
+            const card = document.getElementById(cardId);
+            const body = card.querySelector('.action-card-body');
+            const toggle = card.querySelector('.action-card-toggle');
+            const iconElement = toggle.querySelector('i');
+            
+            if (body.classList.contains('show')) {
+                body.classList.remove('show');
+                toggle.classList.remove('rotated');
+                iconElement.classList.remove('bi-chevron-down');
+                iconElement.classList.add('bi-chevron-right');
+            } else {
+                body.classList.add('show');
+                toggle.classList.add('rotated');
+                iconElement.classList.remove('bi-chevron-right');
+                iconElement.classList.add('bi-chevron-down');
+            }
+        }
+
+        function addLoading() {
+            const chatMessages = document.getElementById('chatMessages');
+            const loadingId = 'loading-' + Date.now();
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message message-assistant';
+            loadingDiv.id = loadingId;
+            
+            loadingDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <div class="loading">
+                            <i class="bi bi-arrow-repeat loading-icon"></i>
+                            <span>AI is thinking...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            return loadingId;
+        }
+
+        function removeLoading(loadingId) {
+            const loadingDiv = document.getElementById(loadingId);
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+
+        async function clearConversation() {
+            try {
+                await fetch('/api/clear', {
+                    method: 'POST'
+                });
+                
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = `
+                    <div class="message message-assistant">
+                        <div class="message-bubble">
+                            Conversation cleared. Hello! I'm an intelligent assistant that can help you query products, manage orders, and more. How can I help you today?
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                alert('Failed to clear conversation: ' + error.message);
+            }
+        }
+
+        async function newSession() {
+            try {
+                await fetch('/api/newSession', {
+                    method: 'POST'
+                });
+                
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = `
+                    <div class="message message-assistant">
+                        <div class="message-bubble">
+                            New session created. Hello! I'm an intelligent assistant that can help you query products, manage orders, and more. How can I help you today?
+                        </div>
+                    </div>
+                `;
+                
+                // Reload session list to show the newly created session
+                await loadSessions();
+                
+            } catch (error) {
+                alert('Failed to create new session: ' + error.message);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // ============================================
+        // Sidebar Toggle Functions
+        // ============================================
+        function toggleSidebar(side) {
+            const sidebar = document.getElementById('sidebar' + side.charAt(0).toUpperCase() + side.slice(1));
+            const toggleBtn = sidebar.querySelector('.sidebar-toggle-btn i');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                sidebar.classList.remove('collapsed');
+                if (side === 'left') {
+                    toggleBtn.classList.remove('bi-chevron-right');
+                    toggleBtn.classList.add('bi-chevron-left');
+                } else {
+                    toggleBtn.classList.remove('bi-chevron-left');
+                    toggleBtn.classList.add('bi-chevron-right');
+                }
+            } else {
+                sidebar.classList.add('collapsed');
+                if (side === 'left') {
+                    toggleBtn.classList.remove('bi-chevron-left');
+                    toggleBtn.classList.add('bi-chevron-right');
+                } else {
+                    toggleBtn.classList.remove('bi-chevron-right');
+                    toggleBtn.classList.add('bi-chevron-left');
+                }
+            }
+        }
+        
+        // ============================================
+        // Session Management Functions
+        // ============================================
+        async function loadSessions() {
+            try {
+                const response = await fetch('/api/sessions');
+                const sessions = await response.json();
+                
+                const sessionList = document.getElementById('sessionList');
+                
+                if (sessions && sessions.length > 0) {
+                    sessionList.innerHTML = sessions.map(session => `
+                        <div class="session-item ${session.active ? 'active' : ''}" onclick="selectSession('${session.id}')" data-session-id="${session.id}">
+                            <div class="session-item-title">${escapeHtml(session.title || 'Untitled Session')}</div>
+                            <div class="session-item-meta">
+                                <div class="session-item-time">
+                                    <i class="bi bi-clock"></i>
+                                    ${formatTime(session.createdAt)}
+                                </div>
+                                <div class="session-item-actions">
+                                    <button class="session-action-btn delete" onclick="event.stopPropagation(); deleteSession('${session.id}')" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    sessionList.innerHTML = `
+                        <div class="empty-sessions">
+                            <i class="bi bi-inbox"></i>
+                            <p>No sessions yet</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load sessions:', error);
+            }
+        }
+        
+        async function selectSession(sessionId) {
+            try {
+                await fetch('/api/sessions/select', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ sessionId: sessionId })
+                });
+                
+                // Update active state
+                document.querySelectorAll('.session-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelector(`[data-session-id="${sessionId}"]`)?.classList.add('active');
+                
+                // Reload conversation history
+                await loadConversationHistory();
+                await loadToolCalls();
+            } catch (error) {
+                console.error('Failed to select session:', error);
+            }
+        }
+        
+        async function deleteSession(sessionId) {
+            if (!confirm('Are you sure you want to delete this session?')) {
+                return;
+            }
+            
+            try {
+                await fetch('/api/sessions/' + sessionId, {
+                    method: 'DELETE'
+                });
+                
+                await loadSessions();
+            } catch (error) {
+                console.error('Failed to delete session:', error);
+                alert('Failed to delete session');
+            }
+        }
+        
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+            if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+            
+            return date.toLocaleDateString();
+        }
+        
+        // ============================================
+        // Tool Call History Functions
+        // ============================================
+        async function loadToolCalls() {
+            const toolCallList = document.getElementById('toolCallList');
+            
+            // Show loading state
+            toolCallList.innerHTML = `
+                <div class="loading-tool-calls">
+                    <i class="bi bi-arrow-repeat loading-icon"></i>
+                    <span>Loading tool calls...</span>
+                </div>
+            `;
+            
+            // Record start time to ensure minimum display duration
+            const startTime = Date.now();
+            const MIN_DISPLAY_TIME = 500; // Minimum 500ms display time
+            
+            try {
+                const response = await fetch('/api/toolCalls');
+                const toolCalls = await response.json();
+                
+                // Calculate remaining time to meet minimum display duration
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsedTime);
+                
+                // Wait for minimum display time if needed
+                if (remainingTime > 0) {
+                    await new Promise(resolve => setTimeout(resolve, remainingTime));
+                }
+                
+                if (toolCalls && toolCalls.length > 0) {
+                    toolCallList.innerHTML = toolCalls.map(toolCall => `
+                        <div class="tool-call-item">
+                            <div class="tool-call-item-header" onclick="toggleToolCallItem(this)">
+                                <div class="tool-call-item-title">
+                                    <i class="bi bi-gear-fill tool-icon"></i>
+                                    <span class="tool-name">${escapeHtml(toolCall.toolName)}</span>
+                                </div>
+                                <div class="tool-call-item-status ${getStatusClass(toolCall.status)}">
+                                    ${escapeHtml(toolCall.status)}
+                                </div>
+                                <i class="bi bi-chevron-right tool-call-item-toggle"></i>
+                            </div>
+                            <div class="tool-call-item-body">
+                                <div class="tool-call-detail">
+                                    <div class="tool-call-detail-label">Server</div>
+                                    <div class="tool-call-detail-content">${escapeHtml(toolCall.serverName)}</div>
+                                </div>
+                                <div class="tool-call-detail">
+                                    <div class="tool-call-detail-label">Arguments</div>
+                                    <div class="tool-call-detail-content">${escapeHtml(JSON.stringify(toolCall.arguments))}</div>
+                                </div>
+                                ${toolCall.result ? `
+                                <div class="tool-call-detail">
+                                    <div class="tool-call-detail-label">Result</div>
+                                    <div class="tool-call-detail-content">${escapeHtml(toolCall.result)}</div>
+                                </div>
+                                ` : ''}
+                                <div class="tool-call-timestamp">
+                                    <i class="bi bi-clock"></i>
+                                    ${formatTime(toolCall.timestamp)}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    toolCallList.innerHTML = `
+                        <div class="empty-tool-calls">
+                            <i class="bi bi-box-seam"></i>
+                            <p>No tool calls yet</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load tool calls:', error);
+                // Ensure minimum display time even for errors
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsedTime);
+                
+                if (remainingTime > 0) {
+                    await new Promise(resolve => setTimeout(resolve, remainingTime));
+                }
+                
+                toolCallList.innerHTML = `
+                    <div class="empty-tool-calls">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <p>Failed to load tool calls</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function toggleToolCallItem(header) {
+            const body = header.nextElementSibling;
+            const toggle = header.querySelector('.tool-call-item-toggle');
+            
+            if (body.classList.contains('show')) {
+                body.classList.remove('show');
+                toggle.classList.remove('rotated');
+            } else {
+                body.classList.add('show');
+                toggle.classList.add('rotated');
+            }
+        }
+        
+        function getStatusClass(status) {
+            switch (status?.toUpperCase()) {
+                case 'SUCCESS':
+                case 'AUTHORIZED':
+                    return 'success';
+                case 'ERROR':
+                case 'FAILED':
+                case 'DENIED':
+                    return 'error';
+                case 'PENDING':
+                case 'REQUIRED':
+                case 'INITIATED':
+                    return 'pending';
+                default:
+                    return 'pending';
+            }
+        }
+        
+        function addAuthorizationStatus(status, authorizationUrl) {
+            const chatMessages = document.getElementById('chatMessages');
+            const authDiv = document.createElement('div');
+            authDiv.className = 'message message-tool';
+            
+            let icon = '';
+            let text = '';
+            let linkHtml = '';
+            let statusClass = '';
+            
+            switch (status) {
+                case 'REQUIRED':
+                    icon = 'bi-lock-fill';
+                    text = 'Authorization Required';
+                    statusClass = 'required';
+                    linkHtml = authorizationUrl ? 
+                        `<a href="${escapeHtml(authorizationUrl)}" target="_blank" class="action-card-auth-link"><i class="bi bi-box-arrow-up-right"></i> Click to Complete Authorization</a>` : '';
+                    break;
+                case 'INITIATED':
+                    icon = 'bi-hourglass-split';
+                    text = 'Authorization Initiated';
+                    statusClass = 'initiated';
+                    linkHtml = authorizationUrl ? 
+                        `<a href="${escapeHtml(authorizationUrl)}" target="_blank" class="action-card-auth-link"><i class="bi bi-box-arrow-up-right"></i> Click to Complete Authorization</a>` : '';
+                    break;
+                case 'AUTHORIZED':
+                    icon = 'bi-check-circle-fill';
+                    text = 'Authorized';
+                    statusClass = 'authorized';
+                    break;
+                case 'DENIED':
+                    icon = 'bi-x-circle-fill';
+                    text = 'Authorization Denied';
+                    statusClass = 'denied';
+                    break;
+                case 'FAILED':
+                    icon = 'bi-exclamation-triangle-fill';
+                    text = 'Authorization Failed';
+                    statusClass = 'failed';
+                    break;
+                default:
+                    icon = 'bi-info-circle-fill';
+                    text = 'Authorization Status: ' + status;
+                    statusClass = '';
+            }
+            
+            authDiv.innerHTML = `
+                <div class="action-card ${statusClass}">
+                    <div class="action-card-header">
+                        <div class="action-card-title">
+                            <i class="bi ${icon} icon auth"></i>
+                            <span>${text}</span>
+                        </div>
+                    </div>
+                    ${linkHtml}
+                </div>
+            `;
+            
+            chatMessages.appendChild(authDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>

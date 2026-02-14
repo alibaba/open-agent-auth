@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.page-title', 'Identity Provider - Login')}">Identity Provider - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-left: 4px solid #c33;
+        }
+        .demo-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #666;
+        }
+        .demo-info h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .demo-info ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .demo-info li {
+            margin-bottom: 5px;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1 th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.title', 'Identity Provider')}">Identity Provider</h1>
+            <p th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.subtitle', 'Please sign in to continue')}">Please sign in to continue</p>
+        </div>
+
+        <div th:if="${error}" class="error-message" th:text="${error}"></div>
+
+        <form action="/login" method="post">
+            <!-- Hidden field for redirect_uri (used to redirect back to authorization endpoint) -->
+            <input type="hidden" name="redirect_uri" th:value="${redirect_uri}">
+            
+            <div class="form-group">
+                <label for="username" th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.username-label', 'Username')}">Username</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password" th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.password-label', 'Password')}">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="btn-login" th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.button-text', 'Sign In')}">Sign In</button>
+        </form>
+
+        <!-- Demo users section - only shown in development mode or when explicitly enabled -->
+        <div th:if="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.show-demo-users', 'false')}" class="demo-info">
+            <h3 th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.demo-users-title', 'Demo Users')}">Demo Users</h3>
+            <ul>
+                <li th:each="user : ${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.demo-users', '').split(';')}">
+                    <strong th:text="${user.split(':')[0]}">alice</strong> / <span th:text="${user.split(':')[1]}">password123</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="footer" th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.footer-text', '')}"></div>
+    </div>
+</body>
+</html>

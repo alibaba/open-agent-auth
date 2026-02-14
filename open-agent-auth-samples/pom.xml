@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.alibaba.openagentauth</groupId>
+        <artifactId>open-agent-auth</artifactId>
+        <version>0.1.0-beta.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>open-agent-auth-samples</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Open Agent Auth Samples</name>
+    <description>Sample applications demonstrating Agent Operation Authorization</description>
+
+    <modules>
+        <module>sample-agent</module>
+        <module>sample-agent-idp</module>
+        <module>sample-agent-user-idp</module>
+        <module>sample-as-user-idp</module>
+        <module>sample-authorization-server</module>
+        <module>sample-resource-server</module>
+    </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <skip>false</skip>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

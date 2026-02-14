@@ -1,0 +1,19 @@
+# Integration Test Configuration
+# This configuration is used for integration tests
+
+spring:
+  application:
+    name: open-agent-auth-integration-tests
+
+# Logging configuration for integration tests
+logging:
+  level:
+    root: INFO
+    com.alibaba.openagentauth: DEBUG
+    org.springframework.web: DEBUG
+    io.restassured: DEBUG
+
+# Test-specific configuration
+test:
+  timeout:
+    seconds: 30

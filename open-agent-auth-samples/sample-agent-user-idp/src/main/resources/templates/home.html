@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent User IDP - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .home-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+        }
+        .home-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .home-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .home-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        .user-info {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .user-info h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .user-info p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+        .user-info strong {
+            color: #333;
+            font-weight: 600;
+        }
+        .btn-logout {
+            width: 100%;
+            padding: 12px;
+            background: #f5f5f5;
+            color: #333;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-logout:hover {
+            background: #e0e0e0;
+        }
+        .endpoints {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .endpoints h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .endpoints ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .endpoints li {
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+        .endpoints a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .endpoints a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="home-container">
+        <div class="home-header">
+            <h1>Welcome to Agent User IDP</h1>
+            <p>Identity Provider for AI Agent Platform</p>
+        </div>
+
+        <div class="user-info">
+            <h2>User Information</h2>
+            <p><strong>Subject:</strong> <span th:text="${session.user.subject}"></span></p>
+            <p><strong>Username:</strong> <span th:text="${session.user.username}"></span></p>
+            <p><strong>Name:</strong> <span th:text="${session.user.name}"></span></p>
+            <p><strong>Email:</strong> <span th:text="${session.user.email}"></span></p>
+        </div>
+
+        <a href="/oauth2/logout" class="btn-logout">Logout</a>
+
+        <div class="endpoints">
+            <h3>Available Endpoints</h3>
+            <ul>
+                <li><a href="/.well-known/openid-configuration" target="_blank">/.well-known/openid-configuration</a></li>
+                <li><a href="/.well-known/jwks.json" target="_blank">/.well-known/jwks.json</a></li>
+                <li><a href="/oauth2/userinfo" target="_blank">/oauth2/userinfo</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

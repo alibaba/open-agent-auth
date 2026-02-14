@@ -1,0 +1,103 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: sample-as-user-idp
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+
+open-agent-auth:
+  enabled: true
+
+  # Infrastructure configuration
+  infrastructures:
+    trust-domain: wimse://default.trust.domain
+    
+    key-management:
+      providers:
+        local:
+          type: in-memory
+      keys:
+        id-token-signing:
+          key-id: as-user-id-token-signing-key
+          algorithm: ES256
+          provider: local
+    
+    jwks:
+      provider:
+        enabled: true
+  
+  # Capabilities configuration
+  capabilities:
+    oauth2-server:
+      enabled: true
+      token:
+        id-token-expiry: 3600
+      auto-register-clients:
+        enabled: true
+        clients:
+          - client-name: sample-authorization-server
+            client-id: sample-authorization-server-id
+            client-secret: sample-authorization-server-secret
+            redirect-uris:
+              - http://localhost:8085/callback
+            grant-types:
+              - authorization_code
+            response-types:
+              - code
+            token-endpoint-auth-method: client_secret_basic
+            scopes:
+              - openid
+              - profile
+              - email
+
+    user-authentication:
+      enabled: true
+      login-page:
+        enabled: true
+        page-title: "Authorization Server IDP - Login"
+        title: "Authorization Server Identity Provider"
+        subtitle: "Sign in to authorize agent operations"
+        username-label: "Username"
+        password-label: "Password"
+        button-text: "Sign In"
+        show-demo-users: true
+        demo-users: "admin:admin123;testuser:testpass123;user:user123"
+        footer-text: "Authorization Server IDP - Powered by Open Agent Auth"
+      user-registry:
+        enabled: true
+        type: in-memory
+        preset-users:
+          - username: admin
+            password: admin123
+            subject: user_admin_001
+            email: admin@example.com
+            name: Admin User
+          - username: testuser
+            password: testpass123
+            subject: user_test_001
+            email: testuser@example.com
+            name: Test User
+          - username: user
+            password: user123
+            subject: user_002
+            email: user@example.com
+            name: Regular User
+  
+  # Roles configuration
+  roles:
+    as-user-idp:
+      enabled: true
+      instance-id: as-user-idp-1
+      issuer: http://localhost:8084
+      capabilities:
+        - oauth2-server
+        - user-authentication
+
+logging:
+  level:
+    com.alibaba.openagentauth: DEBUG
+    org.springframework.web: INFO

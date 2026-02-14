@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.alibaba.openagentauth</groupId>
+    <artifactId>open-agent-auth</artifactId>
+    <version>0.1.0-beta.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Open Agent Operation Authorization</name>
+    <description>Agent Operation Authorization Framework based on IETF Draft</description>
+    <url>https://github.com/alibaba/open-agent-auth</url>
+
+    <modules>
+        <!-- Core Framework Modules -->
+        <module>open-agent-auth-framework</module>
+        <module>open-agent-auth-core</module>
+        <module>open-agent-auth-spring-boot-starter</module>
+
+        <!-- Protocol Adapter Modules (Optional) -->
+        <module>open-agent-auth-mcp-adapter</module>
+
+        <!-- Sample Project Modules -->
+        <module>open-agent-auth-samples</module>
+
+        <!-- Integration Tests -->
+        <module>open-agent-auth-integration-tests</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Spring Boot -->
+        <spring-boot.version>3.3.11</spring-boot.version>
+
+        <!-- JWT & OAuth -->
+        <nimbus-jose-jwt.version>9.37.4</nimbus-jose-jwt.version>
+        <oauth2-oidc-sdk.version>11.10.1</oauth2-oidc-sdk.version>
+
+        <!-- JSON -->
+        <jackson.version>2.16.1</jackson.version>
+
+        <!-- Logging -->
+        <slf4j.version>2.0.11</slf4j.version>
+        <logback.version>1.4.14</logback.version>
+
+        <!-- Testing -->
+        <junit.version>5.10.1</junit.version>
+        <mockito.version>5.8.0</mockito.version>
+        <spring-boot-starter-test.version>3.3.11</spring-boot-starter-test.version>
+
+        <!-- MCP SDK (Only used in mcp-adapter module) -->
+        <mcp-sdk.version>0.14.1</mcp-sdk.version>
+
+        <!-- Code Coverage -->
+        <jacoco.version>0.8.12</jacoco.version>
+        <jacoco.line.coverage>0.50</jacoco.line.coverage>
+        <jacoco.branch.coverage>0.50</jacoco.branch.coverage>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Boot BOM -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Internal Modules -->
+            <dependency>
+                <groupId>com.alibaba.openagentauth</groupId>
+                <artifactId>open-agent-auth-framework</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.openagentauth</groupId>
+                <artifactId>open-agent-auth-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.openagentauth</groupId>
+                <artifactId>open-agent-auth-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Protocol Adapter Modules -->
+            <dependency>
+                <groupId>com.alibaba.openagentauth</groupId>
+                <artifactId>open-agent-auth-mcp-adapter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- External Dependencies -->
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>${nimbus-jose-jwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>oauth2-oidc-sdk</artifactId>
+                <version>${oauth2-oidc-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp</artifactId>
+                <version>${mcp-sdk.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.11.0</version>
+                    <configuration>
+                        <release>17</release>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.3</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
+                <!-- JaCoCo Plugin for Code Coverage -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <!-- Prepare agent for test execution -->
+                        <execution>
+                            <id>prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <!-- Generate report after tests -->
+                        <execution>
+                            <id>report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                        <!-- Check coverage thresholds -->
+                        <execution>
+                            <id>check</id>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <rule>
+                                        <element>BUNDLE</element>
+                                        <limits>
+                                            <limit>
+                                                <counter>LINE</counter>
+                                                <value>COVEREDRATIO</value>
+                                                <minimum>${jacoco.line.coverage}</minimum>
+                                            </limit>
+                                            <limit>
+                                                <counter>BRANCH</counter>
+                                                <value>COVEREDRATIO</value>
+                                                <minimum>${jacoco.branch.coverage}</minimum>
+                                            </limit>
+                                        </limits>
+                                    </rule>
+                                </rules>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- Maven Javadoc Plugin for API Documentation -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.6.3</version>
+                    <configuration>
+                        <encoding>UTF-8</encoding>
+                        <charset>UTF-8</charset>
+                        <docencoding>UTF-8</docencoding>
+                        <doclint>none</doclint>
+                        <show>private</show>
+                        <nohelp>true</nohelp>
+                        <notimestamp>true</notimestamp>
+                        <author>true</author>
+                        <version>true</version>
+                        <useStandardDocletOptions>true</useStandardDocletOptions>
+                        <excludePackageNames>*.internal.*</excludePackageNames>
+                        <links>
+                            <link>https://docs.spring.io/spring-framework/docs/current/javadoc-api/</link>
+                            <link>https://docs.spring.io/spring-security/site/docs/current/api/</link>
+                            <link>https://javadoc.io/doc/com.nimbusds/nimbus-jose-jwt/latest/</link>
+                        </links>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- License Maven Plugin for Apache 2.0 License Headers -->
+                <plugin>
+                    <groupId>com.mycila</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <version>5.0.0</version>
+                    <configuration>
+                        <inlineHeader><![CDATA[
+Copyright 2026 Alibaba Group Holding Ltd.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+]]></inlineHeader>
+                        <includes>
+                            <include>**/*.java</include>
+                        </includes>
+                        <excludes>
+                            <exclude>**/target/**</exclude>
+                            <exclude>**/.git/**</exclude>
+                            <exclude>**/.mvn/**</exclude>
+                        </excludes>
+                        <mapping>
+                            <java>SLASHSTAR_STYLE</java>
+                        </mapping>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <!-- Apply JaCoCo to all modules -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com/alibaba/open-agent-auth.git</connection>
+        <developerConnection>scm:git:ssh://github.com:alibaba/open-agent-auth.git</developerConnection>
+        <url>https://github.com/alibaba/open-agent-auth</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Open Agent Auth Team</name>
+            <email>open-agent-auth@alibaba-inc.com</email>
+            <organization>Alibaba</organization>
+            <organizationUrl>https://www.alibaba.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <profiles>
+        <!-- Profile for generating aggregate coverage report -->
+        <profile>
+            <id>aggregate-report</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>report-aggregate</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>report-aggregate</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

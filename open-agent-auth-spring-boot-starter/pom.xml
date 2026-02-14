@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.alibaba.openagentauth</groupId>
+        <artifactId>open-agent-auth</artifactId>
+        <version>0.1.0-beta.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>open-agent-auth-spring-boot-starter</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Open Agent Auth Spring Boot Starter</name>
+    <description>Spring Boot Starter for Agent Operation Authorization</description>
+
+    <dependencies>
+        <!-- Core Module -->
+        <dependency>
+            <groupId>com.alibaba.openagentauth</groupId>
+            <artifactId>open-agent-auth-core</artifactId>
+        </dependency>
+
+        <!-- Framework Module -->
+        <dependency>
+            <groupId>com.alibaba.openagentauth</groupId>
+            <artifactId>open-agent-auth-framework</artifactId>
+        </dependency>
+
+        <!-- Spring Boot -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

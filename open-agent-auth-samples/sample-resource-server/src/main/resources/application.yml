@@ -1,0 +1,79 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: sample-resource-server
+
+open-agent-auth:
+  enabled: true
+
+  # Infrastructure configuration (shared across all roles)
+  infrastructures:
+    trust-domain: wimse://default.trust.domain
+    
+    # Key management
+    key-management:
+      providers:
+        local:
+          type: in-memory
+      keys:
+        # Verification keys (public keys fetched from JWKS)
+        wit-verification:
+          key-id: wit-signing-key
+          algorithm: ES256
+          jwks-consumer: agent-idp  # Public key fetched from JWKS for verification
+        aoat-verification:
+          key-id: aoat-signing-key
+          algorithm: RS256
+          jwks-consumer: authorization-server  # Public key fetched from JWKS for verification
+    
+    # JWKS configuration
+    jwks:
+      provider:
+        enabled: true
+        path: /.well-known/jwks.json
+        cache-duration-seconds: 300
+        cache-headers-enabled: true
+      consumers:
+        agent-idp:
+          enabled: true
+          issuer: http://localhost:8082
+        authorization-server:
+          enabled: true
+          issuer: http://localhost:8085
+    
+    # Service discovery
+    service-discovery:
+      enabled: true
+      type: static
+      services:
+        agent-idp:
+          base-url: http://localhost:8082
+        authorization-server:
+          base-url: http://localhost:8085
+  
+  # Roles configuration (role instances that compose capabilities)
+  roles:
+    resource-server:
+      enabled: true
+      instance-id: resource-server-1
+      issuer: http://localhost:8086
+      capabilities:
+        - resource-server
+
+# MCP Server Configuration
+mcp:
+  server:
+    name: shopping-mcp-server
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.alibaba.openagentauth: DEBUG
+    com.alibaba.openagentauth.sample.rs: DEBUG
+    io.modelcontextprotocol: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

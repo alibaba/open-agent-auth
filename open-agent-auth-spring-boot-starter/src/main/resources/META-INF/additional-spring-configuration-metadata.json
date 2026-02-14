@@ -1,0 +1,956 @@
+{
+  "properties": [
+    {
+      "name": "open-agent-auth.roles",
+      "type": "java.util.Map<java.lang.String, java.lang.Object>",
+      "description": "Role configurations for the Open Agent Auth framework. Each role composes capabilities to create specific functional roles (e.g., authorization-server, agent, agent-idp, agent-user-idp, as-user-idp)."
+    },
+    {
+      "name": "open-agent-auth.roles.[role-name]",
+      "type": "java.lang.Object",
+      "description": "Configuration for a specific role instance."
+    },
+    {
+      "name": "open-agent-auth.roles.[role-name].enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether this role is enabled."
+    },
+    {
+      "name": "open-agent-auth.roles.[role-name].instance-id",
+      "type": "java.lang.String",
+      "description": "Instance identifier for this role (supports multiple instances)."
+    },
+    {
+      "name": "open-agent-auth.roles.[role-name].issuer",
+      "type": "java.lang.String",
+      "description": "Issuer URL for this role instance."
+    },
+    {
+      "name": "open-agent-auth.roles.[role-name].config",
+      "type": "java.util.Map<java.lang.String, java.lang.Object>",
+      "description": "Role-specific configuration overrides."
+    },
+    {
+      "name": "open-agent-auth.roles.agent.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the agent role is enabled."
+    },
+    {
+      "name": "open-agent-auth.roles.agent.instance-id",
+      "type": "java.lang.String",
+      "description": "Instance identifier for the agent role."
+    },
+    {
+      "name": "open-agent-auth.roles.agent.issuer",
+      "type": "java.lang.String",
+      "description": "Issuer URL for the agent role."
+    },
+    {
+      "name": "open-agent-auth.roles.agent.capabilities",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of capabilities used by the agent role."
+    },
+    {
+      "name": "open-agent-auth.roles.authorization-server.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the authorization-server role is enabled."
+    },
+    {
+      "name": "open-agent-auth.roles.authorization-server.instance-id",
+      "type": "java.lang.String",
+      "description": "Instance identifier for the authorization-server role."
+    },
+    {
+      "name": "open-agent-auth.roles.authorization-server.issuer",
+      "type": "java.lang.String",
+      "description": "Issuer URL for the authorization-server role."
+    },
+    {
+      "name": "open-agent-auth.roles.authorization-server.capabilities",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of capabilities used by the authorization-server role."
+    },
+    {
+      "name": "open-agent-auth.roles.agent-idp.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the agent-idp role is enabled."
+    },
+    {
+      "name": "open-agent-auth.roles.agent-idp.instance-id",
+      "type": "java.lang.String",
+      "description": "Instance identifier for the agent-idp role."
+    },
+    {
+      "name": "open-agent-auth.roles.agent-idp.issuer",
+      "type": "java.lang.String",
+      "description": "Issuer URL for the agent-idp role."
+    },
+    {
+      "name": "open-agent-auth.roles.agent-idp.capabilities",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of capabilities used by the agent-idp role."
+    },
+    {
+      "name": "open-agent-auth.roles.agent-user-idp.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the agent-user-idp role is enabled."
+    },
+    {
+      "name": "open-agent-auth.roles.agent-user-idp.instance-id",
+      "type": "java.lang.String",
+      "description": "Instance identifier for the agent-user-idp role."
+    },
+    {
+      "name": "open-agent-auth.roles.agent-user-idp.issuer",
+      "type": "java.lang.String",
+      "description": "Issuer URL for the agent-user-idp role."
+    },
+    {
+      "name": "open-agent-auth.roles.agent-user-idp.capabilities",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of capabilities used by the agent-user-idp role."
+    },
+    {
+      "name": "open-agent-auth.roles.as-user-idp.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the as-user-idp role is enabled."
+    },
+    {
+      "name": "open-agent-auth.roles.as-user-idp.instance-id",
+      "type": "java.lang.String",
+      "description": "Instance identifier for the as-user-idp role."
+    },
+    {
+      "name": "open-agent-auth.roles.as-user-idp.issuer",
+      "type": "java.lang.String",
+      "description": "Issuer URL for the as-user-idp role."
+    },
+    {
+      "name": "open-agent-auth.roles.as-user-idp.capabilities",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of capabilities used by the as-user-idp role."
+    },
+    {
+      "name": "open-agent-auth.capabilities",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesProperties",
+      "description": "Capabilities configuration properties. This class defines capability-level configurations that can be composed by roles."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ServerProperties",
+      "description": "OAuth 2.0 Server capability configuration. Provides OAuth 2.0 authorization server functionality including authorization flows, token issuance, and client management."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the OAuth 2.0 Server capability is enabled."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.endpoints",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ServerProperties$OAuth2EndpointsProperties",
+      "description": "OAuth 2.0 endpoints configuration. Defines the REST API endpoints for the OAuth 2.0 authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.endpoints.authorize",
+      "type": "java.lang.String",
+      "defaultValue": "/oauth2/authorize",
+      "description": "Authorization endpoint path. The endpoint where the authorization server redirects the user for authentication and consent."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.endpoints.token",
+      "type": "java.lang.String",
+      "defaultValue": "/oauth2/token",
+      "description": "Token endpoint path. The endpoint where clients exchange authorization codes, refresh tokens, or client credentials for access tokens."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.endpoints.par",
+      "type": "java.lang.String",
+      "defaultValue": "/par",
+      "description": "PAR (Pushed Authorization Request) endpoint path. The endpoint where clients can push authorization request parameters to receive a request URI."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.endpoints.userinfo",
+      "type": "java.lang.String",
+      "defaultValue": "/oauth2/userinfo",
+      "description": "Userinfo endpoint path. The endpoint where clients can retrieve user profile information using an access token."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.endpoints.dcr",
+      "type": "java.lang.String",
+      "defaultValue": "/oauth2/register",
+      "description": "DCR (Dynamic Client Registration) endpoint path. The endpoint where clients can dynamically register themselves with the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.endpoints.logout",
+      "type": "java.lang.String",
+      "defaultValue": "/oauth2/logout",
+      "description": "Logout endpoint path. The endpoint where users can log out and invalidate their session."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.token",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ServerProperties$OAuth2TokenProperties",
+      "description": "OAuth 2.0 token configuration. Defines the expiry times for various OAuth 2.0 token types."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.token.access-token-expiry",
+      "type": "java.lang.Integer",
+      "defaultValue": 3600,
+      "description": "Access token expiry in seconds. The lifetime of access tokens issued by the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.token.refresh-token-expiry",
+      "type": "java.lang.Integer",
+      "defaultValue": 2592000,
+      "description": "Refresh token expiry in seconds. The lifetime of refresh tokens issued by the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.token.id-token-expiry",
+      "type": "java.lang.Integer",
+      "defaultValue": 3600,
+      "description": "ID token expiry in seconds. The lifetime of ID tokens issued by the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.token.authorization-code-expiry",
+      "type": "java.lang.Integer",
+      "defaultValue": 600,
+      "description": "Authorization code expiry in seconds. The lifetime of authorization codes issued by the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ServerProperties$AutoRegisterClientsProperties",
+      "description": "Auto-register clients configuration. Defines the list of OAuth 2.0 clients that should be automatically registered with the authorization server at startup."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether auto-register clients is enabled. When enabled, the authorization server will automatically register the clients defined in the clients list at startup."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients",
+      "type": "java.util.List<java.util.Map<java.lang.String, java.lang.Object>>",
+      "description": "Client configurations. A list of OAuth 2.0 client configurations to be automatically registered."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients.[].client-name",
+      "type": "java.lang.String",
+      "description": "Client name. A human-readable name for the OAuth 2.0 client."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients.[].client-id",
+      "type": "java.lang.String",
+      "description": "Client ID. The unique identifier for the OAuth 2.0 client."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients.[].client-secret",
+      "type": "java.lang.String",
+      "description": "Client secret. The secret used to authenticate the client with the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients.[].redirect-uris",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Redirect URIs. A list of URIs where the authorization server will redirect the user after successful authorization."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients.[].grant-types",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Grant types. A list of OAuth 2.0 grant types that the client is allowed to use."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients.[].response-types",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Response types. A list of OAuth 2.0 response types that the client is allowed to use."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients.[].token-endpoint-auth-method",
+      "type": "java.lang.String",
+      "defaultValue": "client_secret_basic",
+      "description": "Token endpoint authentication method. The method used to authenticate the client at the token endpoint."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-server.auto-register-clients.clients.[].scopes",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Scopes. A list of OAuth 2.0 scopes that the client is allowed to request."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ClientProperties",
+      "description": "OAuth 2.0 Client capability configuration. Provides OAuth 2.0 client functionality for authenticating users and obtaining tokens from authorization servers."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the OAuth 2.0 Client capability is enabled."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.authentication",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ClientProperties$OAuth2ClientAuthenticationProperties",
+      "description": "Authentication configuration for protecting endpoints. Defines which endpoints require OAuth 2.0 authentication and how paths are included or excluded from authentication."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.authentication.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether authentication is enabled. When enabled, requests to included paths will require valid OAuth 2.0 tokens."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.authentication.include-paths",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Include paths for authentication. A list of path patterns that require OAuth 2.0 authentication."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.authentication.exclude-paths",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Exclude paths from authentication. A list of path patterns that should be excluded from OAuth 2.0 authentication."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.callback",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ClientProperties$OAuth2ClientCallbackProperties",
+      "description": "Callback configuration for OAuth 2.0 authorization flow. Defines the callback endpoint and credentials for handling OAuth 2.0 authorization code responses."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.callback.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether callback is enabled. When enabled, the application will expose a callback endpoint to receive OAuth 2.0 authorization code responses."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.callback.endpoint",
+      "type": "java.lang.String",
+      "defaultValue": "/callback",
+      "description": "Callback endpoint path. The endpoint path where the authorization server will redirect the user after authorization with the authorization code."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.callback.client-id",
+      "type": "java.lang.String",
+      "description": "Client ID for token exchange. The OAuth 2.0 client identifier used to exchange the authorization code for an access token."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.callback.client-secret",
+      "type": "java.lang.String",
+      "description": "Client secret for token exchange. The OAuth 2.0 client secret used to authenticate the client when exchanging the authorization code for an access token."
+    },
+    {
+      "name": "open-agent-auth.capabilities.oauth2-client.callback.auto-register",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether to auto-register the client. When enabled, the client will be automatically registered with the authorization server using Dynamic Client Registration (DCR)."
+    },
+    {
+      "name": "open-agent-auth.capabilities.workload-identity",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.WorkloadIdentityProperties",
+      "description": "Workload Identity capability configuration. Provides workload identity management and token issuance for applications and services."
+    },
+    {
+      "name": "open-agent-auth.capabilities.workload-identity.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the Workload Identity capability is enabled."
+    },
+    {
+      "name": "open-agent-auth.capabilities.workload-identity.endpoints",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.WorkloadIdentityProperties$WorkloadIdentityEndpointsProperties",
+      "description": "Endpoint configurations for Workload Identity. Defines the REST API endpoints for workload identity management."
+    },
+    {
+      "name": "open-agent-auth.capabilities.workload-identity.endpoints.create",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/workloads/create",
+      "description": "Create workload endpoint path. Creates a new workload identity with the specified attributes."
+    },
+    {
+      "name": "open-agent-auth.capabilities.workload-identity.endpoints.issue",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/workloads/issue",
+      "description": "Issue workload endpoint path. Issues a workload token for an existing workload identity."
+    },
+    {
+      "name": "open-agent-auth.capabilities.workload-identity.endpoints.revoke",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/workloads/revoke",
+      "description": "Revoke workload endpoint path. Revokes a workload identity and invalidates all associated tokens."
+    },
+    {
+      "name": "open-agent-auth.capabilities.workload-identity.endpoints.get",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/workloads/get",
+      "description": "Get workload endpoint path. Retrieves information about a specific workload identity."
+    },
+    {
+      "name": "open-agent-auth.capabilities.workload-identity.endpoints.token-issue",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/workloads/token/issue",
+      "description": "Issue workload token endpoint path. Issues a token for a workload identity without requiring the full workload identity to be created first."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties",
+      "description": "Operation Authorization capability configuration. Provides fine-grained authorization for agent operations including prompt protection and policy evaluation."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the Operation Authorization capability is enabled."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.endpoints",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties$OperationAuthorizationEndpointsProperties",
+      "description": "Operation Authorization endpoints configuration. Defines the REST API endpoints for operation authorization."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.endpoints.authorize",
+      "type": "java.lang.String",
+      "defaultValue": "/oauth2/authorize",
+      "description": "Authorize endpoint path. The endpoint where users approve or deny operation authorization requests."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.endpoints.policy-registry",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/policies",
+      "description": "Policy registry endpoint path. The endpoint for managing authorization policies."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.endpoints.binding-registry",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/bindings",
+      "description": "Binding registry endpoint path. The endpoint for managing policy bindings."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.endpoints.binding-by-id",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/bindings/{bindingInstanceId}",
+      "description": "Binding by ID endpoint path. The endpoint for retrieving a specific policy binding by instance ID."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.endpoints.binding-by-user",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/bindings/user/{userIdentity}",
+      "description": "Binding by user endpoint path. The endpoint for retrieving policy bindings for a specific user."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.endpoints.binding-by-workload",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/bindings/workload/{workloadIdentity}",
+      "description": "Binding by workload endpoint path. The endpoint for retrieving policy bindings for a specific workload."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.prompt-encryption",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties$PromptEncryptionProperties",
+      "description": "Prompt encryption configuration. Defines settings for encrypting agent prompts to protect sensitive information."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.prompt-encryption.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether prompt encryption is enabled. When enabled, agent prompts will be encrypted using JWE before being sent to the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id",
+      "type": "java.lang.String",
+      "defaultValue": "jwe-encryption-key-001",
+      "description": "Encryption key ID. The identifier of the public key used for encryption."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-algorithm",
+      "type": "java.lang.String",
+      "defaultValue": "RSA-OAEP-256",
+      "description": "Encryption algorithm. The JWE key encryption algorithm used to encrypt the content encryption key."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.prompt-encryption.content-encryption-algorithm",
+      "type": "java.lang.String",
+      "defaultValue": "A256GCM",
+      "description": "Content encryption algorithm. The JWE content encryption algorithm used to encrypt the actual prompt content."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.prompt-encryption.authorization-server-jwks-url",
+      "type": "java.lang.String",
+      "description": "Authorization Server JWKS URL for fetching encryption public key. The URL of the authorization server's JWKS endpoint."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties$AgentOperationAuthorizationClientProperties",
+      "description": "Agent Operation Authorization client configuration. Contains client-specific settings for the Agent Operation Authorization protocol."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.credentials",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties$AgentOperationAuthorizationClientProperties$OAuth2CredentialsProperties",
+      "description": "OAuth2 credentials configuration."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.credentials.client-id",
+      "type": "java.lang.String",
+      "description": "OAuth 2.0 client ID for this agent. The unique identifier for this agent as an OAuth 2.0 client."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.credentials.client-secret",
+      "type": "java.lang.String",
+      "description": "OAuth 2.0 client secret for this agent. The secret used to authenticate this agent with the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.credentials.oauth-callbacks-redirect-uri",
+      "type": "java.lang.String",
+      "description": "OAuth callbacks redirect URI. The URI where the authorization server will redirect the user after successful authorization."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.context",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties$AgentOperationAuthorizationClientProperties$AgentContextProperties",
+      "description": "Agent context configuration."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.context.agent-client",
+      "type": "java.lang.String",
+      "description": "Agent client identifier. A user-friendly identifier for this agent client."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.context.channel",
+      "type": "java.lang.String",
+      "description": "Channel type. The type of channel through which the agent is operating."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.context.language",
+      "type": "java.lang.String",
+      "description": "Language preference. The preferred language for authorization prompts and messages."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.context.platform",
+      "type": "java.lang.String",
+      "description": "Platform identifier. The platform on which the agent is running."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.context.device-fingerprint",
+      "type": "java.lang.String",
+      "description": "Device fingerprint for tracking. A unique identifier for the device on which the agent is running."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.protection",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties$AgentOperationAuthorizationClientProperties$PromptProtectionProperties",
+      "description": "Prompt protection configuration."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.protection.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether prompt protection is enabled. When enabled, agent prompts will be protected through sanitization and encryption."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.protection.encryption-enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether encryption is enabled. When enabled, agent prompts will be encrypted before being sent to the authorization server."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.protection.sanitization-level",
+      "type": "java.lang.String",
+      "defaultValue": "MEDIUM",
+      "description": "Sanitization level. The level of sanitization applied to agent prompts before authorization."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.authorization",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties$AgentOperationAuthorizationClientProperties$AuthorizationBehaviorProperties",
+      "description": "Authorization behavior configuration."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.authorization.require-user-interaction",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether user interaction is required for sensitive operations. When enabled, the user will be required to explicitly approve sensitive operations."
+    },
+    {
+      "name": "open-agent-auth.capabilities.operation-authorization.client.authorization.expiration-seconds",
+      "type": "java.lang.Integer",
+      "defaultValue": 3600,
+      "description": "Expiration time in seconds for Agent Operation Authorization tokens. The lifetime of operation authorization tokens."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.UserAuthenticationProperties",
+      "description": "User Authentication capability configuration. Provides user identity authentication including login page, user registry, and session management."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the User Authentication capability is enabled."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.UserAuthenticationProperties$LoginPageProperties",
+      "description": "Login page configuration. Defines the appearance and behavior of the default login page."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether the default login page is enabled. When enabled, the framework will provide a default login page."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.page-title",
+      "type": "java.lang.String",
+      "defaultValue": "Identity Provider - Login",
+      "description": "Page title displayed in browser tab. The HTML title that appears in the browser tab."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.title",
+      "type": "java.lang.String",
+      "defaultValue": "Identity Provider",
+      "description": "Main title displayed on login page. The large heading displayed at the top of the login page."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.subtitle",
+      "type": "java.lang.String",
+      "defaultValue": "Please sign in to continue",
+      "description": "Subtitle displayed below the main title. The smaller text displayed below the main title."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.username-label",
+      "type": "java.lang.String",
+      "defaultValue": "Username",
+      "description": "Label for the username field. The text label displayed above the username input field."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.password-label",
+      "type": "java.lang.String",
+      "defaultValue": "Password",
+      "description": "Label for the password field. The text label displayed above the password input field."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.button-text",
+      "type": "java.lang.String",
+      "defaultValue": "Sign In",
+      "description": "Text for the login button. The text displayed on the submit/login button."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.show-demo-users",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether to display demo users information. When enabled, demo user credentials will be displayed on the login page."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.demo-users",
+      "type": "java.lang.String",
+      "defaultValue": "",
+      "description": "List of demo users in format 'username:password;username2:password2'. A semicolon-separated list of demo user credentials."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.footer-text",
+      "type": "java.lang.String",
+      "defaultValue": "",
+      "description": "Footer text displayed at the bottom. The text displayed at the bottom of the login page."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.login-page.template",
+      "type": "java.lang.String",
+      "defaultValue": "classpath:/templates/login.html",
+      "description": "Login page template path. The classpath location of the Thymeleaf template for the login page."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.UserAuthenticationProperties$UserRegistryProperties",
+      "description": "User registry configuration. Defines how users are stored and authenticated."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether user registry is enabled. When enabled, the application will authenticate users against the configured user registry."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry.type",
+      "type": "java.lang.String",
+      "defaultValue": "in-memory",
+      "description": "User registry type. The type of user registry to use (in-memory, jdbc, ldap)."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry.preset-users",
+      "type": "java.util.List<java.util.Map<java.lang.String, java.lang.Object>>",
+      "description": "Preset users configuration. A list of pre-configured users that will be available for authentication."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry.preset-users.[].username",
+      "type": "java.lang.String",
+      "description": "Username. The unique username used for authentication."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry.preset-users.[].password",
+      "type": "java.lang.String",
+      "description": "Password. The password used for authentication."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry.preset-users.[].subject",
+      "type": "java.lang.String",
+      "description": "Subject identifier. The unique subject identifier for the user, typically used in OIDC tokens."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry.preset-users.[].email",
+      "type": "java.lang.String",
+      "description": "Email. The user's email address, included in user profile information."
+    },
+    {
+      "name": "open-agent-auth.capabilities.user-authentication.user-registry.preset-users.[].name",
+      "type": "java.lang.String",
+      "description": "Display name. The user's display name, included in user profile information."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.AuditProperties",
+      "description": "Audit capability configuration. Provides audit logging functionality for tracking security events, user actions, agent operations, and system activities."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the Audit capability is enabled. When enabled, the application will record audit events for security monitoring, compliance tracking, and operational visibility."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.provider",
+      "type": "java.lang.String",
+      "defaultValue": "logging",
+      "description": "Audit provider implementation. Specifies the backend implementation for storing audit events. Supported providers include logging, database, elk."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.AuditProperties$AuditEndpointsProperties",
+      "description": "Endpoint configurations for Audit. Defines the REST API endpoints for audit event management, including querying events by various criteria."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.event-by-id",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/{eventId}",
+      "description": "Get audit event by ID endpoint path. Retrieves a specific audit event by its unique identifier."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-by-time-range",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events",
+      "description": "Get audit events by time range endpoint path. Retrieves audit events within a specified time range."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-by-user",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/user/{userId}",
+      "description": "Get audit events by user endpoint path. Retrieves audit events for a specific user."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-by-agent",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/agent/{agentId}",
+      "description": "Get audit events by agent endpoint path. Retrieves audit events for a specific agent."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-by-session",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/session/{sessionId}",
+      "description": "Get audit events by session endpoint path. Retrieves audit events for a specific session."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-by-type",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/type/{eventType}",
+      "description": "Get audit events by type endpoint path. Retrieves audit events by event type."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-by-severity",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/severity/{severity}",
+      "description": "Get audit events by severity endpoint path. Retrieves audit events by severity level."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-count",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/count",
+      "description": "Get audit events count endpoint path. Returns the total count of stored audit events."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-since",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/since/{timestamp}",
+      "description": "Get audit events since timestamp endpoint path. Retrieves audit events that occurred after a specified timestamp."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-before",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/before/{timestamp}",
+      "description": "Get audit events before timestamp endpoint path. Retrieves audit events that occurred before a specified timestamp."
+    },
+    {
+      "name": "open-agent-auth.capabilities.audit.endpoints.events-recent",
+      "type": "java.lang.String",
+      "defaultValue": "/api/v1/audit/events/recent/{count}",
+      "description": "Get recent audit events endpoint path. Retrieves the most recent audit events."
+    },
+    {
+      "name": "open-agent-auth.infrastructures",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties",
+      "description": "Infrastructure configuration properties for the Open Agent Auth framework. Defines the infrastructure-level configuration shared across all roles."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.trust-domain",
+      "type": "java.lang.String",
+      "defaultValue": "wimse://default.trust.domain",
+      "description": "The trust domain for workload identity management. Defines the trust boundary for workload identities."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyManagementProperties",
+      "description": "Key management configuration. Defines how cryptographic keys are managed."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.providers",
+      "type": "java.util.Map<java.lang.String, com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyProviderProperties>",
+      "description": "Key providers configuration. A map of key provider configurations."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.providers.[provider-name]",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyProviderProperties",
+      "description": "Configuration for a specific key provider."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.providers.[provider-name].type",
+      "type": "java.lang.String",
+      "description": "Provider type identifier. Specifies the type of key provider to use."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.providers.[provider-name].config",
+      "type": "java.util.Map<java.lang.String, java.lang.String>",
+      "description": "Provider-specific configuration parameters. A map of configuration properties specific to the selected key provider type."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.keys",
+      "type": "java.util.Map<java.lang.String, com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyDefinitionProperties>",
+      "description": "Key definitions. A map of key definitions where the key is the logical key name."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.keys.[key-name]",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyDefinitionProperties",
+      "description": "Configuration for a specific key definition."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.keys.[key-name].key-id",
+      "type": "java.lang.String",
+      "description": "Key identifier used in JWKS and JWT headers. This value is used as the kid header in JWT tokens."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.keys.[key-name].algorithm",
+      "type": "java.lang.String",
+      "description": "Cryptographic algorithm for signing and verification. Specifies the JWS algorithm to be used with this key."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.keys.[key-name].provider",
+      "type": "java.lang.String",
+      "defaultValue": "local",
+      "description": "Key provider name. Specifies the provider that manages and stores the cryptographic key."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.key-management.keys.[key-name].jwks-consumer",
+      "type": "java.lang.String",
+      "description": "JWKS consumer name. Specifies the JWKS consumer that provides the public key for verification or encryption."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksInfrastructureProperties",
+      "description": "JWKS (JSON Web Key Set) configuration. Controls how public keys are exposed and how external JWKS endpoints are consumed."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.provider",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksProviderProperties",
+      "description": "Provider configuration (exposes public keys). When configured as a provider, this service will expose its public keys through a JWKS endpoint."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.provider.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether the JWKS provider is enabled. When enabled, the application will expose a JWKS endpoint."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.provider.path",
+      "type": "java.lang.String",
+      "defaultValue": "/.well-known/jwks.json",
+      "description": "JWKS endpoint path. The HTTP path where the JWKS endpoint will be exposed."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.provider.cache-duration-seconds",
+      "type": "java.lang.Integer",
+      "defaultValue": 300,
+      "description": "Cache duration in seconds. The duration for which clients should cache the JWKS response."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.provider.cache-headers-enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether to include cache headers. When enabled, the HTTP response will include cache control headers."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.consumers",
+      "type": "java.util.Map<java.lang.String, com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksConsumerProperties>",
+      "description": "Consumers configuration (for validating tokens from other IDPs). A map of consumer configurations for fetching and caching public keys."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.consumers.[consumer-name]",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksConsumerProperties",
+      "description": "Configuration for a specific JWKS consumer."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.consumers.[consumer-name].enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether this JWKS consumer is enabled. When enabled, the application will configure a JWKS consumer that fetches and caches public keys."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.consumers.[consumer-name].jwks-endpoint",
+      "type": "java.lang.String",
+      "description": "JWKS endpoint URL. The URL of the JWKS endpoint from which public keys will be fetched."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.jwks.consumers.[consumer-name].issuer",
+      "type": "java.lang.String",
+      "description": "Issuer URL. The issuer identifier for the authorization server that issued the JWT tokens."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.service-discovery",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.ServiceDiscoveryProperties",
+      "description": "Service discovery configuration. Enables automatic discovery of other services within the trust domain."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.service-discovery.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether service discovery is enabled. When enabled, the application will use the configured service discovery mechanism."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.service-discovery.type",
+      "type": "java.lang.String",
+      "defaultValue": "static",
+      "description": "Service discovery type. Specifies the service discovery mechanism to use (static, consul, eureka)."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.service-discovery.services",
+      "type": "java.util.Map<java.lang.String, com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.ServiceDefinitionProperties>",
+      "description": "Service definitions. A map of service definitions where the key is the service name."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.service-discovery.services.[service-name]",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.ServiceDefinitionProperties",
+      "description": "Configuration for a specific service definition."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.service-discovery.services.[service-name].base-url",
+      "type": "java.lang.String",
+      "description": "Base URL of the service. The root URL for the service, which is used as the prefix for all endpoint paths."
+    },
+    {
+      "name": "open-agent-auth.infrastructures.service-discovery.services.[service-name].endpoints",
+      "type": "java.util.Map<java.lang.String, java.lang.String>",
+      "description": "Endpoint configurations. A map of endpoint name to relative path that defines all available endpoints."
+    }
+  ]
+}

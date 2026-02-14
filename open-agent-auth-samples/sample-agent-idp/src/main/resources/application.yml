@@ -1,0 +1,53 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: sample-agent-idp
+
+open-agent-auth:
+  enabled: true
+
+  # Infrastructure configuration
+  infrastructures:
+    trust-domain: wimse://default.trust.domain
+    
+    key-management:
+      providers:
+        local:
+          type: in-memory
+      keys:
+        wit-signing:
+          key-id: wit-signing-key
+          algorithm: ES256
+          provider: local
+    
+    jwks:
+      provider:
+        enabled: true
+      consumers:
+        agent-user-idp:
+          enabled: true
+          issuer: http://localhost:8083
+
+  # Capabilities configuration
+  capabilities:
+    workload-identity:
+      enabled: true
+  
+  # Roles configuration
+  roles:
+    agent-idp:
+      enabled: true
+      instance-id: agent-idp-1
+      issuer: http://localhost:8082
+      capabilities:
+        - workload-identity
+
+logging:
+  level:
+    root: INFO
+    com.alibaba.openagentauth: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

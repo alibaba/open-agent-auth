@@ -1,0 +1,23 @@
+# Open Agent Auth Auto-Configuration
+# This file defines the order in which auto-configurations are loaded
+
+# Core configuration (loaded first - provides shared beans like KeyManager)
+com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration
+
+# Spring Web configuration (scans for REST controllers, MVC controllers, interceptors)
+com.alibaba.openagentauth.spring.autoconfigure.SpringWebAutoConfiguration
+
+# OAuth2 Authorization configuration (loaded after core, conditional on specific roles)
+com.alibaba.openagentauth.spring.config.OAuth2AuthorizationConfiguration
+
+# JWE encryption configuration (loaded after core, conditional on open-agent-auth.encryption.enabled)
+com.alibaba.openagentauth.spring.autoconfigure.role.JweEncryptionAutoConfiguration
+
+# Role-specific configurations (loaded based on open-agent-auth.role property)
+# Only one role should be enabled at a time in production
+com.alibaba.openagentauth.spring.autoconfigure.role.AgentUserIdpAutoConfiguration
+com.alibaba.openagentauth.spring.autoconfigure.role.AgentIdpAutoConfiguration
+com.alibaba.openagentauth.spring.autoconfigure.role.AsUserIdpAutoConfiguration
+com.alibaba.openagentauth.spring.autoconfigure.role.AuthorizationServerAutoConfiguration
+com.alibaba.openagentauth.spring.autoconfigure.role.ResourceServerAutoConfiguration
+com.alibaba.openagentauth.spring.autoconfigure.role.AgentAutoConfiguration
