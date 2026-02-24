@@ -1,14 +1,18 @@
 # Open Agent Auth Auto-Configuration
 # This file defines the order in which auto-configurations are loaded
 
-# Core configuration (loaded first - provides shared beans like KeyManager)
+# Layer 0: Core configuration (loaded first - provides shared beans like KeyManager)
 com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration
+
+# Layer 1: Shared Capability configuration (loaded after core - provides shared infrastructure beans)
+# Extracts common beans (sessionMappingStore, sessionMappingBizService) that are identical across roles
+com.alibaba.openagentauth.spring.autoconfigure.capability.SharedCapabilityAutoConfiguration
 
 # JWE encryption configuration (loaded after core, conditional on open-agent-auth.encryption.enabled)
 com.alibaba.openagentauth.spring.autoconfigure.role.JweEncryptionAutoConfiguration
 
-# Role-specific configurations (loaded based on open-agent-auth.role property)
-# Only one role should be enabled at a time in production
+# Layer 2: Role-specific configurations (loaded based on open-agent-auth.roles.xxx.enabled property)
+# Multiple roles can be enabled simultaneously for co-existence scenarios
 com.alibaba.openagentauth.spring.autoconfigure.role.AgentUserIdpAutoConfiguration
 com.alibaba.openagentauth.spring.autoconfigure.role.AgentIdpAutoConfiguration
 com.alibaba.openagentauth.spring.autoconfigure.role.AsUserIdpAutoConfiguration
@@ -18,6 +22,9 @@ com.alibaba.openagentauth.spring.autoconfigure.role.AgentAutoConfiguration
 
 # OAuth2 Authorization configuration (loaded after role configs, provides AuthorizationOrchestrator)
 com.alibaba.openagentauth.spring.config.OAuth2AuthorizationConfiguration
+
+# Layer 3: Configuration Validator (validates role-capability consistency)
+com.alibaba.openagentauth.spring.autoconfigure.ConfigurationValidator
 
 # Spring Web configuration (loaded last - scans for REST controllers with @ConditionalOnBean)
 # Must be loaded after all role and config classes so that @ConditionalOnBean can detect registered beans

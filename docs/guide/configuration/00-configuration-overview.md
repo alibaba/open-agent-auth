@@ -90,15 +90,9 @@ open-agent-auth:
     authorization-server:
       enabled: true
       issuer: https://auth.mycompany.com
-      capabilities:
-        - oauth2-server
-        - workload-identity
-        - operation-authorization
     resource-server:
       enabled: true
       issuer: https://resource.mycompany.com
-      capabilities:
-        - workload-identity
   
   # Security policies
   security:
@@ -155,7 +149,7 @@ Capabilities represent reusable functional features that can be composed by role
 
 Roles represent specific functional instances that compose capabilities:
 
-| Role | Description | Typical Capabilities |
+| Role | Description | Required Capabilities |
 |------|-------------|----------------------|
 | **agent** | AI Agent that orchestrates tool calls | oauth2-client, operation-authorization |
 | **agent-idp** | Workload Identity Provider | workload-identity |
@@ -260,9 +254,6 @@ open-agent-auth:
     agent:
       enabled: true
       issuer: http://localhost:8081
-      capabilities:
-        - oauth2-client
-        - operation-authorization
 ```
 
 ### Pattern 2: Multi-Role Deployment
@@ -275,19 +266,14 @@ open-agent-auth:
     authorization-server:
       enabled: true
       issuer: http://localhost:8085
-      capabilities:
-        - oauth2-server
-        - operation-authorization
     resource-server:
       enabled: true
       issuer: http://localhost:8086
-      capabilities:
-        - workload-identity
 ```
 
-### Pattern 3: Capability-Level Overrides
+### Pattern 3: Capability Configuration
 
-Override capability configuration at the role level:
+Configure capabilities independently from roles:
 
 ```yaml
 open-agent-auth:
@@ -300,12 +286,6 @@ open-agent-auth:
     authorization-server:
       enabled: true
       issuer: http://localhost:8085
-      capabilities:
-        - oauth2-server
-      config:
-        oauth2-server:
-          token:
-            lifetime-seconds: 7200  # Role-specific override
 ```
 
 ### Pattern 4: Shared Infrastructure
@@ -439,17 +419,16 @@ open-agent-auth:
 **After (Current)**:
 ```yaml
 open-agent-auth:
+  capabilities:
+    oauth2-server:
+      enabled: true
+      par:
+        enabled: true
+        endpoint: /par
   roles:
     authorization-server:
       enabled: true
       issuer: http://localhost:8085
-      capabilities:
-        - oauth2-server
-      config:
-        oauth2-server:
-          par:
-            enabled: true
-            endpoint: /par
 ```
 
 ### Key Changes
@@ -458,8 +437,8 @@ open-agent-auth:
 |--------|--------|---------|
 | **Role Selection** | `open-agent-auth.role` | `open-agent-auth.roles.<role-name>.enabled` |
 | **Configuration Structure** | Flat hierarchy | Layered (Infrastructure → Capabilities → Roles) |
-| **Capability Reuse** | Duplicated per role | Defined once, composed by roles |
-| **Override Mechanism** | Direct property override | Role-level `config` map |
+| **Capability Reuse** | Duplicated per role | Defined once under `capabilities`, composed by roles |
+| **Capability Configuration** | Embedded in role | Configured independently under `open-agent-auth.capabilities` |
 
 ---
 
@@ -483,7 +462,7 @@ open-agent-auth:
 
 **Solutions**:
 - Verify the role is enabled (`roles.<role-name>.enabled: true`)
-- Check if required capabilities are listed
+- Check if required capabilities are enabled under `open-agent-auth.capabilities`
 - Ensure the issuer URL is set correctly
 - Review logs for initialization errors
 
@@ -492,8 +471,8 @@ open-agent-auth:
 **Symptoms**: Capability features are not available
 
 **Solutions**:
-- Verify the capability is enabled in `capabilities.<capability-name>.enabled`
-- Check if the capability is listed in the role's `capabilities` array
+- Verify the capability is enabled under `open-agent-auth.capabilities.<capability-name>.enabled`
+- Ensure the corresponding role is also enabled under `open-agent-auth.roles.<role-name>.enabled`
 - Ensure required infrastructure (trust domain, keys) is configured
 - Review capability-specific logs
 

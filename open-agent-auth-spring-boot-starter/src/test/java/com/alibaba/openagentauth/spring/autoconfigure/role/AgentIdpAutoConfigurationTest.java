@@ -272,8 +272,7 @@ class AgentIdpAutoConfigurationTest {
                     "open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain",
                     "open-agent-auth.infrastructures.jwks.consumers.agent-user-idp.issuer=http://agent-user-idp:8080",
                     "open-agent-auth.infrastructures.jwks.consumers.agent-user-idp.jwks-endpoint=http://agent-user-idp:8080/.well-known/jwks.json",
-                    "open-agent-auth.roles.agent-idp.config.key-algorithm=ES256",
-                    "open-agent-auth.roles.agent-idp.config.wit-expiration-seconds=3600"
+                    "open-agent-auth.capabilities.workload-identity.enabled=true"
                 )
                 .run(context -> {
                     assertThat(context).hasSingleBean(OpenAgentAuthProperties.class);

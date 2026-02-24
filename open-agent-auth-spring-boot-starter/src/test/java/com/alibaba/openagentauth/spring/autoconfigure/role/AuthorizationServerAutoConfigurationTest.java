@@ -99,10 +99,12 @@ class AuthorizationServerAutoConfigurationTest {
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(
             TestCoreConfiguration.class,
+            com.alibaba.openagentauth.spring.autoconfigure.capability.SharedCapabilityAutoConfiguration.class,
             AuthorizationServerAutoConfiguration.class
         ))
         .withPropertyValues(
             "spring.main.allow-bean-definition-overriding=true",
+            "open-agent-auth.enabled=true",
             "open-agent-auth.role=authorization-server",
             "open-agent-auth.roles.authorization-server.enabled=true",
             "open-agent-auth.roles.authorization-server.issuer=http://localhost:8080",

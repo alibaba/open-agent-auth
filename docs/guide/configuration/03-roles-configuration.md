@@ -6,7 +6,7 @@ Roles represent specific functional instances in the Open Agent Auth framework. 
 
 ## Configuration Overview
 
-Roles are configured under `open-agent-auth.roles`:
+Roles are configured under `open-agent-auth.roles`. The required capabilities for each role are automatically validated by the framework's ConfigurationValidator. You only need to enable the corresponding capabilities under `open-agent-auth.capabilities`.
 
 ```yaml
 open-agent-auth:
@@ -14,15 +14,11 @@ open-agent-auth:
     authorization-server:
       enabled: true
       issuer: https://auth.example.com
-      capabilities:
-        - oauth2-server
-        - operation-authorization
-        - workload-identity
 ```
 
 ### Available Roles
 
-| Role | Description | Typical Capabilities |
+| Role | Description | Required Capabilities |
 |------|-------------|----------------------|
 | **agent** | AI Agent that orchestrates tool calls | oauth2-client, operation-authorization |
 | **agent-idp** | Workload Identity Provider | workload-identity |
@@ -44,25 +40,16 @@ All roles share the following common properties:
 | `enabled` | Boolean | Whether this role is enabled | Yes |
 | `issuer` | String | Issuer URL for this role instance | Yes |
 | `instance-id` | String | Instance identifier for multi-instance deployments | No |
-| `capabilities` | List | List of capabilities used by this role | Yes |
-| `config` | Map | Role-specific configuration overrides | No |
 
 ### Role Configuration Structure
 
 ```yaml
 roles:
-  &lt;role-name&gt;:
+  <role-name>:
     enabled: boolean              # Whether role is enabled
     issuer: string                # Issuer URL
     instance-id: string           # Optional: Instance identifier
-    capabilities:                 # List of capabilities
-      - capability-1
-      - capability-2
-    config:                       # Role-specific overrides
-      capability-1:
-        property: value
-      capability-2:
-        property: value
+
 ```
 
 ---
@@ -83,9 +70,6 @@ open-agent-auth:
       enabled: true
       issuer: https://agent.example.com
       instance-id: agent-001
-      capabilities:
-        - oauth2-client
-        - operation-authorization
 ```
 
 #### Required Capabilities
@@ -116,8 +100,6 @@ open-agent-auth:
       enabled: true
       issuer: https://agent-idp.example.com
       instance-id: agent-idp-001
-      capabilities:
-        - workload-identity
 ```
 
 #### Required Capabilities
@@ -146,9 +128,6 @@ open-agent-auth:
       enabled: true
       issuer: https://agent-user-idp.example.com
       instance-id: agent-user-idp-001
-      capabilities:
-        - oauth2-server
-        - user-authentication
 ```
 
 #### Required Capabilities
@@ -178,11 +157,6 @@ open-agent-auth:
       enabled: true
       issuer: https://auth-server.example.com
       instance-id: auth-server-001
-      capabilities:
-        - oauth2-server
-        - operation-authorization
-        - workload-identity
-        - audit
 ```
 
 #### Required Capabilities
@@ -214,8 +188,6 @@ open-agent-auth:
       enabled: true
       issuer: https://resource-server.example.com
       instance-id: resource-server-001
-      capabilities:
-        - workload-identity
 ```
 
 #### Required Capabilities
@@ -244,9 +216,6 @@ open-agent-auth:
       enabled: true
       issuer: https://as-user-idp.example.com
       instance-id: as-user-idp-001
-      capabilities:
-        - oauth2-server
-        - user-authentication
 ```
 
 #### Required Capabilities
@@ -279,17 +248,11 @@ open-agent-auth:
       enabled: true
       issuer: https://auth-primary.example.com
       instance-id: auth-server-001
-      capabilities:
-        - oauth2-server
-        - operation-authorization
     
     authorization-server-secondary:
       enabled: true
       issuer: https://auth-secondary.example.com
       instance-id: auth-server-002
-      capabilities:
-        - oauth2-server
-        - operation-authorization
 ```
 
 ### Use Cases
@@ -297,57 +260,6 @@ open-agent-auth:
 - **High Availability**: Deploy multiple instances for redundancy
 - **Load Balancing**: Distribute load across instances
 - **Geographic Distribution**: Deploy instances in different regions
-
----
-
-## Role-Specific Configuration Overrides
-
-### Overview
-
-Roles can override capability-level configuration using the `config` map. This allows different roles to use different settings for the same capability.
-
-### Configuration
-
-```yaml
-open-agent-auth:
-  capabilities:
-    oauth2-server:
-      enabled: true
-      token:
-        access-token-expiry: 3600  # Default: 1 hour
-  
-  roles:
-    agent:
-      enabled: true
-      capabilities:
-        - oauth2-client
-      config:
-        oauth2-client:  # No override needed
-    
-    authorization-server:
-      enabled: true
-      capabilities:
-        - oauth2-server
-      config:
-        oauth2-server:
-          token:
-            access-token-expiry: 7200  # Override: 2 hours
-```
-
-### Override Precedence
-
-Configuration is applied in the following order (later values override earlier ones):
-
-1. **Capability Defaults**: Default values in capability configuration
-2. **Capability Configuration**: Values from `capabilities.<capability-name>`
-3. **Role Overrides**: Values from `roles.<role-name>.config.<capability-name>`
-
-### Best Practices
-
-1. **Minimize Overrides**: Override only what is necessary
-2. **Document Overrides**: Add comments explaining why overrides are needed
-3. **Test Overrides**: Verify overrides work as expected
-4. **Review Defaults**: Check capability defaults before overriding
 
 ---
 
@@ -372,9 +284,6 @@ open-agent-auth:
     agent:
       enabled: true
       issuer: https://agent.mycompany.com
-      capabilities:
-        - oauth2-client
-        - operation-authorization
 ```
 
 ### Example 2: Full Stack Deployment
@@ -417,31 +326,18 @@ open-agent-auth:
     agent-idp:
       enabled: true
       issuer: https://agent-idp.mycompany.com
-      capabilities:
-        - workload-identity
     
     agent-user-idp:
       enabled: true
       issuer: https://agent-user-idp.mycompany.com
-      capabilities:
-        - oauth2-server
-        - user-authentication
     
     authorization-server:
       enabled: true
       issuer: https://auth-server.mycompany.com
-      capabilities:
-        - oauth2-server
-        - operation-authorization
-        - workload-identity
-        - audit
     
     agent:
       enabled: true
       issuer: https://agent.mycompany.com
-      capabilities:
-        - oauth2-client
-        - operation-authorization
 ```
 
 ### Example 3: Development Configuration
@@ -472,8 +368,6 @@ open-agent-auth:
     agent-idp:
       enabled: true
       issuer: http://localhost:8082
-      capabilities:
-        - workload-identity
 ```
 
 ---
@@ -507,15 +401,17 @@ roles:
 Use environment variables for sensitive configuration:
 
 ```yaml
-roles:
-  agent:
-    enabled: true
-    issuer: ${AGENT_ISSUER_URL:https://agent.mycompany.com}
-    config:
-      oauth2-client:
-        callback:
-          client-id: ${CLIENT_ID}
-          client-secret: ${CLIENT_SECRET}
+open-agent-auth:
+  capabilities:
+    oauth2-client:
+      enabled: true
+      callback:
+        client-id: ${CLIENT_ID}
+        client-secret: ${CLIENT_SECRET}
+  roles:
+    agent:
+      enabled: true
+      issuer: ${AGENT_ISSUER_URL:https://agent.mycompany.com}
 ```
 
 ### 3. Enable Only Needed Roles
@@ -584,7 +480,7 @@ curl https://auth-server.mycompany.com/oauth2/authorize
 
 **Solutions**:
 - Verify the role is enabled (`roles.<role-name>.enabled: true`)
-- Check if required capabilities are listed
+- Check if required capabilities are enabled under `open-agent-auth.capabilities`
 - Ensure the issuer URL is set correctly
 - Review logs for initialization errors
 
@@ -594,17 +490,16 @@ curl https://auth-server.mycompany.com/oauth2/authorize
 
 **Solutions**:
 - Verify the capability is enabled in `capabilities.<capability-name>.enabled`
-- Check if the capability is listed in the role's `capabilities` array
 - Ensure required infrastructure (trust domain, keys) is configured
 
-#### 3. Configuration Override Not Working
+#### 3. Capability Configuration Not Taking Effect
 
-**Symptoms**: Role-specific configuration is not being applied
+**Symptoms**: Capability configuration is not being applied as expected
 
 **Solutions**:
-- Verify the override is in the correct location (`roles.<role-name>.config.<capability-name>`)
-- Check if the capability is listed in the role's `capabilities` array
-- Ensure override property names match capability property names
+- Verify the capability is configured under `open-agent-auth.capabilities.<capability-name>`
+- Ensure property names match the capability's expected property structure
+- Check for YAML indentation issues
 
 ### Debug Logging
 

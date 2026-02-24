@@ -65,8 +65,6 @@ import com.alibaba.openagentauth.framework.web.interceptor.AsUserIdpUserAuthInte
 import com.alibaba.openagentauth.framework.web.interceptor.UserAuthenticationInterceptor;
 import com.alibaba.openagentauth.framework.web.provider.ConsentPageProvider;
 import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
-import com.alibaba.openagentauth.framework.web.store.SessionMappingStore;
-import com.alibaba.openagentauth.framework.web.store.impl.InMemorySessionMappingStore;
 import com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.ServiceProperties;
@@ -168,20 +166,6 @@ public class AuthorizationServerAutoConfiguration {
             }
             serviceProperties.setConsumers(consumers);
             return new DefaultServiceEndpointResolver(serviceProperties);
-        }
-
-        @Bean
-        @ConditionalOnMissingBean
-        public SessionMappingStore sessionMappingStore() {
-            logger.info("Creating SessionMappingStore bean");
-            return new InMemorySessionMappingStore();
-        }
-
-        @Bean
-        @ConditionalOnMissingBean
-        public SessionMappingBizService sessionMappingBizService(SessionMappingStore sessionMappingStore) {
-            logger.info("Creating SessionMappingBizService bean for Authorization Server");
-            return new SessionMappingBizService(sessionMappingStore);
         }
 
         @Bean

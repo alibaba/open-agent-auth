@@ -34,6 +34,7 @@ import com.alibaba.openagentauth.core.protocol.vc.jwe.PromptDecryptionService;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.framework.web.manager.SessionManager;
 import com.alibaba.openagentauth.framework.web.provider.ConsentPageProvider;
+import com.alibaba.openagentauth.spring.autoconfigure.capability.SharedCapabilityAutoConfiguration;
 import com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.ServiceProperties;
@@ -70,6 +71,7 @@ class AgentUserIdpAutoConfigurationTest {
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(
             CoreAutoConfiguration.class,
+            SharedCapabilityAutoConfiguration.class,
             AgentUserIdpAutoConfiguration.class,
             OAuth2AuthorizationConfiguration.class
         ))
@@ -78,6 +80,8 @@ class AgentUserIdpAutoConfigurationTest {
             "open-agent-auth.enabled=true",
             "open-agent-auth.roles.agent-user-idp.enabled=true",
             "open-agent-auth.roles.agent-user-idp.issuer=http://localhost:8080",
+            "open-agent-auth.capabilities.oauth2-server.enabled=true",
+            "open-agent-auth.capabilities.user-authentication.enabled=true",
             "open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain",
             "open-agent-auth.infrastructures.key-management.keys.id-token-signing.key-id=id-token-signing-key",
             "open-agent-auth.infrastructures.key-management.keys.id-token-signing.algorithm=ES256"
@@ -144,6 +148,7 @@ class AgentUserIdpAutoConfigurationTest {
             new WebApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                     CoreAutoConfiguration.class,
+                    SharedCapabilityAutoConfiguration.class,
                     AgentUserIdpAutoConfiguration.class,
                     OAuth2AuthorizationConfiguration.class
                 ))
@@ -151,20 +156,21 @@ class AgentUserIdpAutoConfigurationTest {
                 .withPropertyValues(
                     "open-agent-auth.enabled=true",
                     "open-agent-auth.roles.agent-user-idp.enabled=true",
+                    "open-agent-auth.capabilities.oauth2-server.enabled=true",
+                    "open-agent-auth.capabilities.user-authentication.enabled=true",
                     "open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain",
                     "open-agent-auth.infrastructures.key-management.keys.id-token-signing.key-id=id-token-signing-key",
                     "open-agent-auth.infrastructures.key-management.keys.id-token-signing.algorithm=ES256"
                 )
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    // The exception may be wrapped in UnsatisfiedDependencyException
                     Throwable rootCause = context.getStartupFailure();
                     while (rootCause.getCause() != null) {
                         rootCause = rootCause.getCause();
                     }
                     assertThat(rootCause)
                         .isInstanceOf(IllegalStateException.class)
-                        .hasMessageContaining("Agent User IDP issuer is not configured");
+                        .hasMessageContaining("User IDP issuer is not configured");
                 });
         }
 
@@ -264,6 +270,7 @@ class AgentUserIdpAutoConfigurationTest {
             new WebApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                     CoreAutoConfiguration.class,
+                    SharedCapabilityAutoConfiguration.class,
                     AgentUserIdpAutoConfiguration.class,
                     OAuth2AuthorizationConfiguration.class
                 ))
@@ -271,20 +278,21 @@ class AgentUserIdpAutoConfigurationTest {
                 .withPropertyValues(
                     "open-agent-auth.enabled=true",
                     "open-agent-auth.roles.agent-user-idp.enabled=true",
+                    "open-agent-auth.capabilities.oauth2-server.enabled=true",
+                    "open-agent-auth.capabilities.user-authentication.enabled=true",
                     "open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain",
                     "open-agent-auth.infrastructures.key-management.keys.id-token-signing.key-id=id-token-signing-key",
                     "open-agent-auth.infrastructures.key-management.keys.id-token-signing.algorithm=ES256"
                 )
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    // The exception may be wrapped in UnsatisfiedDependencyException
                     Throwable rootCause = context.getStartupFailure();
                     while (rootCause.getCause() != null) {
                         rootCause = rootCause.getCause();
                     }
                     assertThat(rootCause)
                         .isInstanceOf(IllegalStateException.class)
-                        .hasMessageContaining("Agent User IDP issuer is not configured");
+                        .hasMessageContaining("User IDP issuer is not configured");
                 });
         }
     }

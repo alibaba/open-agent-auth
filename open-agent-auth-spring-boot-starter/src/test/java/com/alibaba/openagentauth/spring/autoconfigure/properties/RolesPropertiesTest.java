@@ -18,9 +18,7 @@ package com.alibaba.openagentauth.spring.autoconfigure.properties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -118,10 +116,6 @@ class RolesPropertiesTest {
         assertFalse(role.isEnabled());
         assertNull(role.getInstanceId());
         assertNull(role.getIssuer());
-        assertNotNull(role.getCapabilities());
-        assertTrue(role.getCapabilities().isEmpty());
-        assertNotNull(role.getConfig());
-        assertTrue(role.getConfig().isEmpty());
     }
 
     @Test
@@ -136,17 +130,6 @@ class RolesPropertiesTest {
         
         role.setIssuer("http://localhost:8080");
         assertEquals("http://localhost:8080", role.getIssuer());
-        
-        List<String> capabilities = new ArrayList<>();
-        capabilities.add("oauth2-client");
-        capabilities.add("operation-authorization");
-        role.setCapabilities(capabilities);
-        assertEquals(capabilities, role.getCapabilities());
-        
-        Map<String, Object> config = new HashMap<>();
-        config.put("custom-key", "custom-value");
-        role.setConfig(config);
-        assertEquals(config, role.getConfig());
     }
 
     @Test
@@ -163,9 +146,6 @@ class RolesPropertiesTest {
         role.setEnabled(true);
         role.setInstanceId("");
         role.setIssuer("");
-        role.setCapabilities(new ArrayList<>());
-        role.setConfig(new HashMap<>());
-        
         properties.putRole("test", role);
         assertEquals("", properties.getRole("test").getInstanceId());
         assertEquals("", properties.getRole("test").getIssuer());
@@ -191,17 +171,14 @@ class RolesPropertiesTest {
         RolesProperties.RoleProperties agentRole = new RolesProperties.RoleProperties();
         agentRole.setEnabled(true);
         agentRole.setIssuer("http://localhost:8081");
-        agentRole.setCapabilities(List.of("oauth2-client", "operation-authorization"));
         
         RolesProperties.RoleProperties idpRole = new RolesProperties.RoleProperties();
         idpRole.setEnabled(true);
         idpRole.setIssuer("http://localhost:8082");
-        idpRole.setCapabilities(List.of("workload-identity"));
         
         RolesProperties.RoleProperties asRole = new RolesProperties.RoleProperties();
         asRole.setEnabled(true);
         asRole.setIssuer("http://localhost:8085");
-        asRole.setCapabilities(List.of("oauth2-server", "operation-authorization"));
         
         properties.putRole("agent", agentRole);
         properties.putRole("agent-idp", idpRole);

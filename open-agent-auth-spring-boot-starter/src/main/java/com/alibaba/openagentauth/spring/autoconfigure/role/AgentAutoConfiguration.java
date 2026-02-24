@@ -196,40 +196,6 @@ public class AgentAutoConfiguration {
         private static final Logger logger = LoggerFactory.getLogger(InfrastructureConfiguration.class);
 
         /**
-         * Creates the SessionMappingStore bean.
-         * <p>
-         * This store provides the underlying storage for session mappings.
-         * Default implementation uses in-memory storage.
-         * </p>
-         *
-         * @return the Session Mapping Store bean
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public SessionMappingStore sessionMappingStore() {
-            logger.info("Creating SessionMappingStore bean");
-            return new InMemorySessionMappingStore();
-        }
-
-        /**
-         * Creates the SessionMappingBizService bean.
-         * <p>
-         * This service provides high-level session mapping operations with business logic.
-         * </p>
-         *
-         * @param sessionMappingStore the session mapping store
-         * @return the Session Mapping Business Service bean
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public SessionMappingBizService sessionMappingBizService(
-                SessionMappingStore sessionMappingStore
-        ) {
-            logger.info("Creating SessionMappingBizService bean");
-            return new SessionMappingBizService(sessionMappingStore);
-        }
-
-        /**
          * Creates the ServiceEndpointResolver bean.
          * <p>
          * This resolver is used to resolve service endpoints for different services.

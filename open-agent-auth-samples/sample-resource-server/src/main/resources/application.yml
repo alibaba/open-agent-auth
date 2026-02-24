@@ -53,14 +53,12 @@ open-agent-auth:
         authorization-server:
           base-url: http://localhost:8085
   
-  # Roles configuration (role instances that compose capabilities)
+  # Roles configuration
   roles:
     resource-server:
       enabled: true
       instance-id: resource-server-1
       issuer: http://localhost:8086
-      capabilities:
-        - resource-server
 
 # MCP Server Configuration
 mcp:
