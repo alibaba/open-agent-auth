@@ -30,7 +30,6 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.Op
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -38,7 +37,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
-import java.net.URL;
 import java.security.PrivateKey;
 
 /**
@@ -71,22 +69,17 @@ import java.security.PrivateKey;
 public class JweEncryptionAutoConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(JweEncryptionAutoConfiguration.class);
-
     /**
      * Creates the JWE encoder bean.
      * <p>
-     * For Agent role, if jwksConsumer is configured, the encoder will
-     * fetch the public key from the Authorization Server's JWKS endpoint. This ensures
-     * that only the Authorization Server can decrypt the encrypted prompts.
-     * </p>
-     * <p>
-     * For Authorization Server role or when jwksConsumer is not configured,
-     * the encoder will use the local KeyManager's key for encryption.
+     * The encoder retrieves the encryption key via KeyManager's resolveKey method,
+     * which automatically determines whether to fetch the key from local storage
+     * or remote JWKS endpoint based on the KeyDefinition configuration.
      * </p>
      *
      * @param keyManager the key manager for retrieving encryption keys
- * @param openAgentAuthProperties the OpenAgentAuth properties
- * @return the JWE encoder instance
+     * @param openAgentAuthProperties the OpenAgentAuth properties
+     * @return the JWE encoder instance
      * @throws IllegalStateException if key retrieval fails
      */
     @Bean
@@ -96,67 +89,25 @@ public class JweEncryptionAutoConfiguration {
             OperationAuthorizationProperties.PromptEncryptionProperties properties = 
                 openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption();
             
-            // Validate encryption key ID
             String encryptionKeyId = properties.getEncryptionKeyId();
             if (encryptionKeyId == null || encryptionKeyId.isBlank()) {
                 throw new IllegalStateException("Encryption key ID must be configured via " +
                         "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id");
             }
             
-            Object encryptionJwk;
-            String keySource;
+            logger.info("Resolving encryption key via KeyManager. Key ID: {}", encryptionKeyId);
+            JWK encryptionJwk = (JWK) keyManager.resolveKey(encryptionKeyId);
+            logger.info("Successfully resolved encryption key. Key ID: {}", encryptionKeyId);
             
-            // Check if JWKS consumer is configured (Agent role scenario)
-            if (properties.getJwksConsumer() != null 
-                    && !properties.getJwksConsumer().isEmpty()) {
-                // Fetch JWKS URL from consumer configuration
-                String consumerName = properties.getJwksConsumer();
-                var jwksConsumers = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers();
-
-                if (jwksConsumers == null || !jwksConsumers.containsKey(consumerName)) {
-                    throw new IllegalStateException(
-                        "JWKS consumer not found: " + consumerName +
-                        ". Please configure it in open-agent-auth.infrastructures.jwks.consumers");
-                }
-
-                String jwksUrl = jwksConsumers.get(consumerName).getJwksEndpoint();
-                logger.info("Fetching encryption public key from JWKS consumer '{}': {}", consumerName, jwksUrl);
-                
-                try {
-                    JWKSet jwkSet = JWKSet.load(new URL(jwksUrl));
-                    // Find the key with matching key ID
-                    encryptionJwk = jwkSet.getKeyByKeyId(encryptionKeyId);
-                    
-                    if (encryptionJwk == null) {
-                        throw new IllegalStateException(
-                            "Encryption key not found in JWKS endpoint. Consumer: " + consumerName + 
-                            ", Key ID: " + encryptionKeyId);
-                    }
-                    
-                    keySource = "JWKS consumer '" + consumerName + "'";
-                    logger.info("Successfully retrieved encryption key from JWKS consumer '{}'", consumerName);
-                } catch (Exception e) {
-                    throw new IllegalStateException(
-                        "Failed to fetch encryption key from JWKS consumer '" + consumerName + 
-                        "': " + jwksUrl, e);
-                }
-            } else {
-                // Use local KeyManager (Authorization Server role or backward compatibility)
-                logger.info("Using local KeyManager for encryption key");
-                encryptionJwk = keyManager.getSigningJWK(encryptionKeyId);
-                keySource = "local KeyManager";
-            }
-
-            // Parse algorithms
             JWEAlgorithm jweAlgorithm = JWEAlgorithm.parse(properties.getEncryptionAlgorithm());
             EncryptionMethod encryptionMethod = EncryptionMethod.parse(properties.getContentEncryptionAlgorithm());
-
-            logger.info("Creating JweEncoder with algorithm: {}, method: {}, key source: {}", 
-                    jweAlgorithm.getName(), encryptionMethod.getName(), keySource);
-
-            return new NimbusJweEncoder((JWK) encryptionJwk, jweAlgorithm, encryptionMethod);
+            
+            logger.info("Creating JweEncoder with algorithm: {}, method: {}", 
+                    jweAlgorithm.getName(), encryptionMethod.getName());
+            
+            return new NimbusJweEncoder(encryptionJwk, jweAlgorithm, encryptionMethod);
         } catch (KeyManagementException e) {
-            throw new IllegalStateException("Failed to get encryption key from KeyManager", e);
+            throw new IllegalStateException("Failed to resolve encryption key from KeyManager", e);
         }
     }
 

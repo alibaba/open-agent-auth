@@ -17,6 +17,7 @@ package com.alibaba.openagentauth.spring.autoconfigure.role;
 
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
 import com.alibaba.openagentauth.core.binding.RemoteBindingInstanceStore;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
 import com.alibaba.openagentauth.core.policy.api.PolicyEvaluator;
 import com.alibaba.openagentauth.core.policy.api.PolicyRegistry;
@@ -35,7 +36,6 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.ServiceProperti
 import com.alibaba.openagentauth.spring.util.DefaultServiceEndpointResolver;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,35 +137,27 @@ public class ResourceServerAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public WitValidator witValidator(OpenAgentAuthProperties openAgentAuthProperties) {
+    public WitValidator witValidator(OpenAgentAuthProperties openAgentAuthProperties, KeyManager keyManager) {
         logger.info("Creating WitValidator bean for Resource Server");
-        String agentIdpJwksEndpoint = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AGENT_IDP).getJwksEndpoint();
         String witKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
         try {
-            // Load the public key from the JWKS endpoint
-            JWKSet jwkSet = JWKSet.load(new URL(agentIdpJwksEndpoint));
+            // Resolve the WIT verification key using KeyManager
+            JWK witJwk = (JWK) keyManager.resolveKey(witKeyId);
 
-            // Find the configured WIT key specifically, not just the first key
-            ECKey witSigningKey = null;
-            for (JWK jwk : jwkSet.getKeys()) {
-                if (jwk.getKeyID() != null && jwk.getKeyID().equals(witKeyId)) {
-                    if (jwk instanceof ECKey ecKey) {
-                        witSigningKey = ecKey;
-                        break;
-                    }
-                }
-            }
-
-            if (witSigningKey == null) {
+            if (witJwk == null) {
                 throw new IllegalStateException(
-                        "WIT verification key '" + witKeyId + "' not found in Agent IDP JWKS endpoint. Available keys: " +
-                                jwkSet.getKeys().stream()
-                                        .map(k -> k.getKeyID() != null ? k.getKeyID() : "null")
-                                        .toList()
+                        "WIT verification key '" + witKeyId + "' not found via KeyManager"
                 );
             }
 
-            logger.info("Found wit-signing-key in Agent IDP JWKS endpoint: keyId={}, algorithm={}, curve={}",
+            // Validate that the key is an ECKey
+            if (!(witJwk instanceof ECKey witSigningKey)) {
+                throw new IllegalStateException(
+                        "WIT verification key '" + witKeyId + "' is not an ECKey. Actual type: " + witJwk.getClass().getSimpleName()
+                );
+            }
+
+            logger.info("Resolved wit-verification key via KeyManager: keyId={}, algorithm={}, curve={}",
                     witSigningKey.getKeyID(),
                     witSigningKey.getAlgorithm(),
                     witSigningKey.getCurve());
@@ -214,36 +206,28 @@ public class ResourceServerAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public AoatValidator aoatValidator(OpenAgentAuthProperties openAgentAuthProperties) {
+    public AoatValidator aoatValidator(OpenAgentAuthProperties openAgentAuthProperties, KeyManager keyManager) {
         logger.info("Creating AoatValidator bean for Resource Server");
 
-        String authorizationServerJwksEndpoint = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AUTHORIZATION_SERVER).getJwksEndpoint();
         String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_AOAT_VERIFICATION).getKeyId();
         try {
-            // Load the public key from the JWKS endpoint
-            JWKSet jwkSet = JWKSet.load(new URL(authorizationServerJwksEndpoint));
+            // Resolve the AOAT verification key using KeyManager
+            JWK aoatJwk = (JWK) keyManager.resolveKey(aoatKeyId);
 
-            // Find the configured AOAT key specifically, not just the first RSA key
-            RSAKey aoatSigningKey = null;
-            for (JWK jwk : jwkSet.getKeys()) {
-                if (jwk.getKeyID() != null && jwk.getKeyID().equals(aoatKeyId)) {
-                    if (jwk instanceof RSAKey rsaKey) {
-                        aoatSigningKey = rsaKey;
-                        break;
-                    }
-                }
-            }
-
-            if (aoatSigningKey == null) {
+            if (aoatJwk == null) {
                 throw new IllegalStateException(
-                        "AOAT verification key '" + aoatKeyId + "' not found in Authorization Server JWKS endpoint. Available keys: " +
-                                jwkSet.getKeys().stream()
-                                        .map(k -> k.getKeyID() != null ? k.getKeyID() : "null")
-                                        .toList()
+                        "AOAT verification key '" + aoatKeyId + "' not found via KeyManager"
                 );
             }
 
-            logger.info("Found aoat-verification-key in Authorization Server JWKS endpoint: keyId={}, algorithm={}",
+            // Validate that the key is an RSAKey
+            if (!(aoatJwk instanceof RSAKey aoatSigningKey)) {
+                throw new IllegalStateException(
+                        "AOAT verification key '" + aoatKeyId + "' is not an RSAKey. Actual type: " + aoatJwk.getClass().getSimpleName()
+                );
+            }
+
+            logger.info("Resolved aoat-verification key via KeyManager: keyId={}, algorithm={}",
                     aoatSigningKey.getKeyID(),
                     aoatSigningKey.getAlgorithm());
 

@@ -394,8 +394,11 @@ class JweEncryptionAutoConfigurationTest {
         }
 
         @Test
-        @DisplayName("Should fail when JWKS consumer is configured but not found")
-        void shouldFailWhenJwksConsumerIsConfiguredButNotFound() {
+        @DisplayName("Should start successfully when JWKS consumer is configured but not found (lazy resolution)")
+        void shouldStartSuccessfullyWhenJwksConsumerIsConfiguredButNotFound() {
+            // After KeyResolver SPI refactoring, key resolution is lazy.
+            // The context starts successfully even if the JWKS consumer does not exist;
+            // the error will surface at runtime when the key is actually resolved.
             contextRunner
                 .withPropertyValues(
                     "open-agent-auth.enabled=true",
@@ -406,9 +409,8 @@ class JweEncryptionAutoConfigurationTest {
                     "open-agent-auth.capabilities.operation-authorization.prompt-encryption.jwks-consumer=non-existent-consumer"
                 )
                 .run(context -> {
-                    assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure().getMessage())
-                        .contains("JWKS consumer not found");
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(KeyManager.class);
                 });
         }
     }
