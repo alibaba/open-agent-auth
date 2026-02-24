@@ -16,13 +16,19 @@
 package com.alibaba.openagentauth.core.crypto.key;
 
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
+import com.alibaba.openagentauth.core.crypto.key.model.KeyDefinition;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyInfo;
+import com.alibaba.openagentauth.core.crypto.key.resolve.JwksConsumerKeyResolver;
+import com.alibaba.openagentauth.core.crypto.key.resolve.KeyResolver;
+import com.alibaba.openagentauth.core.crypto.key.resolve.LocalKeyResolver;
 import com.alibaba.openagentauth.core.crypto.key.store.KeyStore;
 import com.alibaba.openagentauth.core.exception.crypto.KeyManagementException;
+import com.alibaba.openagentauth.core.exception.crypto.KeyResolutionException;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
@@ -34,7 +40,10 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -73,6 +82,16 @@ public class DefaultKeyManager implements KeyManager {
      * The underlying key store for persistent storage.
      */
     private final KeyStore keyStore;
+
+    /**
+     * Ordered list of key resolvers for the resolve chain.
+     */
+    private final List<KeyResolver> keyResolvers;
+
+    /**
+     * Mapping from key ID to its key definition.
+     */
+    private final Map<String, KeyDefinition> keyDefinitions;
     
     /**
      * Read-write lock for thread-safe key operations.
@@ -81,14 +100,60 @@ public class DefaultKeyManager implements KeyManager {
     
     /**
      * Creates a new DefaultKeyManager with the specified key store.
+     * <p>
+     * This constructor maintains backward compatibility. No key resolvers or
+     * key definitions are configured, so {@link #resolveKey(String)} falls back
+     * to {@link #getSigningJWK(String)}.
+     * </p>
      *
      * @param keyStore the key store implementation
      * @throws IllegalArgumentException if keyStore is null
      */
     public DefaultKeyManager(KeyStore keyStore) {
+        this(keyStore, Collections.emptyList(), Collections.emptyMap());
+    }
+
+    /**
+     * Creates a new DefaultKeyManager with the specified key store, external key resolvers,
+     * and key definitions.
+     * <p>
+     * A {@link LocalKeyResolver} is automatically prepended to the resolver chain with
+     * the highest priority (order = 0), so local keys are always checked first. The
+     * external resolvers (e.g., {@link JwksConsumerKeyResolver}) are appended after it.
+     * </p>
+     * <p>
+     * The final resolver chain is sorted by {@link KeyResolver#getOrder()} value (ascending).
+     * </p>
+     *
+     * @param keyStore the key store implementation
+     * @param externalResolvers the list of external key resolvers (may be empty or null)
+     * @param keyDefinitions the mapping from key name to key definition (may be empty or null)
+     * @throws IllegalArgumentException if keyStore is null
+     */
+    public DefaultKeyManager(KeyStore keyStore, List<KeyResolver> externalResolvers,
+                             Map<String, KeyDefinition> keyDefinitions) {
         ValidationUtils.validateNotNull(keyStore, "KeyStore");
         this.keyStore = keyStore;
-        logger.info("DefaultKeyManager initialized with KeyStore: {}", keyStore.getClass().getSimpleName());
+
+        // Build the full resolver chain: LocalKeyResolver (self) + external resolvers
+        List<KeyResolver> allResolvers = new ArrayList<>();
+        allResolvers.add(new LocalKeyResolver(this));
+
+        if (externalResolvers != null) {
+            allResolvers.addAll(externalResolvers);
+        }
+
+        allResolvers.sort(Comparator.comparingInt(KeyResolver::getOrder));
+        this.keyResolvers = Collections.unmodifiableList(allResolvers);
+
+        this.keyDefinitions = keyDefinitions != null
+                ? Collections.unmodifiableMap(keyDefinitions)
+                : Collections.emptyMap();
+
+        logger.info("DefaultKeyManager initialized with KeyStore: {}, resolvers: {}, keyDefinitions: {}",
+                keyStore.getClass().getSimpleName(),
+                this.keyResolvers.size(),
+                this.keyDefinitions.size());
     }
 
     /**
@@ -395,6 +460,85 @@ public class DefaultKeyManager implements KeyManager {
         }
     }
     
+    /**
+     * Resolves a JWK by its key ID using the registered {@code KeyResolver} chain.
+     * <p>
+     * The resolution process:
+     * <ol>
+     *   <li>Look up the {@link KeyDefinition} for the given key ID</li>
+     *   <li>Iterate through registered {@link KeyResolver}s (sorted by order)</li>
+     *   <li>Use the first resolver that {@linkplain KeyResolver#supports(KeyDefinition) supports}
+     *       the key definition</li>
+     *   <li>If no resolver matches or no key definition exists, fall back to
+     *       {@link #getSigningJWK(String)}</li>
+     * </ol>
+     * </p>
+     *
+     * @param keyId the key identifier to resolve
+     * @return the resolved JWK
+     * @throws KeyManagementException if the key cannot be resolved
+     */
+    @Override
+    public Object resolveKey(String keyId) throws KeyManagementException {
+        if (ValidationUtils.isNullOrEmpty(keyId)) {
+            throw new IllegalArgumentException("Key ID cannot be null or empty");
+        }
+
+        // Find key definition by key ID (match by keyId field, not map key)
+        KeyDefinition keyDefinition = findKeyDefinitionByKeyId(keyId);
+
+        if (keyDefinition == null || keyResolvers.isEmpty()) {
+            logger.debug("No key definition or resolvers for keyId='{}', falling back to local lookup", keyId);
+            return getSigningJWK(keyId);
+        }
+
+        logger.debug("Resolving key '{}' with definition: {}", keyId, keyDefinition);
+
+        for (KeyResolver resolver : keyResolvers) {
+            if (resolver.supports(keyDefinition)) {
+                try {
+                    JWK resolvedKey = resolver.resolve(keyDefinition);
+                    logger.debug("Key '{}' resolved by {}", keyId, resolver.getClass().getSimpleName());
+                    return resolvedKey;
+                } catch (KeyResolutionException e) {
+                    throw new KeyManagementException(
+                            "Failed to resolve key '" + keyId + "': " + e.getMessage(), e);
+                }
+            }
+        }
+
+        logger.warn("No KeyResolver supports key definition for keyId='{}', falling back to local lookup", keyId);
+        return getSigningJWK(keyId);
+    }
+
+    /**
+     * Finds a {@link KeyDefinition} by matching the key ID field.
+     * <p>
+     * The key definitions map is keyed by the configuration key name (e.g., "wit-verification"),
+     * but the actual key ID is stored in the {@link KeyDefinition#getKeyId()} field
+     * (e.g., "wit-signing-key"). This method searches by the key ID field.
+     * </p>
+     *
+     * @param keyId the key ID to search for
+     * @return the matching key definition, or {@code null} if not found
+     */
+    private KeyDefinition findKeyDefinitionByKeyId(String keyId) {
+        // First try direct lookup by map key
+        KeyDefinition definition = keyDefinitions.get(keyId);
+        if (definition != null) {
+            return definition;
+        }
+
+        // Search by keyId field in all definitions
+        for (KeyDefinition candidate : keyDefinitions.values()) {
+            if (keyId.equals(candidate.getKeyId())) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Generates a JWK based on the algorithm.
      *

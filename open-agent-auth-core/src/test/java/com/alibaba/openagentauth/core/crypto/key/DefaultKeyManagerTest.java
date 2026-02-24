@@ -16,10 +16,12 @@
 package com.alibaba.openagentauth.core.crypto.key;
 
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
+import com.alibaba.openagentauth.core.crypto.key.model.KeyDefinition;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyInfo;
 import com.alibaba.openagentauth.core.crypto.key.store.InMemoryKeyStore;
 import com.alibaba.openagentauth.core.exception.crypto.KeyManagementException;
 import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,7 +31,10 @@ import org.junit.jupiter.api.Test;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -560,6 +566,109 @@ class DefaultKeyManagerTest {
                 assertThat(keyInfo.getCreatedAt()).isNotNull();
                 assertThat(keyInfo.getActivatedAt()).isNotNull();
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("ResolveKey Tests")
+    class ResolveKeyTests {
+
+        @Test
+        @DisplayName("Should fallback to getSigningJWK when no resolver chain exists")
+        void shouldFallbackToGetSigningJWKWhenNoResolverChainExists() throws KeyManagementException, com.nimbusds.jose.JOSEException {
+            KeyManager singleParamManager = new DefaultKeyManager(new InMemoryKeyStore());
+            singleParamManager.generateKeyPair(KeyAlgorithm.RS256, "fallback-test-key");
+            
+            Object resolvedKey = singleParamManager.resolveKey("fallback-test-key");
+            
+            assertThat(resolvedKey).isNotNull();
+            assertThat(resolvedKey).isInstanceOf(JWK.class);
+            JWK jwk = (JWK) resolvedKey;
+            assertThat(jwk.getKeyID()).isEqualTo("fallback-test-key");
+        }
+
+        @Test
+        @DisplayName("Should resolve local key through resolver chain")
+        void shouldResolveLocalKeyThroughResolverChain() throws KeyManagementException, com.nimbusds.jose.JOSEException {
+            Map<String, KeyDefinition> keyDefinitions = new HashMap<>();
+            KeyDefinition keyDefinition = KeyDefinition.builder()
+                    .keyId("local-resolver-key")
+                    .algorithm(KeyAlgorithm.RS256)
+                    .provider("local")
+                    .build();
+            keyDefinitions.put("local-verification", keyDefinition);
+            
+            KeyManager threeParamManager = new DefaultKeyManager(
+                new InMemoryKeyStore(),
+                Collections.emptyList(),
+                keyDefinitions
+            );
+            
+            threeParamManager.generateKeyPair(KeyAlgorithm.RS256, "local-resolver-key");
+            
+            Object resolvedKey = threeParamManager.resolveKey("local-resolver-key");
+            
+            assertThat(resolvedKey).isNotNull();
+            assertThat(resolvedKey).isInstanceOf(JWK.class);
+            JWK jwk = (JWK) resolvedKey;
+            assertThat(jwk.getKeyID()).isEqualTo("local-resolver-key");
+        }
+
+        @Test
+        @DisplayName("Should find KeyDefinition by keyId field")
+        void shouldFindKeyDefinitionByKeyIdField() throws KeyManagementException, com.nimbusds.jose.JOSEException {
+            Map<String, KeyDefinition> keyDefinitions = new HashMap<>();
+            KeyDefinition keyDefinition = KeyDefinition.builder()
+                    .keyId("wit-signing-key")
+                    .algorithm(KeyAlgorithm.RS256)
+                    .provider("local")
+                    .build();
+            keyDefinitions.put("wit-verification", keyDefinition);
+            
+            KeyManager manager = new DefaultKeyManager(
+                new InMemoryKeyStore(),
+                Collections.emptyList(),
+                keyDefinitions
+            );
+            
+            manager.generateKeyPair(KeyAlgorithm.RS256, "wit-signing-key");
+            
+            Object resolvedKey = manager.resolveKey("wit-signing-key");
+            
+            assertThat(resolvedKey).isNotNull();
+            assertThat(resolvedKey).isInstanceOf(JWK.class);
+            JWK jwk = (JWK) resolvedKey;
+            assertThat(jwk.getKeyID()).isEqualTo("wit-signing-key");
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalArgumentException when keyId is null")
+        void shouldThrowIllegalArgumentExceptionWhenKeyIdIsNull() {
+            KeyManager manager = new DefaultKeyManager(new InMemoryKeyStore());
+            
+            assertThatThrownBy(() -> manager.resolveKey(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Key ID cannot be null or empty");
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalArgumentException when keyId is empty")
+        void shouldThrowIllegalArgumentExceptionWhenKeyIdIsEmpty() {
+            KeyManager manager = new DefaultKeyManager(new InMemoryKeyStore());
+            
+            assertThatThrownBy(() -> manager.resolveKey(""))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Key ID cannot be null or empty");
+        }
+
+        @Test
+        @DisplayName("Should not throw exception with null parameters in three-parameter constructor")
+        void shouldNotThrowExceptionWithNullParametersInThreeParameterConstructor() {
+            assertThatCode(() -> new DefaultKeyManager(
+                new InMemoryKeyStore(),
+                null,
+                null
+            )).doesNotThrowAnyException();
         }
     }
 }

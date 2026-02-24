@@ -233,4 +233,26 @@ public interface KeyManager {
         generateKeyPair(algorithm, keyId);
         return getSigningJWK(keyId);
     }
+
+    /**
+     * Resolves a JWK by its key ID using the registered {@code KeyResolver} chain.
+     * <p>
+     * This method provides a unified entry point for resolving keys from any source
+     * (local key store, remote JWKS endpoint, file system, or custom backends).
+     * The resolution strategy is determined by the {@code KeyDefinition} associated
+     * with the given key ID.
+     * </p>
+     * <p>
+     * If no key definitions or resolvers are configured, this method falls back to
+     * {@link #getSigningJWK(String)} for backward compatibility.
+     * </p>
+     *
+     * @param keyId the key identifier to resolve
+     * @return the resolved JWK
+     * @throws KeyManagementException if the key cannot be resolved
+     * @since 1.0
+     */
+    default Object resolveKey(String keyId) throws KeyManagementException {
+        return getSigningJWK(keyId);
+    }
 }

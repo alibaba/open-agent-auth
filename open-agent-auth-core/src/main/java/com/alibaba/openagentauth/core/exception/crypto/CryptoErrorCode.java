@@ -70,7 +70,14 @@ public enum CryptoErrorCode implements CoreErrorCode {
      * Corresponds to {@link PromptDecryptionException}.
      * Template: {0}
      */
-    PROMPT_DECRYPTION_FAILED("05", "PromptDecryptionFailed", "Prompt decryption operation failed: {0}", HttpStatus.INTERNAL_SERVER_ERROR);
+    PROMPT_DECRYPTION_FAILED("05", "PromptDecryptionFailed", "Prompt decryption operation failed: {0}", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    /**
+     * Key resolution operation failed.
+     * Corresponds to {@link KeyResolutionException}.
+     * Template: {0}
+     */
+    KEY_RESOLUTION_FAILED("06", "KeyResolutionFailed", "Key resolution failed: {0}", HttpStatus.INTERNAL_SERVER_ERROR);
     
     /**
      * Domain code for Crypto.

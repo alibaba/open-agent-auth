@@ -68,8 +68,6 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKMatcher;
-import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.RemoteJWKSet;
@@ -490,10 +488,11 @@ public class AgentAutoConfiguration {
         @ConditionalOnMissingBean
         public String jweEncryptionKeyId(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
             String keyId = openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption().getEncryptionKeyId();
-            
+
             // Validate encryption key ID
             if (keyId == null || keyId.isBlank()) {
-                throw new IllegalStateException("Encryption key ID must be configured via open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id");
+                throw new IllegalStateException("Encryption key ID must be configured via " +
+                        "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id");
             }
 
             // Get key algorithm from key definition, not from encryption-algorithm
@@ -545,7 +544,8 @@ public class AgentAutoConfiguration {
             }
 
             String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_VC_SIGNING).getKeyId();
-            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_VC_SIGNING).getAlgorithm());
+            String keyAlgorithmName = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_VC_SIGNING).getAlgorithm();
+            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(keyAlgorithmName);
 
             // Get or generate VC signing key from KeyManager
             JWK vcSigningKey;
@@ -611,59 +611,24 @@ public class AgentAutoConfiguration {
          */
         @Bean
         @ConditionalOnMissingBean
-        public ECKey witVerificationKey(OpenAgentAuthProperties openAgentAuthProperties) {
-
-            // Get params from properties
-            String agentIdpUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AGENT_IDP).getBaseUrl();
+        public ECKey witVerificationKey(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
             String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
-
             try {
-                // Construct JWKS endpoint URL
-                String jwksEndpoint = agentIdpUrl + JWKS_WELL_KNOWN_PATH;
-                logger.info("Attempting to fetch WIT verification key from Agent IDP JWKS endpoint: {}", jwksEndpoint);
-
-                // Create JWK source to fetch keys from Agent IDP
-                JWKSource<SecurityContext> jwkSource = new RemoteJWKSet<>(new URL(jwksEndpoint));
-
-                // Create a JWK selector to get all keys
-                JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().build());
-
-                // Get the JWK list from the source
-                List<JWK> jwkList = jwkSource.get(selector, null);
-                if (jwkList == null || jwkList.isEmpty()) {
-                    throw new IllegalStateException("No keys found in Agent IDP JWKS endpoint: " + jwksEndpoint);
+                logger.info("Resolving WIT verification key via KeyManager. Key ID: {}", keyId);
+                JWK resolvedKey = (JWK) keyManager.resolveKey(keyId);
+                if (!(resolvedKey instanceof ECKey)) {
+                    throw new IllegalStateException("WIT signing key is not an EC key. " +
+                            "Expected EC key with P-256 curve for ES256 algorithm, but got: " + resolvedKey.getKeyType());
                 }
-
-                // Find the WIT signing key by kid, and agent IDP may have multiple keys,
-                // So we need to select the one used for WIT signature verification
-                JWK witSigningKey = jwkList.stream()
-                        .filter(jwk -> keyId.equals(jwk.getKeyID()))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalStateException(
-                                "WIT signing key not found in Agent IDP JWKS endpoint: " + jwksEndpoint +
-                                        ". Available keys: " + jwkList.stream()
-                                        .map(JWK::getKeyID)
-                                        .toList()));
-
-                if (!(witSigningKey instanceof ECKey)) {
-                    throw new IllegalStateException("WIT signing key is not an EC key. Expected EC key with P-256 curve for ES256 algorithm, but got: " + witSigningKey.getKeyType());
-                }
-
-                ECKey ecPublicKey = witSigningKey.toECKey();
-                logger.info("Successfully fetched WIT verification key from Agent IDP. Key ID: {}, Algorithm: {}, Curve: {}",
+                ECKey ecPublicKey = (ECKey) resolvedKey;
+                logger.info("Successfully resolved WIT verification key. Key ID: {}, Algorithm: {}, Curve: {}",
                         ecPublicKey.getKeyID(), ecPublicKey.getAlgorithm(), ecPublicKey.getCurve());
-
                 return ecPublicKey;
-
             } catch (Exception e) {
-                logger.error("Failed to fetch WIT verification key from Agent IDP: {}", e.getMessage(), e);
+                logger.error("Failed to resolve WIT verification key: {}", e.getMessage(), e);
                 throw new IllegalStateException(
-                        "Failed to initialize WIT verification key. This is a critical error - " +
-                                "the system cannot operate without a valid WIT verification key from the Agent IDP. " +
-                                "Please ensure: " +
-                                "1. The Agent IDP is running and accessible at: " + agentIdpUrl + " " +
-                                "2. The JWKS endpoint is available at: " + agentIdpUrl + JWKS_WELL_KNOWN_PATH + " " +
-                                "3. The Agent IDP is configured with an EC signing key (ES256 algorithm with P-256 curve)", e);
+                        "Failed to initialize WIT verification key. Key ID: " + keyId + ". " +
+                                "Please ensure the key is properly configured in open-agent-auth.infrastructures.key-management.keys", e);
             }
         }
 
@@ -893,7 +858,7 @@ public class AgentAutoConfiguration {
             }
 
             var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
-            
+
             // Derive redirect URI from role issuer + callback endpoint
             String callbackEndpoint = oauth2ClientProps.getCallback().getEndpoint();
             String redirectUri = (issuer != null ? issuer : "") + (callbackEndpoint != null ? callbackEndpoint : "/callback");
