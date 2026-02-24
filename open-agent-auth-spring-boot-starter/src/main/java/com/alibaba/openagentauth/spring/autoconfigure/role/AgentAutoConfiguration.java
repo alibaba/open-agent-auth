@@ -44,6 +44,7 @@ import com.alibaba.openagentauth.core.token.TokenService;
 import com.alibaba.openagentauth.core.trust.model.TrustAnchor;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
+import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
 import com.alibaba.openagentauth.framework.actor.Agent;
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.executor.config.AgentAapExecutorConfig;
@@ -324,7 +325,7 @@ public class AgentAutoConfiguration {
             }
             logger.info("Creating userAuthenticationTokenClient bean with ServiceEndpointResolver, " +
                     "serviceName: agent-user-idp, clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, "agent-user-idp", clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AGENT_USER_IDP, clientId, clientSecret);
         }
 
         /**
@@ -355,7 +356,7 @@ public class AgentAutoConfiguration {
             }
             logger.info("Creating agentOperationAuthorizationTokenClient bean with ServiceEndpointResolver, " +
                     "serviceName: authorization-server, clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, "authorization-server", clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AUTHORIZATION_SERVER, clientId, clientSecret);
         }
 
         /**
@@ -379,7 +380,7 @@ public class AgentAutoConfiguration {
             logger.info("Creating OAuth2CallbackService bean");
             String callbackEndpoint = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getEndpoint();
             if (callbackEndpoint == null || callbackEndpoint.isBlank()) {
-                callbackEndpoint = "/callback";
+                callbackEndpoint = DEFAULT_CALLBACK_ENDPOINT;
             }
             return new OAuth2CallbackService(
                     oauth2TokenClient,
@@ -447,7 +448,7 @@ public class AgentAutoConfiguration {
         @ConditionalOnMissingBean
         public IdTokenValidator idTokenValidator(OpenAgentAuthProperties properties) {
             try {
-                String jwksEndpoint = properties.getInfrastructures().getJwks().getConsumers().get("agent-user-idp").getJwksEndpoint();
+                String jwksEndpoint = properties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AGENT_USER_IDP).getJwksEndpoint();
 
                 if (ValidationUtils.isNullOrEmpty(jwksEndpoint)) {
                     throw new IllegalStateException(
@@ -567,14 +568,14 @@ public class AgentAutoConfiguration {
             // Get issuer from roles configuration
             String issuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("agent");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT);
                 if (role != null) {
                     issuer = role.getIssuer();
                 }
             }
 
-            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("vc-signing").getKeyId();
-            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("vc-signing").getAlgorithm());
+            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_VC_SIGNING).getKeyId();
+            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_VC_SIGNING).getAlgorithm());
 
             // Get or generate VC signing key from KeyManager
             JWK vcSigningKey;
@@ -600,15 +601,15 @@ public class AgentAutoConfiguration {
             // Get issuer from roles configuration
             String issuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("agent");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT);
                 if (role != null) {
                     issuer = role.getIssuer();
                 }
             }
 
-            String authorizationServerUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("authorization-server").getBaseUrl();
-            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("par-jwt-signing").getKeyId();
-            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("par-jwt-signing").getAlgorithm());
+            String authorizationServerUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AUTHORIZATION_SERVER).getBaseUrl();
+            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_PAR_JWT_SIGNING).getKeyId();
+            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_PAR_JWT_SIGNING).getAlgorithm());
 
             // Get or generate PAR-JWT signing key from KeyManager
             RSAKey parJwtSigningKey;
@@ -643,12 +644,12 @@ public class AgentAutoConfiguration {
         public ECKey witVerificationKey(OpenAgentAuthProperties openAgentAuthProperties) {
 
             // Get params from properties
-            String agentIdpUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent-idp").getBaseUrl();
-            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getKeyId();
+            String agentIdpUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AGENT_IDP).getBaseUrl();
+            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
 
             try {
                 // Construct JWKS endpoint URL
-                String jwksEndpoint = agentIdpUrl + "/.well-known/jwks.json";
+                String jwksEndpoint = agentIdpUrl + JWKS_WELL_KNOWN_PATH;
                 logger.info("Attempting to fetch WIT verification key from Agent IDP JWKS endpoint: {}", jwksEndpoint);
 
                 // Create JWK source to fetch keys from Agent IDP
@@ -691,7 +692,7 @@ public class AgentAutoConfiguration {
                                 "the system cannot operate without a valid WIT verification key from the Agent IDP. " +
                                 "Please ensure: " +
                                 "1. The Agent IDP is running and accessible at: " + agentIdpUrl + " " +
-                                "2. The JWKS endpoint is available at: " + agentIdpUrl + "/.well-known/jwks.json " +
+                                "2. The JWKS endpoint is available at: " + agentIdpUrl + JWKS_WELL_KNOWN_PATH + " " +
                                 "3. The Agent IDP is configured with an EC signing key (ES256 algorithm with P-256 curve)", e);
             }
         }
@@ -816,8 +817,8 @@ public class AgentAutoConfiguration {
                 AapParJwtGenerator aapParJwtGenerator
         ) {
             // Get the properties
-            String authorizationServerUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("authorization-server").getBaseUrl();
-            String agentUserIdpUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent-user-idp").getBaseUrl();
+            String authorizationServerUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AUTHORIZATION_SERVER).getBaseUrl();
+            String agentUserIdpUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AGENT_USER_IDP).getBaseUrl();
             String clientId = openAgentAuthProperties.getCapabilities().getOperationAuthorization().getOauth2Client().getClientId();
             String oAuthCallbacksRedirectUri = openAgentAuthProperties.getCapabilities().getOperationAuthorization().getOauth2Client().getOauthCallbacksRedirectUri();
 
@@ -904,8 +905,8 @@ public class AgentAutoConfiguration {
 
             // Get issuer from roles configuration
             String issuer = null;
-            if (openAgentAuthProperties.getRoles() != null && openAgentAuthProperties.getRoles().get("agent") != null) {
-                var role = openAgentAuthProperties.getRoles().get("agent");
+            if (openAgentAuthProperties.getRoles() != null && openAgentAuthProperties.getRoles().get(ROLE_AGENT) != null) {
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT);
                 if (role.getIssuer() != null) {
                     issuer = role.getIssuer();
                 }

@@ -50,6 +50,8 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
+
 /**
  * Auto-configuration for Resource Server role.
  * <p>
@@ -137,8 +139,8 @@ public class ResourceServerAutoConfiguration {
     @ConditionalOnMissingBean
     public WitValidator witValidator(OpenAgentAuthProperties openAgentAuthProperties) {
         logger.info("Creating WitValidator bean for Resource Server");
-        String agentIdpJwksEndpoint = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("agent-idp").getJwksEndpoint();
-        String witKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getKeyId();
+        String agentIdpJwksEndpoint = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AGENT_IDP).getJwksEndpoint();
+        String witKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
         try {
             // Load the public key from the JWKS endpoint
             JWKSet jwkSet = JWKSet.load(new URL(agentIdpJwksEndpoint));
@@ -174,7 +176,7 @@ public class ResourceServerAutoConfiguration {
 
             // Create TrustAnchor with the EC public key from Agent IDP
             // WIT uses algorithm configured in YAML (default: ES256)
-            String witAlgorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getAlgorithm();
+            String witAlgorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getAlgorithm();
             KeyAlgorithm keyAlgorithm = KeyAlgorithm.valueOf(witAlgorithm);
             TrustAnchor trustAnchor;
             try {
@@ -215,8 +217,8 @@ public class ResourceServerAutoConfiguration {
     public AoatValidator aoatValidator(OpenAgentAuthProperties openAgentAuthProperties) {
         logger.info("Creating AoatValidator bean for Resource Server");
 
-        String authorizationServerJwksEndpoint = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("authorization-server").getJwksEndpoint();
-        String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-verification").getKeyId();
+        String authorizationServerJwksEndpoint = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AUTHORIZATION_SERVER).getJwksEndpoint();
+        String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_AOAT_VERIFICATION).getKeyId();
         try {
             // Load the public key from the JWKS endpoint
             JWKSet jwkSet = JWKSet.load(new URL(authorizationServerJwksEndpoint));
@@ -246,12 +248,12 @@ public class ResourceServerAutoConfiguration {
                     aoatSigningKey.getAlgorithm());
 
             // Create AoatValidator with the correct verification key, issuer, and audience
-            String authorizationServerIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("authorization-server").getIssuer();
+            String authorizationServerIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AUTHORIZATION_SERVER).getIssuer();
             
             // Get issuer from roles configuration
             String resourceServerIssuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("resource-server");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_RESOURCE_SERVER);
                 if (role != null) {
                     resourceServerIssuer = role.getIssuer();
                 }

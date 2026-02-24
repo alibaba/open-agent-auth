@@ -48,6 +48,7 @@ import com.alibaba.openagentauth.core.protocol.oauth2.token.client.DefaultOAuth2
 import com.alibaba.openagentauth.core.protocol.oauth2.token.client.OAuth2TokenClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.DefaultOAuth2TokenServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.OAuth2TokenServer;
+import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.TokenGenerator;
 import com.alibaba.openagentauth.core.protocol.vc.DefaultVcVerifier;
 import com.alibaba.openagentauth.core.protocol.vc.VcVerificationPolicy;
@@ -304,7 +305,7 @@ public class AuthorizationServerAutoConfiguration {
             String asUserIdpUrl = null;
             if (openAgentAuthProperties.getInfrastructures().getJwks() != null &&
                 openAgentAuthProperties.getInfrastructures().getJwks().getConsumers() != null) {
-                JwksConsumerProperties asUserIdpConfig = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp");
+                JwksConsumerProperties asUserIdpConfig = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AS_USER_IDP);
                 logger.debug("asUserIdpConfig = {}", asUserIdpConfig);
                 if (asUserIdpConfig != null) {
                     asUserIdpUrl = asUserIdpConfig.getIssuer();
@@ -333,7 +334,7 @@ public class AuthorizationServerAutoConfiguration {
             }
             
             logger.info("Creating userAuthenticationTokenClient bean with clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, "as-user-idp", clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AS_USER_IDP, clientId, clientSecret);
         }
 
         @Bean(name = "agentOperationAuthorizationTokenClient")
@@ -353,7 +354,7 @@ public class AuthorizationServerAutoConfiguration {
             }
             
             logger.info("Creating agentOperationAuthorizationTokenClient bean with clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, "authorization-server", clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AUTHORIZATION_SERVER, clientId, clientSecret);
         }
 
         @Bean
@@ -366,7 +367,7 @@ public class AuthorizationServerAutoConfiguration {
             logger.info("Creating OAuth2CallbackService bean for Authorization Server role");
             String callbackEndpoint = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getEndpoint();
             if (callbackEndpoint == null || callbackEndpoint.isBlank()) {
-                callbackEndpoint = "/callback";
+                callbackEndpoint = DEFAULT_CALLBACK_ENDPOINT;
             }
             return new OAuth2CallbackService(
                     authorizationServerProvider,
@@ -407,8 +408,8 @@ public class AuthorizationServerAutoConfiguration {
                 KeyManager keyManager,
                 OpenAgentAuthProperties openAgentAuthProperties) {
             logger.info("Creating AoatGenerator bean");
-            String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getKeyId();
-            String aoatAlgorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getAlgorithm();
+            String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_AOAT_SIGNING).getKeyId();
+            String aoatAlgorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_AOAT_SIGNING).getAlgorithm();
             logger.info("Getting or generating AOAT signing key with ID: {}, Algorithm: {}", aoatKeyId, aoatAlgorithm);
             
             RSAKey signingKey;
@@ -429,7 +430,7 @@ public class AuthorizationServerAutoConfiguration {
             
             String issuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("authorization-server");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AUTHORIZATION_SERVER);
                 if (role != null) {
                     issuer = role.getIssuer();
                 }
@@ -442,7 +443,7 @@ public class AuthorizationServerAutoConfiguration {
                 );
             }
             
-            String audience = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("resource-server").getBaseUrl();
+            String audience = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_RESOURCE_SERVER).getBaseUrl();
             
             return new AoatGenerator(
                     signingKey,
@@ -456,7 +457,7 @@ public class AuthorizationServerAutoConfiguration {
         @ConditionalOnMissingBean
         public List<JWK> signingKeys(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
             List<JWK> keys = new ArrayList<>();
-            String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getKeyId();
+            String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_AOAT_SIGNING).getKeyId();
             try {
                 PublicKey publicKey = keyManager.getVerificationKey(aoatKeyId);
                 if (publicKey != null) {
@@ -478,9 +479,9 @@ public class AuthorizationServerAutoConfiguration {
                 String agentJwksEndpoint = null;
                 if (openAgentAuthProperties.getInfrastructures().getServiceDiscovery() != null &&
                     openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices() != null &&
-                    openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent") != null &&
-                    openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent").getBaseUrl() != null) {
-                    agentJwksEndpoint = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent").getBaseUrl() + "/.well-known/jwks.json";
+                    openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AGENT) != null &&
+                    openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AGENT).getBaseUrl() != null) {
+                    agentJwksEndpoint = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AGENT).getBaseUrl() + JWKS_WELL_KNOWN_PATH;
                 }
                 
                 JwksProvider jwksProvider;
@@ -551,8 +552,8 @@ public class AuthorizationServerAutoConfiguration {
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
             logger.info("Creating AuthorizationServer (Framework layer) bean");
-            String verificationKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getKeyId();
-            String algorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getAlgorithm();
+            String verificationKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
+            String algorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getAlgorithm();
             
             try {
                 keyManager.generateKeyPair(KeyAlgorithm.valueOf(algorithm), verificationKeyId);
@@ -595,8 +596,8 @@ public class AuthorizationServerAutoConfiguration {
             String asUserIdpIssuer;
             if (openAgentAuthProperties.getInfrastructures().getJwks() != null
                     && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers() != null
-                    && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp") != null) {
-                asUserIdpIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp").getIssuer();
+                    && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AS_USER_IDP) != null) {
+                asUserIdpIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AS_USER_IDP).getIssuer();
             } else {
                 throw new IllegalStateException(
                     "AS User IDP issuer configuration not found. Please configure open-agent-auth.infrastructure.jwks.consumers.as-user-idp in application.yml");
@@ -605,7 +606,7 @@ public class AuthorizationServerAutoConfiguration {
             String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
             String callbackUrl = null;
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("authorization-server");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AUTHORIZATION_SERVER);
                 if (role != null) {
                     callbackUrl = role.getIssuer();
                 }
@@ -626,7 +627,7 @@ public class AuthorizationServerAutoConfiguration {
         @ConditionalOnMissingBean
         public ConsentPageProvider consentPageProvider() {
             logger.info("Creating ConsentPageProvider bean with DefaultConsentPageProvider for Authorization Server");
-            return new DefaultConsentPageProvider("oauth2/aoa_consent");
+            return new DefaultConsentPageProvider(CONSENT_TEMPLATE_AOA);
         }
     }
 }
