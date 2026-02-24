@@ -15,7 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities;
 
+import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,6 +26,7 @@ import org.springframework.test.context.ContextConfiguration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -33,8 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @SpringBootTest
 @ContextConfiguration
-@EnableConfigurationProperties(WorkloadIdentityProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class WorkloadIdentityPropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -50,7 +56,7 @@ class WorkloadIdentityPropertiesTest {
 
     @Test
     void testGetterSetter() {
-        WorkloadIdentityProperties properties = new WorkloadIdentityProperties();
+        WorkloadIdentityProperties properties = openAgentAuthProperties.getCapabilities().getWorkloadIdentity();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -65,8 +71,7 @@ class WorkloadIdentityPropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = WorkloadIdentityProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.capabilities.workload-identity", annotation.prefix());
+        assertNull(annotation, "WorkloadIdentityProperties should not have @ConfigurationProperties annotation as it is nested within parent properties");
     }
 
     @Test
@@ -86,7 +91,7 @@ class WorkloadIdentityPropertiesTest {
 
     @Test
     void testBoundaryValues() {
-        WorkloadIdentityProperties properties = new WorkloadIdentityProperties();
+        WorkloadIdentityProperties properties = openAgentAuthProperties.getCapabilities().getWorkloadIdentity();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -102,7 +107,7 @@ class WorkloadIdentityPropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        WorkloadIdentityProperties properties1 = new WorkloadIdentityProperties();
+        WorkloadIdentityProperties properties1 = openAgentAuthProperties.getCapabilities().getWorkloadIdentity();
         WorkloadIdentityProperties properties2 = new WorkloadIdentityProperties();
         
         properties1.setEnabled(true);

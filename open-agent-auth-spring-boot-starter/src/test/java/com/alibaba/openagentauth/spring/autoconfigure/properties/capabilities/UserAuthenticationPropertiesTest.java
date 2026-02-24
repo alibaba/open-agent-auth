@@ -15,7 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities;
 
+import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,8 +35,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ContextConfiguration
-@EnableConfigurationProperties(UserAuthenticationProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class UserAuthenticationPropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -63,7 +68,7 @@ class UserAuthenticationPropertiesTest {
 
     @Test
     void testGetterSetter() {
-        UserAuthenticationProperties properties = new UserAuthenticationProperties();
+        UserAuthenticationProperties properties = openAgentAuthProperties.getCapabilities().getUserAuthentication();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -82,8 +87,7 @@ class UserAuthenticationPropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = UserAuthenticationProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.capabilities.user-authentication", annotation.prefix());
+        assertNull(annotation, "UserAuthenticationProperties should not have @ConfigurationProperties annotation as it is nested within parent properties");
     }
 
     @Test
@@ -170,7 +174,7 @@ class UserAuthenticationPropertiesTest {
 
     @Test
     void testBoundaryValues() {
-        UserAuthenticationProperties properties = new UserAuthenticationProperties();
+        UserAuthenticationProperties properties = openAgentAuthProperties.getCapabilities().getUserAuthentication();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -205,7 +209,7 @@ class UserAuthenticationPropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        UserAuthenticationProperties properties1 = new UserAuthenticationProperties();
+        UserAuthenticationProperties properties1 = openAgentAuthProperties.getCapabilities().getUserAuthentication();
         UserAuthenticationProperties properties2 = new UserAuthenticationProperties();
         
         properties1.setEnabled(true);

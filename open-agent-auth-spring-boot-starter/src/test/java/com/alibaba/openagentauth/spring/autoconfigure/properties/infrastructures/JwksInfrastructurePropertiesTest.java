@@ -15,7 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures;
 
+import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,8 +35,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ContextConfiguration
-@EnableConfigurationProperties(JwksInfrastructureProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class JwksInfrastructurePropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -52,7 +57,7 @@ class JwksInfrastructurePropertiesTest {
 
     @Test
     void testGetterSetter() {
-        JwksInfrastructureProperties properties = new JwksInfrastructureProperties();
+        JwksInfrastructureProperties properties = openAgentAuthProperties.getInfrastructures().getJwks();
         
         JwksProviderProperties provider = new JwksProviderProperties();
         provider.setEnabled(false);
@@ -73,8 +78,7 @@ class JwksInfrastructurePropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = JwksInfrastructureProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.infrastructures.jwks", annotation.prefix());
+        assertNull(annotation, "JwksInfrastructureProperties should not have @ConfigurationProperties annotation as it is nested within OpenAgentAuthProperties");
     }
 
     @Test
@@ -87,7 +91,7 @@ class JwksInfrastructurePropertiesTest {
 
     @Test
     void testMultipleConsumers() {
-        JwksInfrastructureProperties properties = new JwksInfrastructureProperties();
+        JwksInfrastructureProperties properties = openAgentAuthProperties.getInfrastructures().getJwks();
         
         Map<String, JwksConsumerProperties> consumers = new HashMap<>();
         
@@ -110,7 +114,7 @@ class JwksInfrastructurePropertiesTest {
 
     @Test
     void testBoundaryValues() {
-        JwksInfrastructureProperties properties = new JwksInfrastructureProperties();
+        JwksInfrastructureProperties properties = openAgentAuthProperties.getInfrastructures().getJwks();
         
         properties.getProvider().setEnabled(true);
         assertTrue(properties.getProvider().isEnabled());
@@ -126,7 +130,7 @@ class JwksInfrastructurePropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        JwksInfrastructureProperties properties1 = new JwksInfrastructureProperties();
+        JwksInfrastructureProperties properties1 = openAgentAuthProperties.getInfrastructures().getJwks();
         JwksInfrastructureProperties properties2 = new JwksInfrastructureProperties();
         
         properties1.getProvider().setEnabled(false);
@@ -141,7 +145,7 @@ class JwksInfrastructurePropertiesTest {
 
     @Test
     void testSetConsumersWithNull() {
-        JwksInfrastructureProperties properties = new JwksInfrastructureProperties();
+        JwksInfrastructureProperties properties = openAgentAuthProperties.getInfrastructures().getJwks();
         
         Map<String, JwksConsumerProperties> consumers = new HashMap<>();
         consumers.put("test", new JwksConsumerProperties());

@@ -15,7 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities;
 
+import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,8 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @SpringBootTest
 @ContextConfiguration
-@EnableConfigurationProperties(OperationAuthorizationProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class OperationAuthorizationPropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -69,7 +74,7 @@ class OperationAuthorizationPropertiesTest {
 
     @Test
     void testGetterSetter() {
-        OperationAuthorizationProperties properties = new OperationAuthorizationProperties();
+        OperationAuthorizationProperties properties = openAgentAuthProperties.getCapabilities().getOperationAuthorization();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -94,8 +99,7 @@ class OperationAuthorizationPropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = OperationAuthorizationProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.capabilities.operation-authorization", annotation.prefix());
+        assertNull(annotation, "OperationAuthorizationProperties should not have @ConfigurationProperties annotation as it is nested within parent properties");
     }
 
     @Test
@@ -207,7 +211,7 @@ class OperationAuthorizationPropertiesTest {
 
     @Test
     void testBoundaryValues() {
-        OperationAuthorizationProperties properties = new OperationAuthorizationProperties();
+        OperationAuthorizationProperties properties = openAgentAuthProperties.getCapabilities().getOperationAuthorization();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -240,7 +244,7 @@ class OperationAuthorizationPropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        OperationAuthorizationProperties properties1 = new OperationAuthorizationProperties();
+        OperationAuthorizationProperties properties1 = openAgentAuthProperties.getCapabilities().getOperationAuthorization();
         OperationAuthorizationProperties properties2 = new OperationAuthorizationProperties();
         
         properties1.setEnabled(true);

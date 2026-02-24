@@ -15,7 +15,7 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesProperties;
 
 /**
  * Audit capability properties.
@@ -23,6 +23,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * This class defines configuration for the Audit capability,
  * which provides audit logging functionality for tracking security events,
  * user actions, and system operations across the Open Agent Auth framework.
+ * </p>
+ * <p>
+ * This class is not independently bound via {@code @ConfigurationProperties}.
+ * Instead, it is nested within {@link CapabilitiesProperties} and bound as part of
+ * the {@code open-agent-auth.capabilities.audit} prefix through the parent class hierarchy.
  * </p>
  * <p>
  * <b>Configuration Example:</b></p>
@@ -41,7 +46,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @since 2.0
  * @see AuditEndpointsProperties
  */
-@ConfigurationProperties(prefix = "open-agent-auth.capabilities.audit")
 public class AuditProperties {
 
     /**

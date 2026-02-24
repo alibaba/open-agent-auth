@@ -15,7 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures;
 
+import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,8 +35,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ContextConfiguration
-@EnableConfigurationProperties(KeyManagementProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class KeyManagementPropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -48,7 +53,7 @@ class KeyManagementPropertiesTest {
 
     @Test
     void testGetterSetter() {
-        KeyManagementProperties properties = new KeyManagementProperties();
+        KeyManagementProperties properties = openAgentAuthProperties.getInfrastructures().getKeyManagement();
         
         Map<String, KeyProviderProperties> providers = new HashMap<>();
         KeyProviderProperties provider = new KeyProviderProperties();
@@ -73,13 +78,12 @@ class KeyManagementPropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = KeyManagementProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.infrastructures.key-management", annotation.prefix());
+        assertNull(annotation, "KeyManagementProperties should not have @ConfigurationProperties annotation as it is nested within OpenAgentAuthProperties");
     }
 
     @Test
     void testNestedProperties() {
-        KeyManagementProperties properties = new KeyManagementProperties();
+        KeyManagementProperties properties = openAgentAuthProperties.getInfrastructures().getKeyManagement();
         
         assertNotNull(properties.getProviders());
         assertNotNull(properties.getKeys());
@@ -87,7 +91,7 @@ class KeyManagementPropertiesTest {
 
     @Test
     void testMultipleProviders() {
-        KeyManagementProperties properties = new KeyManagementProperties();
+        KeyManagementProperties properties = openAgentAuthProperties.getInfrastructures().getKeyManagement();
         
         Map<String, KeyProviderProperties> providers = new HashMap<>();
         
@@ -108,7 +112,7 @@ class KeyManagementPropertiesTest {
 
     @Test
     void testMultipleKeys() {
-        KeyManagementProperties properties = new KeyManagementProperties();
+        KeyManagementProperties properties = openAgentAuthProperties.getInfrastructures().getKeyManagement();
         
         Map<String, KeyDefinitionProperties> keys = new HashMap<>();
         
@@ -133,7 +137,7 @@ class KeyManagementPropertiesTest {
 
     @Test
     void testBoundaryValues() {
-        KeyManagementProperties properties = new KeyManagementProperties();
+        KeyManagementProperties properties = openAgentAuthProperties.getInfrastructures().getKeyManagement();
         
         properties.setProviders(new HashMap<>());
         assertTrue(properties.getProviders().isEmpty());
@@ -150,7 +154,7 @@ class KeyManagementPropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        KeyManagementProperties properties1 = new KeyManagementProperties();
+        KeyManagementProperties properties1 = openAgentAuthProperties.getInfrastructures().getKeyManagement();
         KeyManagementProperties properties2 = new KeyManagementProperties();
         
         Map<String, KeyProviderProperties> providers = new HashMap<>();
@@ -168,7 +172,7 @@ class KeyManagementPropertiesTest {
 
     @Test
     void testKeyProviderRelationship() {
-        KeyManagementProperties properties = new KeyManagementProperties();
+        KeyManagementProperties properties = openAgentAuthProperties.getInfrastructures().getKeyManagement();
         
         Map<String, KeyProviderProperties> providers = new HashMap<>();
         KeyProviderProperties provider = new KeyProviderProperties();

@@ -15,7 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities;
 
+import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,8 +32,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ContextConfiguration
-@EnableConfigurationProperties(AuditProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class AuditPropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -47,7 +52,7 @@ class AuditPropertiesTest {
 
     @Test
     void testGetterSetter() {
-        AuditProperties properties = new AuditProperties();
+        AuditProperties properties = openAgentAuthProperties.getCapabilities().getAudit();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -65,8 +70,7 @@ class AuditPropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = AuditProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.capabilities.audit", annotation.prefix());
+        assertNull(annotation, "AuditProperties should not have @ConfigurationProperties annotation as it is nested within parent properties");
     }
 
     @Test
@@ -83,7 +87,7 @@ class AuditPropertiesTest {
 
     @Test
     void testBoundaryValues() {
-        AuditProperties properties = new AuditProperties();
+        AuditProperties properties = openAgentAuthProperties.getCapabilities().getAudit();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -105,7 +109,7 @@ class AuditPropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        AuditProperties properties1 = new AuditProperties();
+        AuditProperties properties1 = openAgentAuthProperties.getCapabilities().getAudit();
         AuditProperties properties2 = new AuditProperties();
         
         properties1.setEnabled(true);
@@ -132,7 +136,7 @@ class AuditPropertiesTest {
 
     @Test
     void testProviderValues() {
-        AuditProperties properties = new AuditProperties();
+        AuditProperties properties = openAgentAuthProperties.getCapabilities().getAudit();
         
         properties.setProvider("logging");
         assertEquals("logging", properties.getProvider());

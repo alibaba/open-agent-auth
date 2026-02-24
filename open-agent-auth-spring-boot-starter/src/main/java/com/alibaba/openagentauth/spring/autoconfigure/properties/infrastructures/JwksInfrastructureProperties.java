@@ -15,7 +15,6 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import java.util.HashMap;
@@ -26,6 +25,11 @@ import java.util.Map;
  * <p>
  * This class defines configuration for the JWKS (JSON Web Key Set) infrastructure,
  * which provides key management for JWT token validation and signing.
+ * </p>
+ * <p>
+ * This class is not independently bound via {@code @ConfigurationProperties}.
+ * Instead, it is nested within {@link com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties}
+ * and bound as part of the {@code open-agent-auth.infrastructures.jwks} prefix through the parent class.
  * </p>
  * <p>
  * The infrastructure consists of two main components:
@@ -53,7 +57,6 @@ import java.util.Map;
  * @see JwksProviderProperties
  * @see JwksConsumerProperties
  */
-@ConfigurationProperties(prefix = "open-agent-auth.infrastructures.jwks")
 public class JwksInfrastructureProperties {
 
     /**

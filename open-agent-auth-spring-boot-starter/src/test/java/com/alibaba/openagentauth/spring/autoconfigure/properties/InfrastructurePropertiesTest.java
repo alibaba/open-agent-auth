@@ -15,10 +15,12 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties;
 
+import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksInfrastructureProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyManagementProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.ServiceDiscoveryProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,8 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @since 2.0
  */
 @SpringBootTest(classes = TestConfiguration.class)
-@EnableConfigurationProperties(InfrastructureProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class InfrastructurePropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -49,7 +54,7 @@ class InfrastructurePropertiesTest {
 
     @Test
     void testGetterSetter() {
-        InfrastructureProperties properties = new InfrastructureProperties();
+        InfrastructureProperties properties = openAgentAuthProperties.getInfrastructures();
         
         String trustDomain = "wimse://custom.trust.domain";
         properties.setTrustDomain(trustDomain);
@@ -70,7 +75,7 @@ class InfrastructurePropertiesTest {
 
     @Test
     void testNestedProperties() {
-        InfrastructureProperties properties = new InfrastructureProperties();
+        InfrastructureProperties properties = openAgentAuthProperties.getInfrastructures();
         
         assertNotNull(properties.getKeyManagement().getProviders());
         assertNotNull(properties.getKeyManagement().getKeys());
@@ -84,13 +89,12 @@ class InfrastructurePropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = InfrastructureProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.infrastructures", annotation.prefix());
+        assertNull(annotation, "InfrastructureProperties should not have @ConfigurationProperties annotation as it is nested within OpenAgentAuthProperties");
     }
 
     @Test
     void testBoundaryValues() {
-        InfrastructureProperties properties = new InfrastructureProperties();
+        InfrastructureProperties properties = openAgentAuthProperties.getInfrastructures();
         
         properties.setTrustDomain("");
         assertEquals("", properties.getTrustDomain());
@@ -104,7 +108,7 @@ class InfrastructurePropertiesTest {
 
     @Test
     void testNotNullConstraints() {
-        InfrastructureProperties properties = new InfrastructureProperties();
+        InfrastructureProperties properties = openAgentAuthProperties.getInfrastructures();
         
         assertNotNull(properties.getTrustDomain());
         assertNotNull(properties.getKeyManagement());
@@ -114,7 +118,7 @@ class InfrastructurePropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        InfrastructureProperties properties1 = new InfrastructureProperties();
+        InfrastructureProperties properties1 = openAgentAuthProperties.getInfrastructures();
         InfrastructureProperties properties2 = new InfrastructureProperties();
         
         properties1.setTrustDomain("wimse://domain1");
@@ -126,7 +130,7 @@ class InfrastructurePropertiesTest {
 
     @Test
     void testTrustDomainFormat() {
-        InfrastructureProperties properties = new InfrastructureProperties();
+        InfrastructureProperties properties = openAgentAuthProperties.getInfrastructures();
         
         String validDomain = "wimse://example.trust.domain";
         properties.setTrustDomain(validDomain);

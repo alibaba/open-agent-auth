@@ -15,7 +15,7 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesProperties;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +26,11 @@ import java.util.List;
  * This class defines configuration for the OAuth 2.0 Authorization Server capability,
  * which provides OAuth 2.0 authorization flows including authorization code, client credentials,
  * and other grant types.
+ * </p>
+ * <p>
+ * This class is not independently bound via {@code @ConfigurationProperties}.
+ * Instead, it is nested within {@link CapabilitiesProperties} and bound as part of
+ * the {@code open-agent-auth.capabilities.oauth2-server} prefix through the parent class hierarchy.
  * </p>
  * <p>
  * <b>Configuration Example:</b></p>
@@ -70,7 +75,6 @@ import java.util.List;
  * @see OAuth2TokenProperties
  * @see AutoRegisterClientsProperties
  */
-@ConfigurationProperties(prefix = "open-agent-auth.capabilities.oauth2-server")
 public class OAuth2ServerProperties {
 
     /**
