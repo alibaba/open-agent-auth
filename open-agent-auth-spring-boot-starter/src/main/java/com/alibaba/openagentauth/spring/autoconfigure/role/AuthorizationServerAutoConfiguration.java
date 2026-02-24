@@ -16,7 +16,8 @@
 package com.alibaba.openagentauth.spring.autoconfigure.role;
 
 import com.alibaba.openagentauth.core.audit.api.AuditService;
-import com.alibaba.openagentauth.core.audit.factory.AuditFactory;
+import com.alibaba.openagentauth.core.audit.impl.DefaultAuditService;
+import com.alibaba.openagentauth.core.audit.impl.InMemoryAuditStorage;
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
 import com.alibaba.openagentauth.core.binding.InMemoryBindingInstanceStore;
 import com.alibaba.openagentauth.core.crypto.jwk.JwksProvider;
@@ -34,8 +35,8 @@ import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.DefaultOAuth2Dc
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.InMemoryOAuth2DcrClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParRequestValidator;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParServer;
+import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParRequestValidator;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParRequestValidator;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.store.InMemoryOAuth2ParRequestStore;
@@ -71,6 +72,7 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures
 import com.alibaba.openagentauth.spring.util.DefaultServiceEndpointResolver;
 import com.alibaba.openagentauth.spring.web.controller.OAuth2CallbackController;
 import com.alibaba.openagentauth.spring.web.provider.DefaultConsentPageProvider;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
@@ -80,14 +82,15 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
@@ -98,67 +101,20 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Auto-configuration for Authorization Server role.
+ * Auto-configuration for the Authorization Server role.
  * <p>
- * This configuration provides automatic setup for the Authorization Server role,
- * which is responsible for handling OAuth 2.0 authorization flows and issuing Agent OA Tokens.
+ * This configuration class sets up all the necessary beans for running an OAuth 2.0 Authorization Server
+ * with support for Agent Operation Authorization (AOA) and Agent Operation Authorization Token (AOAT).
  * </p>
  * <p>
- * <b>Role Identification:</b></p>
- * <p>
- * Enable this configuration by setting:
- * </p>
+ * This configuration is automatically enabled when the following property is set:
  * <pre>
- * open-agent-auth:
- *   roles:
- *     authorization-server:
- *       enabled: true
+ * open-agent-auth.roles.authorization-server.enabled=true
  * </pre>
- * <p>
- * This role is typically used in scenarios where:
  * </p>
- * <ul>
- *   <li>Your application manages the OAuth 2.0 authorization flow for AI Agent operations</li>
- *   <li>You need to issue Agent OA Tokens that grant access to resources</li>
- *   <li>You want to provide fine-grained access control for AI Agent operations</li>
- * </ul>
- * <p>
- * <b>Configuration Example:</b></p>
- * <pre>
- * open-agent-auth:
- *   enabled: true
- *   roles:
- *     authorization-server:
- *       enabled: true
- *       instance-id: authz-server-1
- *       issuer: https://authorization-server.example.com
- *       capabilities:
- *         - oauth2-server
- *         - operation-authorization
- *   capabilities:
- *     oauth2-server:
- *       enabled: true
- *       par:
- *         enabled: true
- *       token:
- *         access-token-expiry: 3600
- * </pre>
- * <p>
- * <b>Provided Beans:</b></p>
- * <ul>
- *   <li><code>parRequestStore</code>: Storage for PAR requests</li>
- *   <li><code>parRequestValidator</code>: Validator for PAR requests</li>
- *   <li><code>parServer</code>: PAR server implementation</li>
- *   <li><code>authorizationCodeStorage</code>: Storage for authorization codes</li>
- *   <li><code>authorizationServer</code>: OAuth 2.0 authorization server implementation</li>
- *   <li><code>tokenServer</code>: OAuth 2.0 token server implementation</li>
- *   <li><code>dcrServer</code>: DCR server implementation (requires custom implementation)</li>
- * </ul>
  *
- * @see CoreAutoConfiguration
- * @see AgentIdpAutoConfiguration
- * @see ResourceServerAutoConfiguration
- * @since 1.0
+ * @author Open Agent Auth Team
+ * @since 1.0.0
  */
 @AutoConfiguration(after = CoreAutoConfiguration.class)
 @EnableConfigurationProperties({OpenAgentAuthProperties.class})
@@ -166,622 +122,9 @@ import java.util.Map;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class AuthorizationServerAutoConfiguration {
 
-    private static final Logger logger = LoggerFactory.getLogger(AuthorizationServerAutoConfiguration.class);
-
-
-    /**
-     * Creates the PAR Request Store bean if not already defined.
-     * <p>
-     * This storage provides storage for PAR requests.
-     * The default implementation uses in-memory storage.
-     * </p>
-     *
-     * @return the PAR Request Store bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2ParRequestStore parRequestStore() {
-        logger.info("Creating OAuth2ParRequestStore bean");
-        return new InMemoryOAuth2ParRequestStore();
-    }
-
-    /**
-     * Creates the Audit Service bean if not already defined.
-     * <p>
-     * This service provides audit logging functionality for authorization events.
-     * The default implementation uses in-memory storage for audit events.
-     * </p>
-     *
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the Audit Service bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "open-agent-auth.capabilities.audit", name = "enabled", havingValue = "true")
-    public AuditService auditService(OpenAgentAuthProperties openAgentAuthProperties) {
-        // Audit is no longer a separate capability, it's integrated into operation authorization
-        // For now, we'll create the audit service if operation authorization is enabled
-        if (openAgentAuthProperties.getCapabilities().getOperationAuthorization().isEnabled()) {
-            logger.info("Creating AuditService bean with in-memory storage");
-            return AuditFactory.createInMemoryAuditService();
-        }
-        logger.info("Audit functionality is disabled, skipping AuditService bean creation");
-        return null;
-    }
-
-    /**
-     * Creates the PAR Server bean if not already defined.
-     * <p>
-     * This server provides PAR endpoint for processing PAR requests.
-     * Note: OAuth2ParRequestValidator is created as a local variable since it's a stateless validator.
-     * </p>
-     *
-     * @param parRequestStore the PAR request store
-     * @return the PAR Server bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2ParServer parServer(OAuth2ParRequestStore parRequestStore) {
-        logger.info("Creating OAuth2ParServer bean");
-        OAuth2ParRequestValidator validator = new DefaultOAuth2ParRequestValidator();
-        return new DefaultOAuth2ParServer(parRequestStore, validator);
-    }
-
-    /**
-     * Creates the Authorization Code Storage bean if not already defined.
-     * <p>
-     * This storage provides storage for authorization codes.
-     * The default implementation uses in-memory storage.
-     * </p>
-     *
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the Authorization Code Storage bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2AuthorizationCodeStorage authorizationCodeStorage(OpenAgentAuthProperties openAgentAuthProperties) {
-        logger.info("Creating OAuth2AuthorizationCodeStorage bean");
-        return new InMemoryOAuth2AuthorizationCodeStorage(openAgentAuthProperties.getCapabilities().getOAuth2Server().getToken().getAuthorizationCodeExpiry());
-    }
-
-    /**
-     * Creates the Authorization Server bean if not already defined.
-     * <p>
-     * This server provides OAuth 2.0 authorization endpoint for processing authorization requests.
-     * </p>
-     *
-     * @param authorizationCodeStorage the authorization code storage
-     * @param parServer the PAR server
-     * @param dcrClientStore the DCR client store
-     * @return the Authorization Server bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2AuthorizationServer authorizationServer(
-            OAuth2AuthorizationCodeStorage authorizationCodeStorage,
-            OAuth2ParServer parServer,
-            OAuth2DcrClientStore dcrClientStore) {
-        logger.info("Creating OAuth2AuthorizationServer bean");
-        return new DefaultOAuth2AuthorizationServer(authorizationCodeStorage, parServer, dcrClientStore);
-    }
-
-    /**
-     * Creates the Token Server bean if not already defined.
-     * <p>
-     * This server provides OAuth 2.0 token endpoint for issuing access tokens.
-     * </p>
-     *
-     * @param authorizationCodeStorage the authorization code storage
-     * @param tokenGenerator the token generator
-     * @return the Token Server bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2TokenServer tokenServer(
-            OAuth2AuthorizationCodeStorage authorizationCodeStorage,
-            TokenGenerator tokenGenerator) {
-        logger.info("Creating OAuth2TokenServer bean");
-        return new DefaultOAuth2TokenServer(authorizationCodeStorage, tokenGenerator);
-    }
-
-    /**
-     * Creates the DCR Server bean if not already defined.
-     * <p>
-     * This server provides OAuth 2.0 DCR endpoint for dynamic client registration.
-     * </p>
-     *
-     * @param dcrClientStore the DCR client store
-     * @return the DCR Server bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2DcrServer dcrServer(OAuth2DcrClientStore dcrClientStore) {
-        logger.info("Creating OAuth2DcrServer bean");
-        // Note: WIMSE authenticator should be configured separately in production
-        // For development/testing, we use an empty authenticator list
-        return new DefaultOAuth2DcrServer(dcrClientStore);
-    }
-
-    /**
-     * Creates the DCR Client Store bean if not already defined.
-     * <p>
-     * This store provides storage for DCR client registrations.
-     * The default implementation uses in-memory storage.
-     * </p>
-     *
-     * @return the DCR Client Store bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2DcrClientStore dcrClientStore() {
-        logger.info("Creating OAuth2DcrClientStore bean");
-        return new InMemoryOAuth2DcrClientStore();
-    }
-
-    /**
-     * Creates the AOAT Token Generator bean if not already defined.
-     * <p>
-     * This generator provides AOAT token generation for Agent Operation Authorization Tokens.
-     * </p>
-     *
-     * @param policyRegistry the policy registry
-     * @param aoatGenerator the AOAT generator
-     * @param vcVerifier the VC verifier
-     * @param bindingInstanceStore the binding instance store
-     * @param promptDecryptionService the prompt decryption service (optional)
-     * @return the AOAT Token Generator bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public AoatTokenGenerator aoatTokenGenerator(
-            PolicyRegistry policyRegistry,
-            AoatGenerator aoatGenerator,
-            VcVerifier vcVerifier,
-            BindingInstanceStore bindingInstanceStore,
-            PromptDecryptionService promptDecryptionService) {
-        logger.info("Creating AoatTokenGenerator bean");
-        return new DefaultAoatTokenGenerator(
-                aoatGenerator,
-                vcVerifier,
-                policyRegistry,
-                bindingInstanceStore,
-                promptDecryptionService,
-                3600 // Default expiration: 1 hour
-        );
-    }
-
-    /**
-     * Creates the Token Generator bean if not already defined.
-     * <p>
-     * This generator provides token generation for access tokens.
-     * It uses the AOAT Token Generator adapter for Agent Operation Authorization Tokens.
-     * </p>
-     *
-     * @param aoatTokenGenerator the AOAT token generator
-     * @param parServer the PAR server
-     * @return the Token Generator bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public TokenGenerator tokenGenerator(AoatTokenGenerator aoatTokenGenerator, OAuth2ParServer parServer) {
-        logger.info("Creating TokenGenerator bean");
-        return new AoatTokenGeneratorAdapter(aoatTokenGenerator, parServer);
-    }
-
-    /**
-     * Creates the AOAT Generator bean if not already defined.
-     * <p>
-     * This generator provides AOAT signing and serialization capabilities.
-     * </p>
-     *
-     * @param keyManager the key manager
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the AOAT Generator bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public AoatGenerator aoatGenerator(
-            KeyManager keyManager,
-            OpenAgentAuthProperties openAgentAuthProperties) {
-        logger.info("Creating AoatGenerator bean");
-        
-        // Generate or get RSA signing key from KeyManager
-        String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getKeyId();
-        String aoatAlgorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getAlgorithm();
-        logger.info("Getting or generating AOAT signing key with ID: {}, Algorithm: {}", aoatKeyId, aoatAlgorithm);
-        
-        RSAKey signingKey;
-        try {
-            KeyAlgorithm keyAlgorithm = KeyAlgorithm.valueOf(aoatAlgorithm);
-            Object signingJwk = keyManager.getOrGenerateKey(aoatKeyId, keyAlgorithm);
-            if (signingJwk instanceof RSAKey) {
-                signingKey = (RSAKey) signingJwk;
-            } else {
-                logger.error("Expected RSAKey but got: {}", signingJwk.getClass());
-                throw new RuntimeException("Expected RSAKey for AOAT signing");
-            }
-            logger.info("AOAT signing key ready. Key ID: {}", aoatKeyId);
-        } catch (KeyManagementException e) {
-            logger.error("Failed to get or generate AOAT signing key", e);
-            throw new RuntimeException("Failed to initialize AOAT signing key", e);
-        }
-        
-        // Get issuer from roles configuration
-        String issuer = null;
-        if (openAgentAuthProperties.getRoles() != null) {
-            var role = openAgentAuthProperties.getRoles().get("authorization-server");
-            if (role != null) {
-                issuer = role.getIssuer();
-            }
-        }
-
-        if (ValidationUtils.isNullOrEmpty(issuer)) {
-            throw new IllegalStateException(
-                "Authorization Server issuer is not configured. Please set 'open-agent-auth.roles.authorization-server.issuer' in your configuration. " +
-                "This is a required configuration for AOAT generation."
-            );
-        }
-        
-        // AOAT audience should be the Resource Server's identifier (issuer)
-        // According to OAuth 2.0, the audience (aud) claim identifies the intended recipient(s) of the token
-        String audience = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("resource-server").getBaseUrl();
-        
-        return new AoatGenerator(
-                signingKey,
-                com.nimbusds.jose.JWSAlgorithm.parse(aoatAlgorithm),
-                issuer,
-                audience
-        );
-    }
-
-    /**
-     * Creates the Policy Registry bean if not already defined.
-     * <p>
-     * This registry provides storage for policies.
-     * The default implementation uses in-memory storage.
-     * </p>
-     *
-     * @return the Policy Registry bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public PolicyRegistry policyRegistry() {
-        logger.info("Creating PolicyRegistry bean");
-        return new InMemoryPolicyRegistry();
-    }
-
-    /**
-     * Creates the ServiceEndpointResolver bean.
-     * <p>
-     * This resolver is used to resolve service endpoints for different services.
-     * </p>
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public ServiceEndpointResolver serviceEndpointResolver(OpenAgentAuthProperties openAgentAuthProperties) {
-        // Convert new architecture service discovery to legacy ServiceProperties format
-        ServiceProperties serviceProperties = new ServiceProperties();
-        
-        // Map service discovery services to consumer services
-        Map<String, ServiceProperties.ConsumerServiceProperties> consumers = new HashMap<>();
-        if (openAgentAuthProperties.getInfrastructures().getServiceDiscovery() != null
-                && openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices() != null) {
-            openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().forEach((name, service) -> {
-                ServiceProperties.ConsumerServiceProperties consumer = new ServiceProperties.ConsumerServiceProperties();
-                consumer.setBaseUrl(service.getBaseUrl());
-                consumer.setEndpoints(service.getEndpoints());
-                consumers.put(name, consumer);
-            });
-        }
-        serviceProperties.setConsumers(consumers);
-        
-        return new DefaultServiceEndpointResolver(serviceProperties);
-    }
-
-    /**
-     * Creates the Session Mapping Store bean if not already defined.
-     * <p>
-     * This store provides the underlying storage for session mappings.
-     * Default implementation uses in-memory storage.
-     * </p>
-     *
-     * @return the Session Mapping Store bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public SessionMappingStore sessionMappingStore() {
-        logger.info("Creating SessionMappingStore bean");
-        return new InMemorySessionMappingStore();
-    }
-
-    /**
-     * Creates the Session Mapping Business Service bean if not already defined.
-     * <p>
-     * This service provides business logic for session mapping operations.
-     * It coordinates between the session mapping store and other components.
-     * </p>
-     *
-     * @param sessionMappingStore the session mapping store
-     * @return the Session Mapping Business Service bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public SessionMappingBizService sessionMappingBizService(SessionMappingStore sessionMappingStore) {
-        logger.info("Creating SessionMappingBizService bean for Authorization Server");
-        return new SessionMappingBizService(sessionMappingStore);
-    }
-
-    /**
-     * Creates the Binding Instance Store bean if not already defined.
-     * <p>
-     * This store provides storage for binding instances that establish
-     * the relationship between user identities and workload identities.
-     * The default implementation uses in-memory storage.
-     * </p>
-     *
-     * @return the Binding Instance Store bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public BindingInstanceStore bindingInstanceStore() {
-        logger.info("Creating BindingInstanceStore bean");
-        return new InMemoryBindingInstanceStore();
-    }
-
-    /**
-     * Creates the User Authentication Interceptor bean if not already defined.
-     * <p>
-     * This interceptor provides user authentication for the OAuth 2.0 authorization flow.
-     * It uses AS User IDP for authentication.
-     * </p>
-     *
-     * @param sessionMappingBizService the session mapping business service
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the User Authentication Interceptor bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public UserAuthenticationInterceptor userAuthenticationInterceptor(
-            SessionMappingBizService sessionMappingBizService,
-            OpenAgentAuthProperties openAgentAuthProperties
-    ) {
-        logger.info("Creating UserAuthenticationInterceptor bean with AsUserIdpUserAuthInterceptor");
-        
-        // Get AS User IDP configuration
-        String asUserIdpIssuer;
-        if (openAgentAuthProperties.getInfrastructures().getJwks() != null
-                && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers() != null
-                && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp") != null) {
-            asUserIdpIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp").getIssuer();
-        } else {
-            throw new IllegalStateException(
-                "AS User IDP issuer configuration not found. Please configure open-agent-auth.infrastructure.jwks.consumers.as-user-idp in application.yml");
-        }
-
-        String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
-        
-        // Get issuer from roles configuration
-        String callbackUrl = null;
-        if (openAgentAuthProperties.getRoles() != null) {
-            var role = openAgentAuthProperties.getRoles().get("authorization-server");
-            if (role != null) {
-                callbackUrl = role.getIssuer();
-            }
-        }
-        
-        // Use excluded paths from oauth2-client.authentication.exclude-paths
-        // This configuration already has default values, so users don't need to configure it explicitly
-        List<String> excludedPaths = openAgentAuthProperties.getCapabilities().getOAuth2Client().getAuthentication().getExcludePaths();
-        
-        logger.debug("Using excluded paths: {}", excludedPaths);
-        
-        return new AsUserIdpUserAuthInterceptor(
-                sessionMappingBizService,
-                excludedPaths,
-                asUserIdpIssuer,
-                clientId,
-                callbackUrl + "/callback");
-    }
-
-    /**
-     * Creates the Consent Page Provider bean if not already defined.
-     * <p>
-     * This provider provides rendering and handling of the user consent page
-     * for the Agent Operation Authorization flow. The default implementation uses
-     * a Thymeleaf template located at {@code oauth2/aoa_consent}.
-     * </p>
-     *
-     * @return the Consent Page Provider bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public ConsentPageProvider consentPageProvider() {
-        logger.info("Creating ConsentPageProvider bean with DefaultConsentPageProvider for Authorization Server");
-        return new DefaultConsentPageProvider("oauth2/aoa_consent");
-    }
-
-
-
-    /**
-     * Creates the OAuth2TokenClient bean for user authentication flow with AS User IDP.
-     * <p>
-     * This client is used to exchange authorization codes for access tokens
-     * in the user authentication flow with AS User IDP.
-     * </p>
-     *
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the OAuth2TokenClient bean for user authentication
-     */
-    @Bean(name = "userAuthenticationTokenClient")
-    @ConditionalOnMissingBean(name = "userAuthenticationTokenClient")
-    public OAuth2TokenClient userAuthenticationTokenClient(
-            OpenAgentAuthProperties openAgentAuthProperties,
-            ServiceEndpointResolver serviceEndpointResolver) {
-        logger.info("Creating userAuthenticationTokenClient bean for Authorization Server role");
-        
-        // Debug: log configuration binding status
-        logger.debug("OpenAgentAuthProperties.getInfrastructure().getJwks() = {}", openAgentAuthProperties.getInfrastructures().getJwks());
-        if (openAgentAuthProperties.getInfrastructures().getJwks() != null) {
-            logger.debug("Consumers = {}", openAgentAuthProperties.getInfrastructures().getJwks().getConsumers());
-            logger.debug("Consumers.keySet() = {}", 
-                openAgentAuthProperties.getInfrastructures().getJwks() != null ?
-                openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().keySet() : "null");
-        }
-        
-        // Get AS User IDP configuration
-        String asUserIdpUrl = null;
-        if (openAgentAuthProperties.getInfrastructures().getJwks() != null &&
-            openAgentAuthProperties.getInfrastructures().getJwks().getConsumers() != null) {
-            JwksConsumerProperties asUserIdpConfig = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp");
-            logger.debug("asUserIdpConfig = {}", asUserIdpConfig);
-            if (asUserIdpConfig != null) {
-                asUserIdpUrl = asUserIdpConfig.getIssuer();
-                logger.debug("asUserIdpUrl = {}", asUserIdpUrl);
-            }
-        }
-        
-        if (asUserIdpUrl == null || asUserIdpUrl.isBlank()) {
-            logger.error("AS User IDP configuration not found in open-agent-auth.infrastructure.jwks.consumers.as-user-idp");
-            logger.error("Available consumer keys: {}", 
-                openAgentAuthProperties.getInfrastructures().getJwks() != null && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers() != null ?
-                openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().keySet() : "null");
-            throw new IllegalStateException(
-                "AS User IDP configuration not found. Please configure open-agent-auth.infrastructure.jwks.consumers.as-user-idp in application.yml"
-            );
-        }
-
-        String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
-        String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientSecret();
-        
-        if (clientId == null || clientId.isBlank()) {
-            throw new IllegalStateException(
-                "OAuth client ID is not configured. Please set 'open-agent-auth.capabilities.oauth2-client.callback.client-id' in your configuration. " +
-                "This is a required configuration for OAuth 2.0 token exchange."
-            );
-        }
-        
-        logger.info("Creating userAuthenticationTokenClient bean with clientId: {}", clientId);
-        return new DefaultOAuth2TokenClient(serviceEndpointResolver, "as-user-idp", clientId, clientSecret);
-    }
-
-    /**
-     * Creates the OAuth2TokenClient bean for agent operation authorization flow.
-     * <p>
-     * This client is used to exchange authorization codes for access tokens
-     * in the agent operation authorization flow with Authorization Server.
-     * For authorization-server role, this client points to itself to handle callbacks.
-     * </p>
-     *
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the OAuth2TokenClient bean for agent operation authorization
-     */
-    @Bean(name = "agentOperationAuthorizationTokenClient")
-    @ConditionalOnMissingBean(name = "agentOperationAuthorizationTokenClient")
-    public OAuth2TokenClient agentOperationAuthorizationTokenClient(
-            OpenAgentAuthProperties openAgentAuthProperties,
-            ServiceEndpointResolver serviceEndpointResolver) {
-        logger.info("Creating agentOperationAuthorizationTokenClient bean for Authorization Server role");
-        
-        // For authorization-server role, this client points to itself
-        // This is needed for OAuth2CallbackController to handle agent operation authorization flow callbacks
-        String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
-        String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientSecret();
-        
-        if (clientId == null || clientId.isBlank()) {
-            throw new IllegalStateException(
-                "OAuth client ID is not configured. Please set 'open-agent-auth.server.callback.client-id' in your configuration. " +
-                "This is a required configuration for OAuth 2.0 token exchange."
-            );
-        }
-        
-        logger.info("Creating agentOperationAuthorizationTokenClient bean with clientId: {}", clientId);
-        return new DefaultOAuth2TokenClient(serviceEndpointResolver, "authorization-server", clientId, clientSecret);
-    }
-
-    /**
-     * Creates the OAuth2CallbackService bean for Authorization Server role.
-     * <p>
-     * This service handles OAuth 2.0 authorization code callbacks from the authorization server.
-     * It exchanges the authorization code for an access token and redirects the user to the
-     * application's home page.
-     * </p>
-     *
-     * @param authorizationServerProvider the AuthorizationServer bean (implements FrameworkOAuth2TokenClient)
-     * @param sessionMappingBizService the session mapping business service
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the OAuth2CallbackService bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2CallbackService callbackService(
-            AuthorizationServer authorizationServerProvider,
-            SessionMappingBizService sessionMappingBizService,
-            OpenAgentAuthProperties openAgentAuthProperties
-    ) {
-        logger.info("Creating OAuth2CallbackService bean for Authorization Server role");
-        String callbackEndpoint = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getEndpoint();
-        if (callbackEndpoint == null || callbackEndpoint.isBlank()) {
-            callbackEndpoint = "/callback";
-        }
-        return new OAuth2CallbackService(
-                authorizationServerProvider,
-                sessionMappingBizService,
-                callbackEndpoint
-        );
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2CallbackController oauth2CallbackController(
-            OAuth2CallbackService callbackService,
-            OpenAgentAuthProperties openAgentAuthProperties
-    ) {
-        logger.info("Creating OAuth2CallbackController bean for Authorization Server role");
-        return new OAuth2CallbackController(
-                callbackService,
-                openAgentAuthProperties
-        );
-    }
-
-    /**
-     * Configures the signing keys for JWKS endpoint.
-     * <p>
-     * This bean provides the public keys that should be exposed through the JWKS endpoint
-     * for token verification by other services.
-     * </p>
-     *
-     * @param keyManager the key manager
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the list of signing keys
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public List<JWK> signingKeys(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
-        List<JWK> keys = new ArrayList<>();
-        
-        // Get the public key for JWKS exposure
-        String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getKeyId();
-        try {
-            PublicKey publicKey = keyManager.getVerificationKey(aoatKeyId);
-            if (publicKey != null) {
-                JWK jwk = convertToJWK(publicKey, aoatKeyId);
-                keys.add(jwk);
-            }
-        } catch (Exception e) {
-            logger.error("Failed to get public key for JWKS: {}", aoatKeyId, e);
-        }
-        
-        return keys;
-    }
-
-    /**
-     * Converts a PublicKey to JWK.
-     *
-     * @param publicKey the public key
-     * @param keyId the key ID
-     * @return the JWK
-     */
-    private JWK convertToJWK(PublicKey publicKey, String keyId) {
+    // Package-private static method for converting PublicKey to JWK
+    // Shared by CryptoConfiguration and AuthorizationCoreConfiguration
+    static JWK convertToJWK(PublicKey publicKey, String keyId) {
         if (publicKey instanceof RSAPublicKey) {
             return new RSAKey.Builder((RSAPublicKey) publicKey)
                     .keyID(keyId)
@@ -796,110 +139,494 @@ public class AuthorizationServerAutoConfiguration {
     }
 
     /**
-     * Creates the VC Verifier bean if not already defined.
+     * Configuration for infrastructure-related beans.
      * <p>
-     * This verifier provides verification capabilities for Verifiable Credentials.
-     * Supports both local and remote JWKS providers based on configuration.
+     * This configuration provides beans for service discovery, session management,
+     * and binding instance storage.
      * </p>
-     *
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the VC Verifier bean
      */
-    @Bean
-    @ConditionalOnMissingBean
-    @Lazy
-    public VcVerifier vcVerifier(OpenAgentAuthProperties openAgentAuthProperties) {
-        logger.info("Creating VcVerifier bean");
-        
-        try {
-            // Check if Agent's JWKS endpoint is configured
-            String agentJwksEndpoint = null;
-            if (openAgentAuthProperties.getInfrastructures().getServiceDiscovery() != null &&
-                openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices() != null &&
-                openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent") != null &&
-                openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent").getBaseUrl() != null) {
-                agentJwksEndpoint = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent").getBaseUrl() + "/.well-known/jwks.json";
-            }
-            
-            JwksProvider jwksProvider;
-            if (agentJwksEndpoint != null && !agentJwksEndpoint.isBlank()) {
-                logger.info("Using remote JWKS provider for VcVerifier: {}", agentJwksEndpoint);
-                jwksProvider = new RemoteJwksProvider(agentJwksEndpoint);
-            } else {
-                logger.info("Using local JWKS provider for VcVerifier");
-                // Create a simple JWKS provider that uses the KeyManager
-                jwksProvider = new JwksProvider() {
-                    @Override
-                    public JWKSource<SecurityContext> getJwkSource() {
-                        return (jwkSelector, context) -> new java.util.ArrayList<>();
-                    }
+    @Configuration(proxyBeanMethods = false)
+    static class InfrastructureConfiguration {
 
-                    @Override
-                    public JWKSet getJwkSet() {
-                        return new com.nimbusds.jose.jwk.JWKSet();
-                    }
+        private static final Logger logger = LoggerFactory.getLogger(InfrastructureConfiguration.class);
 
-                    @Override
-                    public void refresh() {
-                        // No-op for simple implementation
-                    }
-                };
+        @Bean
+        @ConditionalOnMissingBean
+        public ServiceEndpointResolver serviceEndpointResolver(OpenAgentAuthProperties openAgentAuthProperties) {
+            ServiceProperties serviceProperties = new ServiceProperties();
+            Map<String, ServiceProperties.ConsumerServiceProperties> consumers = new HashMap<>();
+            if (openAgentAuthProperties.getInfrastructures().getServiceDiscovery() != null
+                    && openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices() != null) {
+                openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().forEach((name, service) -> {
+                    ServiceProperties.ConsumerServiceProperties consumer = new ServiceProperties.ConsumerServiceProperties();
+                    consumer.setBaseUrl(service.getBaseUrl());
+                    consumer.setEndpoints(service.getEndpoints());
+                    consumers.put(name, consumer);
+                });
             }
-            
-            return new DefaultVcVerifier(jwksProvider, new VcVerificationPolicy());
-        } catch (Exception e) {
-            logger.error("Failed to create VcVerifier: {}", e.getMessage(), e);
-            throw new IllegalStateException("Failed to initialize VcVerifier", e);
+            serviceProperties.setConsumers(consumers);
+            return new DefaultServiceEndpointResolver(serviceProperties);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public SessionMappingStore sessionMappingStore() {
+            logger.info("Creating SessionMappingStore bean");
+            return new InMemorySessionMappingStore();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public SessionMappingBizService sessionMappingBizService(SessionMappingStore sessionMappingStore) {
+            logger.info("Creating SessionMappingBizService bean for Authorization Server");
+            return new SessionMappingBizService(sessionMappingStore);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public BindingInstanceStore bindingInstanceStore() {
+            logger.info("Creating BindingInstanceStore bean");
+            return new InMemoryBindingInstanceStore();
         }
     }
 
     /**
-     * Creates the AuthorizationServer (Framework layer) bean if not already defined.
+     * Configuration for OAuth2 server-related beans.
      * <p>
-     * This is the main orchestrator that coordinates all authorization server operations.
-     * It provides the high-level API for authorization processing.
+     * This configuration provides beans for OAuth2 authorization server functionality,
+     * including PAR (Pushed Authorization Requests), DCR (Dynamic Client Registration),
+     * and token generation.
      * </p>
-     *
-     * @param parServer the PAR server
-     * @param dcrClientStore the DCR client store
-     * @param userAuthenticationTokenClient the user authentication token client
-     * @param oauth2TokenServer the OAuth2 token server
-     * @param keyManager the key manager
-     * @param openAgentAuthProperties the global configuration properties
-     * @return the AuthorizationServer bean
      */
-    @Bean
-    @ConditionalOnMissingBean
-    public AuthorizationServer authorizationServerProvider(
-            OAuth2ParServer parServer,
-            OAuth2DcrClientStore dcrClientStore,
-            @Qualifier("userAuthenticationTokenClient") OAuth2TokenClient userAuthenticationTokenClient,
-            OAuth2TokenServer oauth2TokenServer,
-            KeyManager keyManager,
-            OpenAgentAuthProperties openAgentAuthProperties
-    ) {
-        logger.info("Creating AuthorizationServer (Framework layer) bean");
-        
-        String verificationKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getKeyId();
-        String algorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getAlgorithm();
-        
-        // Generate RSA key pair if not exists
-        try {
-            keyManager.generateKeyPair(KeyAlgorithm.valueOf(algorithm), verificationKeyId);
-        } catch (Exception e) {
-            // Key may already exist
+    @Configuration(proxyBeanMethods = false)
+    static class OAuth2ServerConfiguration {
+
+        private static final Logger logger = LoggerFactory.getLogger(OAuth2ServerConfiguration.class);
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2ParRequestStore parRequestStore() {
+            logger.info("Creating OAuth2ParRequestStore bean");
+            return new InMemoryOAuth2ParRequestStore();
         }
-        
-        PublicKey publicKey = keyManager.getVerificationKey(verificationKeyId);
-        JWK witVerificationKey = convertToJWK(publicKey, verificationKeyId);
-        
-        return new DefaultAuthorizationServer(
-                parServer,
-                dcrClientStore,
-                userAuthenticationTokenClient,
-                oauth2TokenServer,
-                witVerificationKey,
-                openAgentAuthProperties.getInfrastructures().getTrustDomain()
-        );
+
+        @Bean
+        @ConditionalOnMissingBean
+        @ConditionalOnProperty(prefix = "open-agent-auth.capabilities.audit", name = "enabled", havingValue = "true")
+        public AuditService auditService() {
+            logger.info("Creating AuditService bean");
+            return new DefaultAuditService(new InMemoryAuditStorage());
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2ParRequestValidator parRequestValidator() {
+            logger.info("Creating OAuth2ParRequestValidator bean");
+            return new DefaultOAuth2ParRequestValidator();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2ParServer parServer(OAuth2ParRequestStore parRequestStore, OAuth2ParRequestValidator parRequestValidator) {
+            logger.info("Creating OAuth2ParServer bean");
+            return new DefaultOAuth2ParServer(parRequestStore, parRequestValidator);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2AuthorizationCodeStorage authorizationCodeStorage(OpenAgentAuthProperties openAgentAuthProperties) {
+            logger.info("Creating OAuth2AuthorizationCodeStorage bean");
+            return new InMemoryOAuth2AuthorizationCodeStorage();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2AuthorizationServer authorizationServer(OAuth2AuthorizationCodeStorage authorizationCodeStorage, OAuth2ParServer parServer, OAuth2DcrClientStore dcrClientStore) {
+            logger.info("Creating OAuth2AuthorizationServer bean");
+            return new DefaultOAuth2AuthorizationServer(authorizationCodeStorage, parServer, dcrClientStore);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2TokenServer tokenServer(OAuth2AuthorizationCodeStorage authorizationCodeStorage, TokenGenerator tokenGenerator) {
+            logger.info("Creating OAuth2TokenServer bean");
+            return new DefaultOAuth2TokenServer(authorizationCodeStorage, tokenGenerator);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2DcrServer dcrServer(OAuth2DcrClientStore dcrClientStore) {
+            logger.info("Creating OAuth2DcrServer bean");
+            return new DefaultOAuth2DcrServer(dcrClientStore);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2DcrClientStore dcrClientStore() {
+            logger.info("Creating OAuth2DcrClientStore bean");
+            return new InMemoryOAuth2DcrClientStore();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public TokenGenerator tokenGenerator(AoatTokenGenerator aoatTokenGenerator, OAuth2ParServer parServer) {
+            logger.info("Creating TokenGenerator bean");
+            return new AoatTokenGeneratorAdapter(aoatTokenGenerator, parServer);
+        }
+    }
+
+    /**
+     * Configuration for OAuth2 client-related beans.
+     * <p>
+     * This configuration provides beans for OAuth2 client functionality,
+     * including token clients and callback handling.
+     * </p>
+     */
+    @Configuration(proxyBeanMethods = false)
+    static class OAuth2ClientConfiguration {
+
+        private static final Logger logger = LoggerFactory.getLogger(OAuth2ClientConfiguration.class);
+
+        @Bean(name = "userAuthenticationTokenClient")
+        @ConditionalOnMissingBean(name = "userAuthenticationTokenClient")
+        public OAuth2TokenClient userAuthenticationTokenClient(
+                OpenAgentAuthProperties openAgentAuthProperties,
+                ServiceEndpointResolver serviceEndpointResolver) {
+            logger.info("Creating userAuthenticationTokenClient bean for Authorization Server role");
+            logger.debug("OpenAgentAuthProperties.getInfrastructure().getJwks() = {}", openAgentAuthProperties.getInfrastructures().getJwks());
+            if (openAgentAuthProperties.getInfrastructures().getJwks() != null) {
+                logger.debug("Consumers = {}", openAgentAuthProperties.getInfrastructures().getJwks().getConsumers());
+                logger.debug("Consumers.keySet() = {}", 
+                    openAgentAuthProperties.getInfrastructures().getJwks() != null ?
+                    openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().keySet() : "null");
+            }
+            
+            String asUserIdpUrl = null;
+            if (openAgentAuthProperties.getInfrastructures().getJwks() != null &&
+                openAgentAuthProperties.getInfrastructures().getJwks().getConsumers() != null) {
+                JwksConsumerProperties asUserIdpConfig = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp");
+                logger.debug("asUserIdpConfig = {}", asUserIdpConfig);
+                if (asUserIdpConfig != null) {
+                    asUserIdpUrl = asUserIdpConfig.getIssuer();
+                    logger.debug("asUserIdpUrl = {}", asUserIdpUrl);
+                }
+            }
+            
+            if (asUserIdpUrl == null || asUserIdpUrl.isBlank()) {
+                logger.error("AS User IDP configuration not found in open-agent-auth.infrastructure.jwks.consumers.as-user-idp");
+                logger.error("Available consumer keys: {}", 
+                    openAgentAuthProperties.getInfrastructures().getJwks() != null && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers() != null ?
+                    openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().keySet() : "null");
+                throw new IllegalStateException(
+                    "AS User IDP configuration not found. Please configure open-agent-auth.infrastructure.jwks.consumers.as-user-idp in application.yml"
+                );
+            }
+
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
+            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientSecret();
+            
+            if (clientId == null || clientId.isBlank()) {
+                throw new IllegalStateException(
+                    "OAuth client ID is not configured. Please set 'open-agent-auth.capabilities.oauth2-client.callback.client-id' in your configuration. " +
+                    "This is a required configuration for OAuth 2.0 token exchange."
+                );
+            }
+            
+            logger.info("Creating userAuthenticationTokenClient bean with clientId: {}", clientId);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, "as-user-idp", clientId, clientSecret);
+        }
+
+        @Bean(name = "agentOperationAuthorizationTokenClient")
+        @ConditionalOnMissingBean(name = "agentOperationAuthorizationTokenClient")
+        public OAuth2TokenClient agentOperationAuthorizationTokenClient(
+                OpenAgentAuthProperties openAgentAuthProperties,
+                ServiceEndpointResolver serviceEndpointResolver) {
+            logger.info("Creating agentOperationAuthorizationTokenClient bean for Authorization Server role");
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
+            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientSecret();
+            
+            if (clientId == null || clientId.isBlank()) {
+                throw new IllegalStateException(
+                    "OAuth client ID is not configured. Please set 'open-agent-auth.server.callback.client-id' in your configuration. " +
+                    "This is a required configuration for OAuth 2.0 token exchange."
+                );
+            }
+            
+            logger.info("Creating agentOperationAuthorizationTokenClient bean with clientId: {}", clientId);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, "authorization-server", clientId, clientSecret);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2CallbackService callbackService(
+                AuthorizationServer authorizationServerProvider,
+                SessionMappingBizService sessionMappingBizService,
+                OpenAgentAuthProperties openAgentAuthProperties
+        ) {
+            logger.info("Creating OAuth2CallbackService bean for Authorization Server role");
+            String callbackEndpoint = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getEndpoint();
+            if (callbackEndpoint == null || callbackEndpoint.isBlank()) {
+                callbackEndpoint = "/callback";
+            }
+            return new OAuth2CallbackService(
+                    authorizationServerProvider,
+                    sessionMappingBizService,
+                    callbackEndpoint
+            );
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2CallbackController oauth2CallbackController(
+                OAuth2CallbackService callbackService,
+                OpenAgentAuthProperties openAgentAuthProperties
+        ) {
+            logger.info("Creating OAuth2CallbackController bean for Authorization Server role");
+            return new OAuth2CallbackController(
+                    callbackService,
+                    openAgentAuthProperties
+            );
+        }
+    }
+
+    /**
+     * Configuration for cryptography-related beans.
+     * <p>
+     * This configuration provides beans for cryptographic operations,
+     * including key generation, signing, and verification.
+     * </p>
+     */
+    @Configuration(proxyBeanMethods = false)
+    static class CryptoConfiguration {
+
+        private static final Logger logger = LoggerFactory.getLogger(CryptoConfiguration.class);
+
+        @Bean
+        @ConditionalOnMissingBean
+        public AoatGenerator aoatGenerator(
+                KeyManager keyManager,
+                OpenAgentAuthProperties openAgentAuthProperties) {
+            logger.info("Creating AoatGenerator bean");
+            String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getKeyId();
+            String aoatAlgorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getAlgorithm();
+            logger.info("Getting or generating AOAT signing key with ID: {}, Algorithm: {}", aoatKeyId, aoatAlgorithm);
+            
+            RSAKey signingKey;
+            try {
+                KeyAlgorithm keyAlgorithm = KeyAlgorithm.valueOf(aoatAlgorithm);
+                Object signingJwk = keyManager.getOrGenerateKey(aoatKeyId, keyAlgorithm);
+                if (signingJwk instanceof RSAKey) {
+                    signingKey = (RSAKey) signingJwk;
+                } else {
+                    logger.error("Expected RSAKey but got: {}", signingJwk.getClass());
+                    throw new RuntimeException("Expected RSAKey for AOAT signing");
+                }
+                logger.info("AOAT signing key ready. Key ID: {}", aoatKeyId);
+            } catch (KeyManagementException e) {
+                logger.error("Failed to get or generate AOAT signing key", e);
+                throw new RuntimeException("Failed to initialize AOAT signing key", e);
+            }
+            
+            String issuer = null;
+            if (openAgentAuthProperties.getRoles() != null) {
+                var role = openAgentAuthProperties.getRoles().get("authorization-server");
+                if (role != null) {
+                    issuer = role.getIssuer();
+                }
+            }
+
+            if (ValidationUtils.isNullOrEmpty(issuer)) {
+                throw new IllegalStateException(
+                    "Authorization Server issuer is not configured. Please set 'open-agent-auth.roles.authorization-server.issuer' in your configuration. " +
+                    "This is a required configuration for AOAT generation."
+                );
+            }
+            
+            String audience = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("resource-server").getBaseUrl();
+            
+            return new AoatGenerator(
+                    signingKey,
+                    JWSAlgorithm.parse(aoatAlgorithm),
+                    issuer,
+                    audience
+            );
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public List<JWK> signingKeys(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
+            List<JWK> keys = new ArrayList<>();
+            String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("aoat-signing").getKeyId();
+            try {
+                PublicKey publicKey = keyManager.getVerificationKey(aoatKeyId);
+                if (publicKey != null) {
+                    JWK jwk = AuthorizationServerAutoConfiguration.convertToJWK(publicKey, aoatKeyId);
+                    keys.add(jwk);
+                }
+            } catch (Exception e) {
+                logger.error("Failed to get public key for JWKS: {}", aoatKeyId, e);
+            }
+            return keys;
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        @Lazy
+        public VcVerifier vcVerifier(OpenAgentAuthProperties openAgentAuthProperties) {
+            logger.info("Creating VcVerifier bean");
+            try {
+                String agentJwksEndpoint = null;
+                if (openAgentAuthProperties.getInfrastructures().getServiceDiscovery() != null &&
+                    openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices() != null &&
+                    openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent") != null &&
+                    openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent").getBaseUrl() != null) {
+                    agentJwksEndpoint = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get("agent").getBaseUrl() + "/.well-known/jwks.json";
+                }
+                
+                JwksProvider jwksProvider;
+                if (agentJwksEndpoint != null && !agentJwksEndpoint.isBlank()) {
+                    logger.info("Using remote JWKS provider for VcVerifier: {}", agentJwksEndpoint);
+                    jwksProvider = new RemoteJwksProvider(agentJwksEndpoint);
+                } else {
+                    logger.info("Using local JWKS provider for VcVerifier");
+                    jwksProvider = new JwksProvider() {
+                        @Override
+                        public JWKSource<SecurityContext> getJwkSource() {
+                            return (jwkSelector, context) -> new java.util.ArrayList<>();
+                        }
+
+                        @Override
+                        public JWKSet getJwkSet() {
+                            return new com.nimbusds.jose.jwk.JWKSet();
+                        }
+
+                        @Override
+                        public void refresh() {
+                        }
+                    };
+                }
+                return new DefaultVcVerifier(jwksProvider, new VcVerificationPolicy());
+            } catch (Exception e) {
+                logger.error("Failed to create VcVerifier: {}", e.getMessage(), e);
+                throw new IllegalStateException("Failed to initialize VcVerifier", e);
+            }
+        }
+    }
+
+    /**
+     * Configuration for authorization core-related beans.
+     * <p>
+     * This configuration provides beans for core authorization functionality,
+     * including AOAT token generation, policy registry, and audit service.
+     * </p>
+     */
+    @Configuration(proxyBeanMethods = false)
+    static class AuthorizationCoreConfiguration {
+
+        private static final Logger logger = LoggerFactory.getLogger(AuthorizationCoreConfiguration.class);
+
+        @Bean
+        @ConditionalOnMissingBean
+        public AoatTokenGenerator aoatTokenGenerator(AoatGenerator aoatGenerator, VcVerifier vcVerifier, PolicyRegistry policyRegistry, BindingInstanceStore bindingInstanceStore, PromptDecryptionService promptDecryptionService, OpenAgentAuthProperties openAgentAuthProperties) {
+            logger.info("Creating AoatTokenGenerator bean");
+            long tokenExpiration = openAgentAuthProperties.getCapabilities().getOAuth2Server().getToken().getAccessTokenExpiry();
+            return new DefaultAoatTokenGenerator(aoatGenerator, vcVerifier, policyRegistry, bindingInstanceStore, promptDecryptionService, tokenExpiration);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public PolicyRegistry policyRegistry() {
+            logger.info("Creating PolicyRegistry bean");
+            return new InMemoryPolicyRegistry();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public AuthorizationServer authorizationServerProvider(
+                OAuth2ParServer parServer,
+                OAuth2DcrClientStore dcrClientStore,
+                @Qualifier("userAuthenticationTokenClient") OAuth2TokenClient userAuthenticationTokenClient,
+                OAuth2TokenServer oauth2TokenServer,
+                KeyManager keyManager,
+                OpenAgentAuthProperties openAgentAuthProperties
+        ) {
+            logger.info("Creating AuthorizationServer (Framework layer) bean");
+            String verificationKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getKeyId();
+            String algorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get("wit-verification").getAlgorithm();
+            
+            try {
+                keyManager.generateKeyPair(KeyAlgorithm.valueOf(algorithm), verificationKeyId);
+            } catch (Exception e) {
+            }
+            
+            PublicKey publicKey = keyManager.getVerificationKey(verificationKeyId);
+            JWK witVerificationKey = AuthorizationServerAutoConfiguration.convertToJWK(publicKey, verificationKeyId);
+            
+            return new DefaultAuthorizationServer(
+                    parServer,
+                    dcrClientStore,
+                    userAuthenticationTokenClient,
+                    oauth2TokenServer,
+                    witVerificationKey,
+                    openAgentAuthProperties.getInfrastructures().getTrustDomain()
+            );
+        }
+    }
+
+    /**
+     * Configuration for web-related beans.
+     * <p>
+     * This configuration provides beans for web layer functionality,
+     * including interceptors and controllers.
+     * </p>
+     */
+    @Configuration(proxyBeanMethods = false)
+    static class WebConfiguration {
+
+        private static final Logger logger = LoggerFactory.getLogger(WebConfiguration.class);
+
+        @Bean
+        @ConditionalOnMissingBean
+        public UserAuthenticationInterceptor userAuthenticationInterceptor(
+                SessionMappingBizService sessionMappingBizService,
+                OpenAgentAuthProperties openAgentAuthProperties
+        ) {
+            logger.info("Creating UserAuthenticationInterceptor bean with AsUserIdpUserAuthInterceptor");
+            String asUserIdpIssuer;
+            if (openAgentAuthProperties.getInfrastructures().getJwks() != null
+                    && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers() != null
+                    && openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp") != null) {
+                asUserIdpIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("as-user-idp").getIssuer();
+            } else {
+                throw new IllegalStateException(
+                    "AS User IDP issuer configuration not found. Please configure open-agent-auth.infrastructure.jwks.consumers.as-user-idp in application.yml");
+            }
+
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
+            String callbackUrl = null;
+            if (openAgentAuthProperties.getRoles() != null) {
+                var role = openAgentAuthProperties.getRoles().get("authorization-server");
+                if (role != null) {
+                    callbackUrl = role.getIssuer();
+                }
+            }
+            
+            List<String> excludedPaths = openAgentAuthProperties.getCapabilities().getOAuth2Client().getAuthentication().getExcludePaths();
+            logger.debug("Using excluded paths: {}", excludedPaths);
+            
+            return new AsUserIdpUserAuthInterceptor(
+                    sessionMappingBizService,
+                    excludedPaths,
+                    asUserIdpIssuer,
+                    clientId,
+                    callbackUrl + "/callback");
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public ConsentPageProvider consentPageProvider() {
+            logger.info("Creating ConsentPageProvider bean with DefaultConsentPageProvider for Authorization Server");
+            return new DefaultConsentPageProvider("oauth2/aoa_consent");
+        }
     }
 }

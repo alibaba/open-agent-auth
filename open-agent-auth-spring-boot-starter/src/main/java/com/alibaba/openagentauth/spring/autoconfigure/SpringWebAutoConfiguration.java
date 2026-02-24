@@ -18,6 +18,7 @@ package com.alibaba.openagentauth.spring.autoconfigure;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 
 /**
  * Auto-configuration for Spring Web components.
@@ -43,7 +44,13 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ComponentScan(basePackages = "com.alibaba.openagentauth.spring")
+@ComponentScan(
+        basePackages = "com.alibaba.openagentauth.spring",
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.REGEX,
+                pattern = "com\\.alibaba\\.openagentauth\\.spring\\.autoconfigure\\.role\\..*"
+        )
+)
 public class SpringWebAutoConfiguration {
     // Component scan handles everything - all components in com.alibaba.openagentauth.spring
     // will be automatically discovered and registered based on their annotations
