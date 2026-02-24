@@ -41,8 +41,6 @@ open-agent-auth:
       enabled: true
       instance-id: agent-idp-1
       issuer: http://localhost:8082
-      capabilities:
-        - workload-identity
 
 logging:
   level:

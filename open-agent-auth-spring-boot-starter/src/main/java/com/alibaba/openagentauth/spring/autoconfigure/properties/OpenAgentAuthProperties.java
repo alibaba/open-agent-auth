@@ -41,15 +41,15 @@ import java.util.Map;
  *     trust-domain: wimse://default.trust.domain
  *     jwks: {...}
  *   capabilities:
- *     oauth2-server: {...}
- *     operation-authorization: {...}
+ *     oauth2-server:
+ *       enabled: true
+ *     operation-authorization:
+ *       enabled: true
  *   roles:
  *     authorization-server:
  *       enabled: true
+ *       instance-id: auth-server-1
  *       issuer: http://localhost:8085
- *       capabilities:
- *         - oauth2-server
- *         - operation-authorization
  *   security:
  *     csrf:
  *       enabled: true
@@ -89,11 +89,17 @@ public class OpenAgentAuthProperties {
     private CapabilitiesProperties capabilities = new CapabilitiesProperties();
 
     /**
-     * Roles configuration (role instances that compose capabilities).
+     * Roles configuration (role instances).
      * <p>
      * Map of role configurations keyed by role name.
      * For example, configuration under {@code open-agent-auth.roles.agent-user-idp}
      * will be bound to a RoleProperties instance stored under the key "agent-user-idp".
+     * </p>
+     * <p>
+     * Each role defines its identity (enabled, instance-id, issuer) but does not
+     * declare which capabilities it uses. The required capabilities for each role
+     * are determined by the framework's built-in mapping in {@code ConfigurationValidator},
+     * and are activated via {@code open-agent-auth.capabilities.xxx.enabled=true}.
      * </p>
      */
     private Map<String, RolesProperties.RoleProperties> roles = new HashMap<>();

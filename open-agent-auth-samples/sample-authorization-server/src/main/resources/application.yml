@@ -115,16 +115,12 @@ open-agent-auth:
       enabled: true
       provider: logging
   
-  # Roles configuration (role instances that compose capabilities)
+  # Roles configuration
   roles:
     authorization-server:
       enabled: true
       instance-id: authorization-server-1
       issuer: http://localhost:8085
-      capabilities:
-        - oauth2-server
-        - operation-authorization
-        - audit
 
 logging:
   level:

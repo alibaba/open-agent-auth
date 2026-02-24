@@ -15,9 +15,7 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,16 +31,21 @@ import java.util.Map;
  *   roles:
  *     agent-idp:
  *       enabled: true
+ *       instance-id: agent-idp-1
  *       issuer: http://localhost:8082
- *       capabilities:
- *         - workload-identity
  *     agent:
  *       enabled: true
+ *       instance-id: agent-1
  *       issuer: http://localhost:8081
- *       capabilities:
- *         - oauth2-client
- *         - operation-authorization
  * </pre>
+ * <p>
+ * <b>Note:</b> The capabilities that each role requires are determined by the
+ * {@code open-agent-auth.capabilities.xxx.enabled} properties, not by a list
+ * on the role itself. The framework's {@code ConfigurationValidator} uses a
+ * built-in mapping to verify that each enabled role has its required capabilities
+ * also enabled. This design follows the DRY principle — capabilities are configured
+ * once at the capability level and validated automatically.
+ * </p>
   *
  * @since 2.0
  */
@@ -124,17 +127,6 @@ public class RolesProperties {
          */
         private String issuer;
 
-        /**
-         * List of capabilities used by this role.
-         */
-        private List<String> capabilities = new ArrayList<>();
-
-        /**
-         * Role-specific configuration overrides.
-         * Allows overriding capability-level configurations at the role level.
-         */
-        private Map<String, Object> config = Map.of();
-
         public boolean isEnabled() {
             return enabled;
         }
@@ -159,20 +151,5 @@ public class RolesProperties {
             this.issuer = issuer;
         }
 
-        public List<String> getCapabilities() {
-            return capabilities;
-        }
-
-        public void setCapabilities(List<String> capabilities) {
-            this.capabilities = capabilities;
-        }
-
-        public Map<String, Object> getConfig() {
-            return config;
-        }
-
-        public void setConfig(Map<String, Object> config) {
-            this.config = config;
-        }
     }
 }

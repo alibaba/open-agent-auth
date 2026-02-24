@@ -16,10 +16,8 @@
 package com.alibaba.openagentauth.spring.autoconfigure.role;
 
 import com.alibaba.openagentauth.core.crypto.jwe.NimbusJweDecoder;
-import com.alibaba.openagentauth.core.crypto.key.DefaultKeyManager;
 import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
-import com.alibaba.openagentauth.core.crypto.key.store.InMemoryKeyStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.DefaultOAuth2AuthorizationServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.OAuth2AuthorizationServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationCodeStorage;
@@ -36,17 +34,15 @@ import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultIdTokenGenerator
 import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultIdTokenValidator;
 import com.alibaba.openagentauth.core.protocol.vc.jwe.PromptDecryptionService;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
-import com.alibaba.openagentauth.core.token.TokenService;
-import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.framework.actor.UserIdentityProvider;
 import com.alibaba.openagentauth.framework.orchestration.DefaultUserIdentityProvider;
 import com.alibaba.openagentauth.framework.web.manager.SessionManager;
 import com.alibaba.openagentauth.framework.web.provider.ConsentPageProvider;
+import com.alibaba.openagentauth.spring.autoconfigure.capability.SharedCapabilityAutoConfiguration;
+import com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.ServiceProperties;
 import com.alibaba.openagentauth.spring.util.DefaultServiceEndpointResolver;
 import com.alibaba.openagentauth.spring.web.provider.DefaultConsentPageProvider;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -74,10 +70,15 @@ class AsUserIdpAutoConfigurationTest {
 
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(
-            TestCoreConfiguration.class,
+            CoreAutoConfiguration.class,
+            SharedCapabilityAutoConfiguration.class,
             AsUserIdpAutoConfiguration.class
         ))
+        .withUserConfiguration(TestCoreConfiguration.class)
         .withPropertyValues(
+            "open-agent-auth.enabled=true",
+            "open-agent-auth.capabilities.oauth2-server.enabled=true",
+            "open-agent-auth.capabilities.user-authentication.enabled=true",
             "open-agent-auth.infrastructures.key-management.keys.id-token-signing.key-id=id-token-signing-key",
             "open-agent-auth.infrastructures.key-management.keys.id-token-signing.algorithm=ES256"
         );
@@ -85,18 +86,10 @@ class AsUserIdpAutoConfigurationTest {
     @Configuration
     static class TestCoreConfiguration {
         @Bean
-        public KeyManager keyManager() {
-            return new DefaultKeyManager(
-                new InMemoryKeyStore()
-            );
-        }
-
-        @Bean
-        public PromptDecryptionService promptDecryptionService(
-            KeyManager keyManager) {
+        public PromptDecryptionService promptDecryptionService(KeyManager keyManager) {
             try {
                 RSAKey rsaKey = (RSAKey) keyManager.getOrGenerateKey(
-                    "prompt-encryption-key", 
+                    "prompt-encryption-key",
                     KeyAlgorithm.RS256
                 );
                 PrivateKey decryptionKey = rsaKey.toRSAPrivateKey();
@@ -115,30 +108,6 @@ class AsUserIdpAutoConfigurationTest {
         }
 
         @Bean
-        public TrustDomain trustDomain() {
-            return new TrustDomain("wimse://test.trust.domain");
-        }
-
-        @Bean
-        public TokenService tokenService(
-            KeyManager keyManager,
-            TrustDomain trustDomain) {
-            try {
-                JWK signingJWK = (JWK) keyManager.getOrGenerateKey(
-                    "wit-signing-key", 
-                    KeyAlgorithm.ES256
-                );
-                return new TokenService(
-                    signingJWK, 
-                    trustDomain, 
-                    JWSAlgorithm.ES256
-                );
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to initialize WIT signing key", e);
-            }
-        }
-
-        @Bean
         public IdTokenValidator idTokenValidator(ServiceProperties serviceProperties) {
             return new DefaultIdTokenValidator(serviceProperties);
         }
@@ -149,8 +118,7 @@ class AsUserIdpAutoConfigurationTest {
         }
 
         @Bean
-        public ServiceEndpointResolver serviceEndpointResolver(
-            ServiceProperties serviceProperties) {
+        public ServiceEndpointResolver serviceEndpointResolver(ServiceProperties serviceProperties) {
             return new DefaultServiceEndpointResolver(serviceProperties);
         }
     }
@@ -185,11 +153,13 @@ class AsUserIdpAutoConfigurationTest {
                 )
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                        .getCause()
-                        .getCause()
+                    Throwable rootCause = context.getStartupFailure();
+                    while (rootCause.getCause() != null) {
+                        rootCause = rootCause.getCause();
+                    }
+                    assertThat(rootCause)
                         .isInstanceOf(IllegalStateException.class)
-                        .hasMessageContaining("AS User IDP issuer is not configured");
+                        .hasMessageContaining("User IDP issuer is not configured");
                 });
         }
 
@@ -310,11 +280,13 @@ class AsUserIdpAutoConfigurationTest {
                 )
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                        .getCause()
-                        .getCause()
+                    Throwable rootCause = context.getStartupFailure();
+                    while (rootCause.getCause() != null) {
+                        rootCause = rootCause.getCause();
+                    }
+                    assertThat(rootCause)
                         .isInstanceOf(IllegalStateException.class)
-                        .hasMessageContaining("AS User IDP issuer is not configured");
+                        .hasMessageContaining("User IDP issuer is not configured");
                 });
         }
     }
@@ -370,11 +342,13 @@ class AsUserIdpAutoConfigurationTest {
                 )
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                        .getCause()
-                        .getCause()
+                    Throwable rootCause = context.getStartupFailure();
+                    while (rootCause.getCause() != null) {
+                        rootCause = rootCause.getCause();
+                    }
+                    assertThat(rootCause)
                         .isInstanceOf(IllegalStateException.class)
-                        .hasMessageContaining("AS User IDP issuer is not configured");
+                        .hasMessageContaining("User IDP issuer is not configured");
                 });
         }
     }
@@ -467,10 +441,16 @@ class AsUserIdpAutoConfigurationTest {
         @Test
         @DisplayName("Should not load when role is not as-user-idp")
         void shouldNotLoadWhenRoleIsNotAsUserIdp() {
-            contextRunner
+            new WebApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                    CoreAutoConfiguration.class,
+                    SharedCapabilityAutoConfiguration.class,
+                    AsUserIdpAutoConfiguration.class
+                ))
+                .withUserConfiguration(TestCoreConfiguration.class)
                 .withPropertyValues(
+                    "open-agent-auth.enabled=true",
                     "open-agent-auth.roles.agent.enabled=true",
-                    "open-agent-auth.roles.as-user-idp.issuer=http://localhost:8080",
                     "open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain"
                 )
                 .run(context -> {

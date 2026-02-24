@@ -25,9 +25,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -277,14 +275,10 @@ class OpenAgentAuthPropertiesTest {
             role.setEnabled(true);
             role.setInstanceId("instance-1");
             role.setIssuer("https://example.com/issuer");
-            role.setCapabilities(List.of("oauth2-server", "operation-authorization"));
-            role.setConfig(Map.of("key", "value"));
 
             assertTrue(role.isEnabled());
             assertEquals("instance-1", role.getInstanceId());
             assertEquals("https://example.com/issuer", role.getIssuer());
-            assertEquals(2, role.getCapabilities().size());
-            assertEquals("value", role.getConfig().get("key"));
         }
 
         @Test
@@ -303,21 +297,6 @@ class OpenAgentAuthPropertiesTest {
             assertNull(role.getIssuer());
         }
 
-        @Test
-        @DisplayName("Should handle empty capabilities list")
-        void shouldHandleEmptyCapabilitiesList() {
-            RolesProperties.RoleProperties role = new RolesProperties.RoleProperties();
-            role.setCapabilities(new ArrayList<>());
-            assertTrue(role.getCapabilities().isEmpty());
-        }
-
-        @Test
-        @DisplayName("Should handle empty config map")
-        void shouldHandleEmptyConfigMap() {
-            RolesProperties.RoleProperties role = new RolesProperties.RoleProperties();
-            role.setConfig(Map.of());
-            assertTrue(role.getConfig().isEmpty());
-        }
     }
 
     @Nested
