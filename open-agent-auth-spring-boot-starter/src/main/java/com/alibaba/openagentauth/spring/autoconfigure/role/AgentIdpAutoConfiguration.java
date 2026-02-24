@@ -42,6 +42,8 @@ import org.springframework.context.annotation.Bean;
 import java.net.URL;
 import java.util.Optional;
 
+import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
+
 /**
  * Auto-configuration for Agent IDP role.
  * <p>
@@ -161,7 +163,7 @@ public class AgentIdpAutoConfiguration {
         String issuer = null;
         logger.debug("OpenAgentAuthProperties: {}", openAgentAuthProperties);
         if (openAgentAuthProperties.getRoles() != null) {
-            var role = openAgentAuthProperties.getRoles().get("agent-idp");
+            var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_IDP);
             logger.debug("Agent IDP role: {}", role);
             if (role != null) {
                 issuer = role.getIssuer();
@@ -178,8 +180,8 @@ public class AgentIdpAutoConfiguration {
 
         // Agent User IDP issuer for ID Token validation
         String agentUserIdpIssuer = null;
-        if (openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().containsKey("agent-user-idp")) {
-            agentUserIdpIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get("agent-user-idp").getIssuer();
+        if (openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().containsKey(SERVICE_AGENT_USER_IDP)) {
+            agentUserIdpIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AGENT_USER_IDP).getIssuer();
         }
 
         if (ValidationUtils.isNullOrEmpty(agentUserIdpIssuer)) {
@@ -227,7 +229,7 @@ public class AgentIdpAutoConfiguration {
             // Get Agent User IDP's JWKS endpoint from consumers configuration
             String jwksEndpoint = Optional.ofNullable(properties.getInfrastructures().getJwks())
                     .map(JwksInfrastructureProperties::getConsumers)
-                    .map(consumers -> consumers.get("agent-user-idp"))
+                    .map(consumers -> consumers.get(SERVICE_AGENT_USER_IDP))
                     .map(JwksConsumerProperties::getJwksEndpoint)
                     .orElse(null);
 

@@ -66,6 +66,8 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
+
 /**
  * Auto-configuration for the Agent User IDP role.
  * &lt;p&gt;
@@ -279,7 +281,7 @@ public class AgentUserIdpAutoConfiguration {
             // Get issuer from roles configuration
             String issuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("agent-user-idp");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_USER_IDP);
                 if (role != null) {
                     issuer = role.getIssuer();
                 }
@@ -347,7 +349,7 @@ public class AgentUserIdpAutoConfiguration {
             String issuer = null;
             logger.debug("OpenAgentAuthProperties: {}", openAgentAuthProperties);
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("agent-user-idp");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_USER_IDP);
                 logger.debug("Agent User IDP role: {}", role);
                 if (role != null) {
                     issuer = role.getIssuer();
@@ -440,7 +442,7 @@ public class AgentUserIdpAutoConfiguration {
             // Get issuer from roles configuration
             String issuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("agent-user-idp");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_USER_IDP);
                 if (role != null) {
                     issuer = role.getIssuer();
                 }
@@ -530,7 +532,7 @@ public class AgentUserIdpAutoConfiguration {
             // Get issuer from roles configuration
             String issuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get("agent-user-idp");
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_USER_IDP);
                 if (role != null) {
                     issuer = role.getIssuer();
                 }
@@ -565,7 +567,7 @@ public class AgentUserIdpAutoConfiguration {
         @ConditionalOnMissingBean
         public ConsentPageProvider consentPageProvider() {
             logger.info("Creating ConsentPageProvider bean with DefaultConsentPageProvider for Agent User IDP");
-            return new DefaultConsentPageProvider("oauth2/oidc_consent", "Agent User IDP");
+            return new DefaultConsentPageProvider(CONSENT_TEMPLATE_OIDC, "Agent User IDP");
         }
 
         /**
