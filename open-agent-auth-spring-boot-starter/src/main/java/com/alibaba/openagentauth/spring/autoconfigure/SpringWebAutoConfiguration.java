@@ -18,13 +18,14 @@ package com.alibaba.openagentauth.spring.autoconfigure;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
 
 /**
  * Auto-configuration for Spring Web components.
  * <p>
- * This configuration class scans the {@code com.alibaba.openagentauth.spring} package
- * to discover and register REST controllers, MVC controllers, and other web components.
+ * This configuration class scans the {@code com.alibaba.openagentauth.spring.web},
+ * {@code com.alibaba.openagentauth.spring.config}, and
+ * {@code com.alibaba.openagentauth.spring.autoconfigure.initializer} packages to discover
+ * and register REST controllers, MVC controllers, initializers, and other web components.
  * It enables the framework's HTTP endpoints to be automatically available when
  * the application is a web application.
  * </p>
@@ -45,14 +46,13 @@ import org.springframework.context.annotation.FilterType;
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ComponentScan(
-        basePackages = "com.alibaba.openagentauth.spring",
-        excludeFilters = @ComponentScan.Filter(
-                type = FilterType.REGEX,
-                pattern = "com\\.alibaba\\.openagentauth\\.spring\\.autoconfigure\\.role\\..*"
-        )
+        basePackages = {
+                "com.alibaba.openagentauth.spring.web",
+                "com.alibaba.openagentauth.spring.config",
+                "com.alibaba.openagentauth.spring.autoconfigure.initializer"
+        }
 )
 public class SpringWebAutoConfiguration {
-    // Component scan handles everything - all components in com.alibaba.openagentauth.spring
-    // will be automatically discovered and registered based on their annotations
-    // and @ConditionalOn* annotations
+    // Component scan discovers web controllers and configuration classes
+    // in the specified packages based on their annotations and @ConditionalOn* conditions
 }

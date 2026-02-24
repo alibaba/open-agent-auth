@@ -114,7 +114,7 @@ class OpenAgentAuthPropertiesTest {
         @Test
         @DisplayName("Should set and get security properties")
         void shouldSetAndGetSecurityProperties() {
-            OpenAgentAuthProperties.SecurityProperties security = new OpenAgentAuthProperties.SecurityProperties();
+            SecurityProperties security = new SecurityProperties();
             properties.setSecurity(security);
             assertSame(security, properties.getSecurity());
         }
@@ -122,7 +122,7 @@ class OpenAgentAuthPropertiesTest {
         @Test
         @DisplayName("Should set and get audit properties")
         void shouldSetAndGetAuditProperties() {
-            OpenAgentAuthProperties.AuditProperties audit = new OpenAgentAuthProperties.AuditProperties();
+            OpenAgentAuthAuditProperties audit = new OpenAgentAuthAuditProperties();
             properties.setAudit(audit);
             assertSame(audit, properties.getAudit());
         }
@@ -130,7 +130,7 @@ class OpenAgentAuthPropertiesTest {
         @Test
         @DisplayName("Should set and get monitoring properties")
         void shouldSetAndGetMonitoringProperties() {
-            OpenAgentAuthProperties.MonitoringProperties monitoring = new OpenAgentAuthProperties.MonitoringProperties();
+            MonitoringProperties monitoring = new MonitoringProperties();
             properties.setMonitoring(monitoring);
             assertSame(monitoring, properties.getMonitoring());
         }
