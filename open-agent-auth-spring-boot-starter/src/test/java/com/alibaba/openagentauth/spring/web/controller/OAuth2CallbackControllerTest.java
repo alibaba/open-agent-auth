@@ -80,8 +80,8 @@ class OAuth2CallbackControllerTest {
         // Update to use new architecture: capabilities.oauth2Client.callback
         lenient().when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
         properties.getCapabilities().setOAuth2Client(new OAuth2ClientProperties());
+        properties.getCapabilities().getOAuth2Client().setClientId(CLIENT_ID);
         properties.getCapabilities().getOAuth2Client().setCallback(new OAuth2ClientProperties.OAuth2ClientCallbackProperties());
-        properties.getCapabilities().getOAuth2Client().getCallback().setClientId(CLIENT_ID);
     }
 
     @Nested
@@ -178,7 +178,7 @@ class OAuth2CallbackControllerTest {
         @DisplayName("Should return error when client ID is not configured")
         void shouldReturnErrorWhenClientIdIsNotConfigured() {
             // Arrange
-            properties.getCapabilities().getOAuth2Client().getCallback().setClientId(null);
+            properties.getCapabilities().getOAuth2Client().setClientId(null);
 
             // Act
             Object response = controller.callback(CODE, STATE, null, null, request);
@@ -197,7 +197,7 @@ class OAuth2CallbackControllerTest {
         @DisplayName("Should return error when client ID is empty")
         void shouldReturnErrorWhenClientIdIsEmpty() {
             // Arrange
-            properties.getCapabilities().getOAuth2Client().getCallback().setClientId("");
+            properties.getCapabilities().getOAuth2Client().setClientId("");
 
             // Act
             Object response = controller.callback(CODE, STATE, null, null, request);

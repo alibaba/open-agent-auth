@@ -92,7 +92,7 @@ public final class DefaultEndpoints {
         Map<String, String> endpoints = new HashMap<>();
         endpoints.put("workload.issue", "/api/v1/workloads/token/issue");
         endpoints.put("workload.revoke", "/api/v1/workloads/revoke");
-        endpoints.put("workload.get", "/api/v1/workloads/get");
+        endpoints.put("workload.retrieve", "/api/v1/workloads/get");
         return endpoints;
     }
 
@@ -109,24 +109,24 @@ public final class DefaultEndpoints {
 
     private static Map<String, String> createPolicyEndpoints() {
         Map<String, String> endpoints = new HashMap<>();
-        endpoints.put("policy.registry", "/api/v1/policies");
-        endpoints.put("policy.delete", "/api/v1/policies/{policyId}");
-        endpoints.put("policy.get", "/api/v1/policies/{policyId}");
+        endpoints.put("policy.registry", "/api/v1/policies/register");
+        endpoints.put("policy.retrieve", "/api/v1/policies/get");
+        endpoints.put("policy.delete", "/api/v1/policies/delete");
         return endpoints;
     }
 
     private static Map<String, String> createBindingEndpoints() {
         Map<String, String> endpoints = new HashMap<>();
-        endpoints.put("binding.registry", "/api/v1/bindings");
-        endpoints.put("binding.get", "/api/v1/bindings/{bindingInstanceId}");
-        endpoints.put("binding.delete", "/api/v1/bindings/{bindingInstanceId}");
+        endpoints.put("binding.registry", "/api/v1/bindings/register");
+        endpoints.put("binding.retrieve", "/api/v1/bindings/get");
+        endpoints.put("binding.delete", "/api/v1/bindings/delete");
         return endpoints;
     }
 
     private static Map<String, String> createAuditEndpoints() {
         Map<String, String> endpoints = new HashMap<>();
-        endpoints.put("event.get", "/api/v1/audit/events/{eventId}");
-        endpoints.put("event.list", "/api/v1/audit/events");
+        endpoints.put("event.retrieve", "/api/v1/audit/events/get");
+        endpoints.put("event.list", "/api/v1/audit/events/list");
         return endpoints;
     }
 

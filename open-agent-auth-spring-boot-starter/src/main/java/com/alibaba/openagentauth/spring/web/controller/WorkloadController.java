@@ -194,7 +194,7 @@ public class WorkloadController {
      * @param request the request containing the workload identifier
      * @return the workload information
      */
-    @PostMapping("${open-agent-auth.capabilities.workload-identity.endpoints.workload.get:/api/v1/workloads/get}")
+    @PostMapping("${open-agent-auth.capabilities.workload-identity.endpoints.workload.retrieve:/api/v1/workloads/get}")
     public ResponseEntity<WorkloadResponse> get(
             @RequestBody GetWorkloadRequest request
     ) {

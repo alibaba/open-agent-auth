@@ -66,7 +66,6 @@ class OpenAgentAuthPropertiesTest {
             assertNotNull(properties.getCapabilities());
             assertNotNull(properties.getRoles());
             assertNotNull(properties.getSecurity());
-            assertNotNull(properties.getAudit());
             assertNotNull(properties.getMonitoring());
         }
     }
@@ -115,14 +114,6 @@ class OpenAgentAuthPropertiesTest {
             SecurityProperties security = new SecurityProperties();
             properties.setSecurity(security);
             assertSame(security, properties.getSecurity());
-        }
-
-        @Test
-        @DisplayName("Should set and get audit properties")
-        void shouldSetAndGetAuditProperties() {
-            OpenAgentAuthAuditProperties audit = new OpenAgentAuthAuditProperties();
-            properties.setAudit(audit);
-            assertSame(audit, properties.getAudit());
         }
 
         @Test
@@ -310,7 +301,6 @@ class OpenAgentAuthPropertiesTest {
             properties.setCapabilities(null);
             properties.setRoles(null);
             properties.setSecurity(null);
-            properties.setAudit(null);
             properties.setMonitoring(null);
 
             assertNull(properties.getInfrastructures());
@@ -320,7 +310,6 @@ class OpenAgentAuthPropertiesTest {
             assertNotNull(properties.getRoles());
             assertTrue(properties.getRoles().isEmpty());
             assertNull(properties.getSecurity());
-            assertNull(properties.getAudit());
             assertNull(properties.getMonitoring());
         }
 

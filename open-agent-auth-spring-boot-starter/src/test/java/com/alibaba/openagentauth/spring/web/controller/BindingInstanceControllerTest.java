@@ -83,7 +83,9 @@ class BindingInstanceControllerTest {
         BindingInstance binding = createTestBinding();
         when(bindingInstanceStore.retrieve(BINDING_INSTANCE_ID)).thenReturn(binding);
 
-        ResponseEntity<BindingInstance> response = controller.getBinding(BINDING_INSTANCE_ID);
+        BindingInstanceController.BindingInstanceIdRequest request = new BindingInstanceController.BindingInstanceIdRequest();
+        request.setBindingInstanceId(BINDING_INSTANCE_ID);
+        ResponseEntity<BindingInstance> response = controller.getBinding(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -96,7 +98,9 @@ class BindingInstanceControllerTest {
     void shouldReturn404WhenBindingNotFoundById() {
         when(bindingInstanceStore.retrieve(BINDING_INSTANCE_ID)).thenReturn(null);
 
-        ResponseEntity<BindingInstance> response = controller.getBinding(BINDING_INSTANCE_ID);
+        BindingInstanceController.BindingInstanceIdRequest request = new BindingInstanceController.BindingInstanceIdRequest();
+        request.setBindingInstanceId(BINDING_INSTANCE_ID);
+        ResponseEntity<BindingInstance> response = controller.getBinding(request);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNull(response.getBody());
@@ -106,10 +110,14 @@ class BindingInstanceControllerTest {
     @Test
     @DisplayName("Should return 400 when binding instance ID is null or empty")
     void shouldReturn400WhenBindingInstanceIdIsNullOrEmpty() {
-        ResponseEntity<BindingInstance> response = controller.getBinding(null);
+        BindingInstanceController.BindingInstanceIdRequest nullRequest = new BindingInstanceController.BindingInstanceIdRequest();
+        nullRequest.setBindingInstanceId(null);
+        ResponseEntity<BindingInstance> response = controller.getBinding(nullRequest);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
 
-        response = controller.getBinding("");
+        BindingInstanceController.BindingInstanceIdRequest emptyRequest = new BindingInstanceController.BindingInstanceIdRequest();
+        emptyRequest.setBindingInstanceId("");
+        response = controller.getBinding(emptyRequest);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
 
         verify(bindingInstanceStore, never()).retrieve(any());
@@ -157,7 +165,9 @@ class BindingInstanceControllerTest {
         when(bindingInstanceStore.exists(BINDING_INSTANCE_ID)).thenReturn(true);
         doNothing().when(bindingInstanceStore).delete(BINDING_INSTANCE_ID);
 
-        ResponseEntity<Void> response = controller.deleteBinding(BINDING_INSTANCE_ID);
+        BindingInstanceController.BindingInstanceIdRequest request = new BindingInstanceController.BindingInstanceIdRequest();
+        request.setBindingInstanceId(BINDING_INSTANCE_ID);
+        ResponseEntity<Void> response = controller.deleteBinding(request);
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         verify(bindingInstanceStore).exists(BINDING_INSTANCE_ID);
@@ -169,7 +179,9 @@ class BindingInstanceControllerTest {
     void shouldReturn404WhenDeletingNonExistentBinding() {
         when(bindingInstanceStore.exists(BINDING_INSTANCE_ID)).thenReturn(false);
 
-        ResponseEntity<Void> response = controller.deleteBinding(BINDING_INSTANCE_ID);
+        BindingInstanceController.BindingInstanceIdRequest request = new BindingInstanceController.BindingInstanceIdRequest();
+        request.setBindingInstanceId(BINDING_INSTANCE_ID);
+        ResponseEntity<Void> response = controller.deleteBinding(request);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         verify(bindingInstanceStore).exists(BINDING_INSTANCE_ID);
@@ -179,10 +191,14 @@ class BindingInstanceControllerTest {
     @Test
     @DisplayName("Should return 400 when deleting with null or empty ID")
     void shouldReturn400WhenDeletingWithNullOrEmptyId() {
-        ResponseEntity<Void> response = controller.deleteBinding(null);
+        BindingInstanceController.BindingInstanceIdRequest nullRequest = new BindingInstanceController.BindingInstanceIdRequest();
+        nullRequest.setBindingInstanceId(null);
+        ResponseEntity<Void> response = controller.deleteBinding(nullRequest);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
 
-        response = controller.deleteBinding("");
+        BindingInstanceController.BindingInstanceIdRequest emptyRequest = new BindingInstanceController.BindingInstanceIdRequest();
+        emptyRequest.setBindingInstanceId("");
+        response = controller.deleteBinding(emptyRequest);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
 
         verify(bindingInstanceStore, never()).exists(any());

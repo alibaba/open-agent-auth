@@ -51,18 +51,17 @@ class OperationAuthorizationPropertiesTest {
         assertNotNull(properties.getPromptEncryption());
         assertNotNull(properties.getPromptProtection());
         assertNotNull(properties.getAgentContext());
-        assertNotNull(properties.getOauth2Client());
         assertNotNull(properties.getAuthorization());
         
-        assertEquals("/api/v1/policies", properties.getEndpoints().getPolicy().getRegistry());
-        assertEquals("/api/v1/policies/{policyId}", properties.getEndpoints().getPolicy().getDelete());
-        assertEquals("/api/v1/policies/{policyId}", properties.getEndpoints().getPolicy().getGet());
-        assertEquals("/api/v1/bindings", properties.getEndpoints().getBinding().getRegistry());
-        assertEquals("/api/v1/bindings/{bindingInstanceId}", properties.getEndpoints().getBinding().getGet());
-        assertEquals("/api/v1/bindings/{bindingInstanceId}", properties.getEndpoints().getBinding().getDelete());
+        assertEquals("/api/v1/policies/register", properties.getEndpoints().getPolicy().getRegistry());
+        assertEquals("/api/v1/policies/delete", properties.getEndpoints().getPolicy().getDelete());
+        assertEquals("/api/v1/policies/get", properties.getEndpoints().getPolicy().getRetrieve());
+        assertEquals("/api/v1/bindings/register", properties.getEndpoints().getBinding().getRegistry());
+        assertEquals("/api/v1/bindings/get", properties.getEndpoints().getBinding().getRetrieve());
+        assertEquals("/api/v1/bindings/delete", properties.getEndpoints().getBinding().getDelete());
         
         assertFalse(properties.getPromptEncryption().isEnabled());
-        assertEquals("jwe-encryption-key-001", properties.getPromptEncryption().getEncryptionKeyId());
+        assertNull(properties.getPromptEncryption().getEncryptionKeyId());
         assertEquals("RSA-OAEP-256", properties.getPromptEncryption().getEncryptionAlgorithm());
         assertEquals("A256GCM", properties.getPromptEncryption().getContentEncryptionAlgorithm());
         
@@ -89,11 +88,6 @@ class OperationAuthorizationPropertiesTest {
         encryption.setEnabled(true);
         properties.setPromptEncryption(encryption);
         assertTrue(properties.getPromptEncryption().isEnabled());
-        
-        OperationAuthorizationProperties.OAuth2ClientProperties oauth2Client = new OperationAuthorizationProperties.OAuth2ClientProperties();
-        oauth2Client.setClientId("test-client");
-        properties.setOauth2Client(oauth2Client);
-        assertEquals("test-client", properties.getOauth2Client().getClientId());
     }
 
     @Test
@@ -113,15 +107,15 @@ class OperationAuthorizationPropertiesTest {
         policy.setDelete("/custom/policies/{id}");
         assertEquals("/custom/policies/{id}", policy.getDelete());
         
-        policy.setGet("/custom/policies/{id}");
-        assertEquals("/custom/policies/{id}", policy.getGet());
+        policy.setRetrieve("/custom/policies/{id}");
+        assertEquals("/custom/policies/{id}", policy.getRetrieve());
         
         OperationAuthorizationProperties.OperationAuthorizationEndpointsProperties.BindingEndpointPaths binding = endpoints.getBinding();
         binding.setRegistry("/custom/bindings");
         assertEquals("/custom/bindings", binding.getRegistry());
         
-        binding.setGet("/custom/bindings/{id}");
-        assertEquals("/custom/bindings/{id}", binding.getGet());
+        binding.setRetrieve("/custom/bindings/{id}");
+        assertEquals("/custom/bindings/{id}", binding.getRetrieve());
         
         binding.setDelete("/custom/bindings/{id}");
         assertEquals("/custom/bindings/{id}", binding.getDelete());
@@ -147,22 +141,7 @@ class OperationAuthorizationPropertiesTest {
         assertEquals("authorization-server", encryption.getJwksConsumer());
     }
 
-    @Test
-    void testOAuth2ClientProperties() {
-        
-        
-        OperationAuthorizationProperties.OAuth2ClientProperties oauth2Client = new OperationAuthorizationProperties.OAuth2ClientProperties();
-        
-        // Test credentials
-        oauth2Client.setClientId("test-client");
-        assertEquals("test-client", oauth2Client.getClientId());
-        
-        oauth2Client.setClientSecret("test-secret");
-        assertEquals("test-secret", oauth2Client.getClientSecret());
-        
-        oauth2Client.setOauthCallbacksRedirectUri("http://localhost:8080/callback");
-        assertEquals("http://localhost:8080/callback", oauth2Client.getOauthCallbacksRedirectUri());
-    }
+
 
     @Test
     void testAgentContextProperties() {
@@ -249,8 +228,5 @@ class OperationAuthorizationPropertiesTest {
         
         properties1.setEnabled(true);
         assertFalse(properties2.isEnabled());
-        
-        properties1.getOauth2Client().setClientId("client-1");
-        assertNull(properties2.getOauth2Client().getClientId());
     }
 }

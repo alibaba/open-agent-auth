@@ -235,13 +235,13 @@ class DefaultServiceEndpointResolverTest {
         @DisplayName("Should handle path variables")
         void shouldHandlePathVariables() {
             Map<String, String> endpoints = new HashMap<>();
-            endpoints.put("workload.get", "/api/v1/workload/{workloadId}");
+            endpoints.put("workload.retrieve", "/api/v1/workload/{workloadId}");
             serviceProperties.getConsumers().get("agent-idp").setEndpoints(endpoints);
 
             Map<String, String> pathVariables = new HashMap<>();
             pathVariables.put("workloadId", "123");
 
-            String url = resolver.resolveConsumer("agent-idp", "workload.get", pathVariables);
+            String url = resolver.resolveConsumer("agent-idp", "workload.retrieve", pathVariables);
 
             assertThat(url).isEqualTo("https://agent-idp.example.com/api/v1/workload/123");
         }
@@ -262,7 +262,7 @@ class DefaultServiceEndpointResolverTest {
         @DisplayName("Should handle both path variables and query parameters")
         void shouldHandleBothPathVariablesAndQueryParameters() {
             Map<String, String> endpoints = new HashMap<>();
-            endpoints.put("workload.get", "/api/v1/workload/{workloadId}");
+            endpoints.put("workload.retrieve", "/api/v1/workload/{workloadId}");
             serviceProperties.getConsumers().get("agent-idp").setEndpoints(endpoints);
 
             Map<String, String> pathVariables = new HashMap<>();
@@ -271,7 +271,7 @@ class DefaultServiceEndpointResolverTest {
             Map<String, String> queryParams = new HashMap<>();
             queryParams.put("detail", "true");
 
-            String url = resolver.resolveConsumer("agent-idp", "workload.get", pathVariables, queryParams);
+            String url = resolver.resolveConsumer("agent-idp", "workload.retrieve", pathVariables, queryParams);
 
             assertThat(url).isEqualTo("https://agent-idp.example.com/api/v1/workload/123?detail=true");
         }

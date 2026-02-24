@@ -70,6 +70,27 @@ public class OAuth2ClientProperties {
     private boolean enabled = false;
 
     /**
+     * OAuth 2.0 client identifier.
+     * <p>
+     * The unique identifier for this application as an OAuth 2.0 client,
+     * used for all OAuth 2.0 flows including authorization code exchange,
+     * token requests, and operation authorization.
+     * </p>
+     */
+    private String clientId;
+
+    /**
+     * OAuth 2.0 client secret.
+     * <p>
+     * The secret used to authenticate this application with the authorization server
+     * during token exchange and other OAuth 2.0 operations.
+     * </p>
+     */
+    private String clientSecret;
+
+
+
+    /**
      * Authentication configuration for protecting endpoints.
      * <p>
      * Defines which endpoints require OAuth 2.0 authentication and how
@@ -81,7 +102,7 @@ public class OAuth2ClientProperties {
     /**
      * Callback configuration for OAuth 2.0 authorization flow.
      * <p>
-     * Defines the callback endpoint and credentials for handling OAuth 2.0
+     * Defines the callback endpoint behavior for handling OAuth 2.0
      * authorization code responses.
      * </p>
      */
@@ -104,6 +125,44 @@ public class OAuth2ClientProperties {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
+
+    /**
+     * Gets the OAuth 2.0 client identifier.
+     *
+     * @return the client ID
+     */
+    public String getClientId() {
+        return clientId;
+    }
+
+    /**
+     * Sets the OAuth 2.0 client identifier.
+     *
+     * @param clientId the client ID to set
+     */
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    /**
+     * Gets the OAuth 2.0 client secret.
+     *
+     * @return the client secret
+     */
+    public String getClientSecret() {
+        return clientSecret;
+    }
+
+    /**
+     * Sets the OAuth 2.0 client secret.
+     *
+     * @param clientSecret the client secret to set
+     */
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
+    }
+
+
 
     /**
      * Gets the authentication configuration.
@@ -242,8 +301,12 @@ public class OAuth2ClientProperties {
     /**
      * OAuth 2.0 Client callback configuration.
      * <p>
-     * This inner class defines the callback endpoint and credentials for
+     * This inner class defines the callback endpoint behavior for
      * handling OAuth 2.0 authorization code responses from the authorization server.
+     * </p>
+     * <p>
+     * Note: Client credentials (client-id, client-secret) are configured at the
+     * {@link OAuth2ClientProperties} level and shared across all OAuth 2.0 flows.
      * </p>
      */
     public static class OAuth2ClientCallbackProperties {
@@ -270,24 +333,6 @@ public class OAuth2ClientProperties {
          * </p>
          */
         private String endpoint = "/callback";
-
-        /**
-         * Client ID for token exchange.
-         * <p>
-         * The OAuth 2.0 client identifier used to exchange the authorization code
-         * for an access token at the authorization server.
-         * </p>
-         */
-        private String clientId;
-
-        /**
-         * Client secret for token exchange.
-         * <p>
-         * The OAuth 2.0 client secret used to authenticate the client when exchanging
-         * the authorization code for an access token.
-         * </p>
-         */
-        private String clientSecret;
 
         /**
          * Whether to auto-register the client.
@@ -335,42 +380,6 @@ public class OAuth2ClientProperties {
          */
         public void setEndpoint(String endpoint) {
             this.endpoint = endpoint;
-        }
-
-        /**
-         * Gets the client ID.
-         *
-         * @return the client ID
-         */
-        public String getClientId() {
-            return clientId;
-        }
-
-        /**
-         * Sets the client ID.
-         *
-         * @param clientId the client ID to set
-         */
-        public void setClientId(String clientId) {
-            this.clientId = clientId;
-        }
-
-        /**
-         * Gets the client secret.
-         *
-         * @return the client secret
-         */
-        public String getClientSecret() {
-            return clientSecret;
-        }
-
-        /**
-         * Sets the client secret.
-         *
-         * @param clientSecret the client secret to set
-         */
-        public void setClientSecret(String clientSecret) {
-            this.clientSecret = clientSecret;
         }
 
         /**

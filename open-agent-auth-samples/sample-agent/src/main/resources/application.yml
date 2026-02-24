@@ -78,18 +78,19 @@ open-agent-auth:
   capabilities:
     oauth2-client:
       enabled: true
+      client-id: sample-agent
+      client-secret: sample-agent-secret
       authentication:
         enabled: true
       callback:
         enabled: true
-        client-id: sample-agent
-        client-secret: sample-agent-secret
     
     operation-authorization:
       enabled: true
       # Prompt encryption configuration (technical implementation)
       prompt-encryption:
         enabled: true
+        encryption-key-id: jwe-encryption-key-001
         jwks-consumer: authorization-server
       # Prompt protection configuration (business logic)
       prompt-protection:
@@ -104,11 +105,6 @@ open-agent-auth:
         default-language: zh-CN
         default-platform: sample-agent.platform
         default-device-fingerprint: sample-device
-      # OAuth2 client configuration (authentication credentials)
-      oauth2-client:
-        client-id: sample-agent
-        client-secret: sample-agent-secret
-        oauth-callbacks-redirect-uri: http://localhost:8081/callback
       # Authorization behavior configuration (authorization policy)
       authorization:
         require-user-interaction: false

@@ -46,8 +46,8 @@ class AuditPropertiesTest {
         assertEquals("logging", properties.getProvider());
         assertNotNull(properties.getEndpoints());
         
-        assertEquals("/api/v1/audit/events/{eventId}", properties.getEndpoints().getEvent().getGet());
-        assertEquals("/api/v1/audit/events", properties.getEndpoints().getEvent().getList());
+        assertEquals("/api/v1/audit/events/get", properties.getEndpoints().getEvent().getRetrieve());
+        assertEquals("/api/v1/audit/events/list", properties.getEndpoints().getEvent().getList());
     }
 
     @Test
@@ -62,9 +62,9 @@ class AuditPropertiesTest {
         
         AuditProperties.AuditEndpointsProperties endpoints = new AuditProperties.AuditEndpointsProperties();
         endpoints.setEvent(new AuditProperties.AuditEndpointsProperties.EventEndpointPaths());
-        endpoints.getEvent().setGet("/custom/events/{id}");
+        endpoints.getEvent().setRetrieve("/custom/events/{id}");
         properties.setEndpoints(endpoints);
-        assertEquals("/custom/events/{id}", properties.getEndpoints().getEvent().getGet());
+        assertEquals("/custom/events/{id}", properties.getEndpoints().getEvent().getRetrieve());
     }
 
     @Test
@@ -78,8 +78,8 @@ class AuditPropertiesTest {
         AuditProperties.AuditEndpointsProperties endpoints = new AuditProperties.AuditEndpointsProperties();
         AuditProperties.AuditEndpointsProperties.EventEndpointPaths event = endpoints.getEvent();
         
-        event.setGet("/custom/events/{eventId}");
-        assertEquals("/custom/events/{eventId}", event.getGet());
+        event.setRetrieve("/custom/events/{eventId}");
+        assertEquals("/custom/events/{eventId}", event.getRetrieve());
         
         event.setList("/custom/events");
         assertEquals("/custom/events", event.getList());
@@ -100,8 +100,8 @@ class AuditPropertiesTest {
         properties.setProvider("elk");
         assertEquals("elk", properties.getProvider());
         
-        properties.getEndpoints().getEvent().setGet("");
-        assertEquals("", properties.getEndpoints().getEvent().getGet());
+        properties.getEndpoints().getEvent().setRetrieve("");
+        assertEquals("", properties.getEndpoints().getEvent().getRetrieve());
         
         properties.getEndpoints().getEvent().setList("/api/v1/custom/events");
         assertEquals("/api/v1/custom/events", properties.getEndpoints().getEvent().getList());
@@ -118,8 +118,8 @@ class AuditPropertiesTest {
         properties1.setProvider("database");
         assertEquals("logging", properties2.getProvider());
         
-        properties1.getEndpoints().getEvent().setGet("/custom");
-        assertEquals("/api/v1/audit/events/{eventId}", properties2.getEndpoints().getEvent().getGet());
+        properties1.getEndpoints().getEvent().setRetrieve("/custom");
+        assertEquals("/api/v1/audit/events/get", properties2.getEndpoints().getEvent().getRetrieve());
     }
 
     @Test
@@ -127,8 +127,8 @@ class AuditPropertiesTest {
         AuditProperties.AuditEndpointsProperties endpoints = new AuditProperties.AuditEndpointsProperties();
         AuditProperties.AuditEndpointsProperties.EventEndpointPaths event = endpoints.getEvent();
         
-        event.setGet("/api/v1/audit/events/{eventId}");
-        assertTrue(event.getGet().startsWith("/"));
+        event.setRetrieve("/api/v1/audit/events/get");
+        assertTrue(event.getRetrieve().startsWith("/"));
         
         event.setList("/api/v1/audit/events");
         assertTrue(event.getList().startsWith("/"));

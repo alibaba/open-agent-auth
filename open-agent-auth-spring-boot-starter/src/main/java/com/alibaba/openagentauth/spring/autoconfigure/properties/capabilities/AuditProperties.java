@@ -39,8 +39,8 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesPro
  *       provider: logging
  *       endpoints:
  *         event:
- *           get: /api/v1/audit/events/{eventId}
- *           list: /api/v1/audit/events
+ *           retrieve: /api/v1/audit/events/get
+ *           list: /api/v1/audit/events/list
  * </pre>
  *
  * @since 2.0
@@ -184,15 +184,15 @@ public class AuditProperties {
         public static class EventEndpointPaths {
 
             /**
-             * Get audit event endpoint path.
+             * Retrieve audit event endpoint path.
              * <p>
              * Retrieves a specific audit event by its unique identifier.
              * </p>
              * <p>
-             * Default value: {@code /api/v1/audit/events/{eventId}}
+             * Default value: {@code /api/v1/audit/events/get}
              * </p>
              */
-            private String get = "/api/v1/audit/events/{eventId}";
+            private String retrieve = "/api/v1/audit/events/get";
 
             /**
              * List audit events endpoint path.
@@ -200,27 +200,27 @@ public class AuditProperties {
              * Retrieves audit events, optionally filtered by criteria.
              * </p>
              * <p>
-             * Default value: {@code /api/v1/audit/events}
+             * Default value: {@code /api/v1/audit/events/list}
              * </p>
              */
-            private String list = "/api/v1/audit/events";
+            private String list = "/api/v1/audit/events/list";
 
             /**
-             * Gets the get audit event endpoint path.
+             * Gets the retrieve audit event endpoint path.
              *
-             * @return the get audit event endpoint path
+             * @return the retrieve audit event endpoint path
              */
-            public String getGet() {
-                return get;
+            public String getRetrieve() {
+                return retrieve;
             }
 
             /**
-             * Sets the get audit event endpoint path.
+             * Sets the retrieve audit event endpoint path.
              *
-             * @param get the get audit event endpoint path to set
+             * @param retrieve the retrieve audit event endpoint path to set
              */
-            public void setGet(String get) {
-                this.get = get;
+            public void setRetrieve(String retrieve) {
+                this.retrieve = retrieve;
             }
 
             /**

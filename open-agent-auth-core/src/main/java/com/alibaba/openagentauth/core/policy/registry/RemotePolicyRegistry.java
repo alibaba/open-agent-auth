@@ -52,8 +52,8 @@ import java.util.Optional;
  * <pre>
  * ┌─────────────────┐         HTTP          ┌──────────────────────┐
  * │ Resource Server │ ────────────────────▶ │ Authorization Server │
- * │  (RemotePolicy  │   GET /api/v1/        │   (Local InMemory    │
- * │   Registry)     │   policies/{id}       │    PolicyRegistry)   │
+ * │  (RemotePolicy  │   POST /api/v1/       │   (Local InMemory    │
+ * │   Registry)     │   policies/get        │    PolicyRegistry)   │
  * └─────────────────┘                       └──────────────────────┘
  * </pre>
  * <p>
@@ -134,17 +134,22 @@ public class RemotePolicyRegistry implements PolicyRegistry {
 
         try {
             // Build the HTTP request
-            String urlTemplate = serviceEndpointResolver.resolveConsumer("authorization-server", "policy.get");
-            // Replace path parameter {policyId} with actual value
-            String url = urlTemplate.replace("{policyId}", policyId);
+            String url = serviceEndpointResolver.resolveConsumer("authorization-server", "policy.retrieve");
+            if (url == null) {
+                throw new PolicyNotFoundException(
+                        "Failed to resolve endpoint: policy.retrieve for service authorization-server");
+            }
+            String requestBody = objectMapper.writeValueAsString(
+                    java.util.Map.of("policyId", policyId));
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .timeout(Duration.ofSeconds(30))
-                    .GET()
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
 
-            logger.debug("Sending GET request to: {}", url);
+            logger.debug("Sending POST request to: {}", url);
 
             // Send the request
             HttpResponse<String> response = httpClient.send(

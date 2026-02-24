@@ -50,7 +50,7 @@ class WorkloadIdentityPropertiesTest {
         assertNotNull(properties.getEndpoints());
         
         assertEquals("/api/v1/workloads/revoke", properties.getEndpoints().getWorkload().getRevoke());
-        assertEquals("/api/v1/workloads/get", properties.getEndpoints().getWorkload().getGet());
+        assertEquals("/api/v1/workloads/get", properties.getEndpoints().getWorkload().getRetrieve());
         assertEquals("/api/v1/workloads/token/issue", properties.getEndpoints().getWorkload().getIssue());
     }
 
@@ -82,8 +82,8 @@ class WorkloadIdentityPropertiesTest {
         workload.setRevoke("/custom/revoke");
         assertEquals("/custom/revoke", workload.getRevoke());
         
-        workload.setGet("/custom/get");
-        assertEquals("/custom/get", workload.getGet());
+        workload.setRetrieve("/custom/get");
+        assertEquals("/custom/get", workload.getRetrieve());
         
         workload.setIssue("/custom/token/issue");
         assertEquals("/custom/token/issue", workload.getIssue());
@@ -101,8 +101,8 @@ class WorkloadIdentityPropertiesTest {
         properties.getEndpoints().getWorkload().setRevoke("");
         assertEquals("", properties.getEndpoints().getWorkload().getRevoke());
         
-        properties.getEndpoints().getWorkload().setGet("/api/v1/workloads/custom-get");
-        assertEquals("/api/v1/workloads/custom-get", properties.getEndpoints().getWorkload().getGet());
+        properties.getEndpoints().getWorkload().setRetrieve("/api/v1/workloads/custom-get");
+        assertEquals("/api/v1/workloads/custom-get", properties.getEndpoints().getWorkload().getRetrieve());
     }
 
     @Test
@@ -125,8 +125,8 @@ class WorkloadIdentityPropertiesTest {
         workload.setRevoke("/api/v1/workloads/revoke");
         assertTrue(workload.getRevoke().startsWith("/"));
         
-        workload.setGet("/api/v1/workloads/get");
-        assertTrue(workload.getGet().startsWith("/"));
+        workload.setRetrieve("/api/v1/workloads/get");
+        assertTrue(workload.getRetrieve().startsWith("/"));
         
         workload.setIssue("/api/v1/workloads/token/issue");
         assertTrue(workload.getIssue().startsWith("/"));

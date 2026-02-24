@@ -37,9 +37,9 @@ import org.springframework.web.bind.annotation.*;
  * <p>
  * <b>Endpoints:</b></p>
  * <ul>
- *   <li>GET /api/v1/policies/{policyId} - Get a policy by ID</li>
- *   <li>POST /api/v1/policies - Register a new policy</li>
- *   <li>DELETE /api/v1/policies/{policyId} - Delete a policy</li>
+ *   <li>POST /api/v1/policies/get - Retrieve a policy by ID</li>
+ *   <li>POST /api/v1/policies/register - Register a new policy</li>
+ *   <li>POST /api/v1/policies/delete - Delete a policy</li>
  * </ul>
  *
  * @see PolicyRegistry
@@ -67,18 +67,18 @@ public class PolicyRegistryController {
     /**
      * Retrieves a policy by its ID.
      *
-     * @param policyId the policy ID
+     * @param request the request containing policy ID
      * @return the policy if found
      */
-    @GetMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.policy.get:/api/v1/policies/{policyId}}")
-    public ResponseEntity<Policy> getPolicy(@PathVariable String policyId) {
-        logger.debug("Getting policy with ID: {}", policyId);
+    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.policy.retrieve:/api/v1/policies/get}")
+    public ResponseEntity<Policy> getPolicy(@RequestBody PolicyIdRequest request) {
+        logger.debug("Getting policy with ID: {}", request.getPolicyId());
 
         try {
-            Policy policy = policyRegistry.get(policyId);
+            Policy policy = policyRegistry.get(request.getPolicyId());
             return ResponseEntity.ok(policy);
         } catch (PolicyNotFoundException e) {
-            logger.warn("Policy not found: {}", policyId);
+            logger.warn("Policy not found: {}", request.getPolicyId());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
@@ -89,7 +89,7 @@ public class PolicyRegistryController {
      * @param request the policy registration request
      * @return the registered policy
      */
-    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.policy.registry:/api/v1/policies}")
+    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.policy.registry:/api/v1/policies/register}")
     public ResponseEntity<PolicyRegistration> registerPolicy(@RequestBody PolicyRegistrationRequest request) {
         logger.debug("Registering new policy with description: {}", request.getDescription());
 
@@ -111,18 +111,18 @@ public class PolicyRegistryController {
     /**
      * Deletes a policy by its ID.
      *
-     * @param policyId the policy ID
+     * @param request the request containing policy ID
      * @return 204 No Content if successful
      */
-    @DeleteMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.policy.delete:/api/v1/policies/{policyId}}")
-    public ResponseEntity<Void> deletePolicy(@PathVariable String policyId) {
-        logger.debug("Deleting policy with ID: {}", policyId);
+    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.policy.delete:/api/v1/policies/delete}")
+    public ResponseEntity<Void> deletePolicy(@RequestBody PolicyIdRequest request) {
+        logger.debug("Deleting policy with ID: {}", request.getPolicyId());
 
         try {
-            policyRegistry.delete(policyId);
+            policyRegistry.delete(request.getPolicyId());
             return ResponseEntity.noContent().build();
         } catch (PolicyNotFoundException e) {
-            logger.warn("Policy not found for deletion: {}", policyId);
+            logger.warn("Policy not found for deletion: {}", request.getPolicyId());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
@@ -166,6 +166,21 @@ public class PolicyRegistryController {
 
         public void setExpirationTime(java.time.Instant expirationTime) {
             this.expirationTime = expirationTime;
+        }
+    }
+
+    /**
+     * Request DTO for policy ID.
+     */
+    public static class PolicyIdRequest {
+        private String policyId;
+
+        public String getPolicyId() {
+            return policyId;
+        }
+
+        public void setPolicyId(String policyId) {
+            this.policyId = policyId;
         }
     }
 }

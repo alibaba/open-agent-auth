@@ -44,8 +44,8 @@ import java.time.Duration;
  * <pre>
  * ┌─────────────────┐         HTTP          ┌──────────────────────────┐
  * │ Resource Server │ ────────────────────▶ │ Authorization Server     │
- * │  (RemoteBinding │   GET /api/v1/        │   (Local InMemory        │
- * │   InstanceStore)│   bindings/{id}       │    BindingInstanceStore) │
+ * │  (RemoteBinding │   POST /api/v1/       │   (Local InMemory        │
+ * │   InstanceStore)│   bindings/get        │    BindingInstanceStore) │
  * └─────────────────┘                       └──────────────────────────┘
  * </pre>
  * <p>
@@ -119,17 +119,22 @@ public class RemoteBindingInstanceStore implements BindingInstanceStore {
 
         try {
             // Build the HTTP request
-            String urlTemplate = serviceEndpointResolver.resolveConsumer("authorization-server", "binding.get");
-            // Replace path parameter {bindingInstanceId} with actual value
-            String url = urlTemplate.replace("{bindingInstanceId}", bindingInstanceId);
+            String url = serviceEndpointResolver.resolveConsumer("authorization-server", "binding.retrieve");
+            if (url == null) {
+                logger.error("Failed to resolve endpoint: binding.retrieve for service authorization-server");
+                return null;
+            }
+            String requestBody = objectMapper.writeValueAsString(
+                    java.util.Map.of("bindingInstanceId", bindingInstanceId));
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .timeout(Duration.ofSeconds(30))
-                    .GET()
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
 
-            logger.debug("Sending GET request to: {}", url);
+            logger.debug("Sending POST request to: {}", url);
 
             // Send the request
             HttpResponse<String> response = httpClient.send(

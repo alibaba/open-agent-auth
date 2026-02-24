@@ -195,9 +195,9 @@ open-agent-auth:
 |----------|------|-------------|---------|
 | `enabled` | Boolean | Whether callback is enabled | `false` |
 | `endpoint` | String | Callback endpoint path | `/callback` |
-| `client-id` | String | OAuth 2.0 client ID | Required |
-| `client-secret` | String | OAuth 2.0 client secret | Required |
 | `auto-register` | Boolean | Whether to auto-register client | `false` |
+
+> **Note**: Client credentials (`client-id`, `client-secret`) are now configured at the `oauth2-client` top level, not within `callback`. See [OAuth2 Client Properties](#properties) above.
 
 ### Path Matching
 
@@ -237,7 +237,7 @@ open-agent-auth:
       endpoints:
         workload:
           revoke: /api/v1/workloads/revoke
-          get: /api/v1/workloads/get
+          retrieve: /api/v1/workloads/get
           issue: /api/v1/workloads/token/issue
 ```
 
@@ -254,7 +254,7 @@ open-agent-auth:
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
 | `workload.revoke` | String | Revoke workload endpoint path | `/api/v1/workloads/revoke` |
-| `workload.get` | String | Get workload endpoint path | `/api/v1/workloads/get` |
+| `workload.retrieve` | String | Retrieve workload endpoint path | `/api/v1/workloads/get` |
 | `workload.issue` | String | Issue workload token endpoint path | `/api/v1/workloads/token/issue` |
 
 ### Workload Identity Flow
@@ -269,7 +269,7 @@ open-agent-auth:
        └─> Returns Workload Identity Token (WIT)
 
 2. Workload Query
-   └─> GET /api/v1/workloads/get
+   └─> POST /api/v1/workloads/get
        └─> Returns workload information
 
 3. Workload Revocation
@@ -308,16 +308,16 @@ open-agent-auth:
       enabled: true
       endpoints:
         policy:
-          registry: /api/v1/policies
-          get: /api/v1/policies/{policyId}
-          delete: /api/v1/policies/{policyId}
+          registry: /api/v1/policies/register
+          retrieve: /api/v1/policies/get
+          delete: /api/v1/policies/delete
         binding:
-          registry: /api/v1/bindings
-          get: /api/v1/bindings/{bindingInstanceId}
-          delete: /api/v1/bindings/{bindingInstanceId}
+          registry: /api/v1/bindings/register
+          retrieve: /api/v1/bindings/get
+          delete: /api/v1/bindings/delete
       prompt-encryption:
         enabled: true
-        encryption-key-id: jwe-encryption-key-001
+        encryption-key-id: null
         encryption-algorithm: RSA-OAEP-256
         content-encryption-algorithm: A256GCM
         jwks-consumer: authorization-server
@@ -326,15 +326,11 @@ open-agent-auth:
         encryption-enabled: true
         sanitization-level: MEDIUM
       agent-context:
-        default-client: sample-agent-client
+        default-client: my-agent-client
         default-channel: web
         default-language: zh-CN
-        default-platform: sample-agent.platform
-        default-device-fingerprint: sample-device
-      oauth2-client:
-        client-id: agent-client-id
-        client-secret: agent-client-secret
-        oauth-callbacks-redirect-uri: https://agent.example.com/callback
+        default-platform: my-agent-platform
+        default-device-fingerprint: my-device-fingerprint
       authorization:
         require-user-interaction: false
         expiration-seconds: 3600
@@ -352,19 +348,19 @@ open-agent-auth:
 
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
-| `policy.registry` | String | Policy registry endpoint path | `/api/v1/policies` |
-| `policy.get` | String | Get policy by ID endpoint path | `/api/v1/policies/{policyId}` |
-| `policy.delete` | String | Delete policy endpoint path | `/api/v1/policies/{policyId}` |
-| `binding.registry` | String | Binding registry endpoint path | `/api/v1/bindings` |
-| `binding.get` | String | Get binding by ID endpoint path | `/api/v1/bindings/{bindingInstanceId}` |
-| `binding.delete` | String | Delete binding endpoint path | `/api/v1/bindings/{bindingInstanceId}` |
+| `policy.registry` | String | Policy registry endpoint path | `/api/v1/policies/register` |
+| `policy.retrieve` | String | Retrieve policy by ID endpoint path | `/api/v1/policies/get` |
+| `policy.delete` | String | Delete policy endpoint path | `/api/v1/policies/delete` |
+| `binding.registry` | String | Binding registry endpoint path | `/api/v1/bindings/register` |
+| `binding.retrieve` | String | Retrieve binding by ID endpoint path | `/api/v1/bindings/get` |
+| `binding.delete` | String | Delete binding endpoint path | `/api/v1/bindings/delete` |
 
 #### Prompt Encryption Properties
 
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
 | `enabled` | Boolean | Whether prompt encryption is enabled | `false` |
-| `encryption-key-id` | String | Encryption key ID | `jwe-encryption-key-001` |
+| `encryption-key-id` | String | Encryption key ID | `null` |
 | `encryption-algorithm` | String | Key encryption algorithm | `RSA-OAEP-256` |
 | `content-encryption-algorithm` | String | Content encryption algorithm | `A256GCM` |
 | `jwks-consumer` | String | JWKS consumer name for fetching public key | Optional |
@@ -381,19 +377,13 @@ open-agent-auth:
 
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
-| `default-client` | String | Default agent client identifier | `sample-agent-client` |
+| `default-client` | String | Default agent client identifier | `null` |
 | `default-channel` | String | Default channel type | `web` |
 | `default-language` | String | Default language preference | `zh-CN` |
-| `default-platform` | String | Default platform identifier | `sample-agent.platform` |
-| `default-device-fingerprint` | String | Default device fingerprint | `sample-device` |
+| `default-platform` | String | Default platform identifier | `null` |
+| `default-device-fingerprint` | String | Default device fingerprint | `null` |
 
-#### OAuth2 Client Properties
-
-| Property | Type | Description | Required |
-|----------|------|-------------|----------|
-| `client-id` | String | OAuth 2.0 client ID | Yes |
-| `client-secret` | String | OAuth 2.0 client secret | Yes |
-| `oauth-callbacks-redirect-uri` | String | OAuth callbacks redirect URI | Yes |
+> **Note**: OAuth 2.0 client credentials (`client-id`, `client-secret`) are now configured at the `capabilities.oauth2-client` top level, shared across all OAuth 2.0 flows. The `oauth2-client` sub-section has been removed from `operation-authorization`.
 
 #### Authorization Behavior Properties
 
@@ -653,8 +643,8 @@ open-agent-auth:
       provider: logging
       endpoints:
         event:
-          get: /api/v1/audit/events/{eventId}
-          list: /api/v1/audit/events
+          retrieve: /api/v1/audit/events/get
+          list: /api/v1/audit/events/list
 ```
 
 ### Properties
@@ -675,8 +665,8 @@ open-agent-auth:
 
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
-| `event.get` | String | Get audit event by ID endpoint path | `/api/v1/audit/events/{eventId}` |
-| `event.list` | String | List audit events endpoint path | `/api/v1/audit/events` |
+| `event.retrieve` | String | Retrieve audit event by ID endpoint path | `/api/v1/audit/events/get` |
+| `event.list` | String | List audit events endpoint path | `/api/v1/audit/events/list` |
 
 ### Supported Providers
 
@@ -747,9 +737,8 @@ Use environment variables for sensitive configuration:
 ```yaml
 capabilities:
   oauth2-client:
-    callback:
-      client-id: ${CLIENT_ID}
-      client-secret: ${CLIENT_SECRET}
+    client-id: ${CLIENT_ID}
+    client-secret: ${CLIENT_SECRET}
 ```
 
 ### 4. Document Custom Configuration
