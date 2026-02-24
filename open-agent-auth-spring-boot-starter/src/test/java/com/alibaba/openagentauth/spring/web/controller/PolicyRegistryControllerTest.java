@@ -102,7 +102,9 @@ class PolicyRegistryControllerTest {
             when(policyRegistry.get(POLICY_ID)).thenReturn(mockPolicy);
 
             // Act
-            ResponseEntity<Policy> response = controller.getPolicy(POLICY_ID);
+            PolicyRegistryController.PolicyIdRequest request = new PolicyRegistryController.PolicyIdRequest();
+            request.setPolicyId(POLICY_ID);
+            ResponseEntity<Policy> response = controller.getPolicy(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -118,7 +120,9 @@ class PolicyRegistryControllerTest {
             when(policyRegistry.get(POLICY_ID)).thenThrow(new PolicyNotFoundException("Policy not found"));
 
             // Act
-            ResponseEntity<Policy> response = controller.getPolicy(POLICY_ID);
+            PolicyRegistryController.PolicyIdRequest request = new PolicyRegistryController.PolicyIdRequest();
+            request.setPolicyId(POLICY_ID);
+            ResponseEntity<Policy> response = controller.getPolicy(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -203,7 +207,9 @@ class PolicyRegistryControllerTest {
         @DisplayName("Should delete policy successfully")
         void shouldDeletePolicySuccessfully() throws Exception {
             // Act
-            ResponseEntity<Void> response = controller.deletePolicy(POLICY_ID);
+            PolicyRegistryController.PolicyIdRequest request = new PolicyRegistryController.PolicyIdRequest();
+            request.setPolicyId(POLICY_ID);
+            ResponseEntity<Void> response = controller.deletePolicy(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
@@ -217,7 +223,9 @@ class PolicyRegistryControllerTest {
             doThrow(new PolicyNotFoundException("Policy not found")).when(policyRegistry).delete(POLICY_ID);
 
             // Act
-            ResponseEntity<Void> response = controller.deletePolicy(POLICY_ID);
+            PolicyRegistryController.PolicyIdRequest request = new PolicyRegistryController.PolicyIdRequest();
+            request.setPolicyId(POLICY_ID);
+            ResponseEntity<Void> response = controller.deletePolicy(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -260,7 +268,9 @@ class PolicyRegistryControllerTest {
             when(policyRegistry.get(isNull())).thenThrow(new PolicyNotFoundException("Policy ID is null"));
 
             // Act
-            ResponseEntity<Policy> response = controller.getPolicy(null);
+            PolicyRegistryController.PolicyIdRequest request = new PolicyRegistryController.PolicyIdRequest();
+            request.setPolicyId(null);
+            ResponseEntity<Policy> response = controller.getPolicy(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -273,7 +283,9 @@ class PolicyRegistryControllerTest {
             when(policyRegistry.get("")).thenThrow(new PolicyNotFoundException("Policy ID is empty"));
 
             // Act
-            ResponseEntity<Policy> response = controller.getPolicy("");
+            PolicyRegistryController.PolicyIdRequest request = new PolicyRegistryController.PolicyIdRequest();
+            request.setPolicyId("");
+            ResponseEntity<Policy> response = controller.getPolicy(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);

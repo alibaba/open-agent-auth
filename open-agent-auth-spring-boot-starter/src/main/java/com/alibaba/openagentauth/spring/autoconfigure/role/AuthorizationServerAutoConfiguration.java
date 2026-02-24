@@ -308,12 +308,12 @@ public class AuthorizationServerAutoConfiguration {
                 );
             }
 
-            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
-            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientSecret();
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
+            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientSecret();
             
             if (clientId == null || clientId.isBlank()) {
                 throw new IllegalStateException(
-                    "OAuth client ID is not configured. Please set 'open-agent-auth.capabilities.oauth2-client.callback.client-id' in your configuration. " +
+                    "OAuth client ID is not configured. Please set 'open-agent-auth.capabilities.oauth2-client.client-id' in your configuration. " +
                     "This is a required configuration for OAuth 2.0 token exchange."
                 );
             }
@@ -328,12 +328,12 @@ public class AuthorizationServerAutoConfiguration {
                 OpenAgentAuthProperties openAgentAuthProperties,
                 ServiceEndpointResolver serviceEndpointResolver) {
             logger.info("Creating agentOperationAuthorizationTokenClient bean for Authorization Server role");
-            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
-            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientSecret();
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
+            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientSecret();
             
             if (clientId == null || clientId.isBlank()) {
                 throw new IllegalStateException(
-                    "OAuth client ID is not configured. Please set 'open-agent-auth.server.callback.client-id' in your configuration. " +
+                    "OAuth client ID is not configured. Please set 'open-agent-auth.capabilities.oauth2-client.client-id' in your configuration. " +
                     "This is a required configuration for OAuth 2.0 token exchange."
                 );
             }
@@ -588,7 +588,7 @@ public class AuthorizationServerAutoConfiguration {
                     "AS User IDP issuer configuration not found. Please configure open-agent-auth.infrastructure.jwks.consumers.as-user-idp in application.yml");
             }
 
-            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
             String callbackUrl = null;
             if (openAgentAuthProperties.getRoles() != null) {
                 var role = openAgentAuthProperties.getRoles().get(ROLE_AUTHORIZATION_SERVER);

@@ -44,7 +44,9 @@ import com.alibaba.openagentauth.core.token.TokenService;
 import com.alibaba.openagentauth.core.trust.model.TrustAnchor;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
+
 import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
+
 import com.alibaba.openagentauth.framework.actor.Agent;
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.executor.config.AgentAapExecutorConfig;
@@ -55,8 +57,6 @@ import com.alibaba.openagentauth.framework.orchestration.DefaultAgent;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
 import com.alibaba.openagentauth.framework.web.interceptor.AgentAuthenticationInterceptor;
 import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
-import com.alibaba.openagentauth.framework.web.store.SessionMappingStore;
-import com.alibaba.openagentauth.framework.web.store.impl.InMemorySessionMappingStore;
 import com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.ServiceProperties;
@@ -271,7 +271,7 @@ public class AgentAutoConfiguration {
          * </p>
          *
          * @param serviceEndpointResolver the service endpoint resolver
-         * @param openAgentAuthProperties      the global configuration properties
+         * @param openAgentAuthProperties the global configuration properties
          * @return the OAuth2TokenClient bean for user authentication
          */
         @Bean(name = "userAuthenticationTokenClient")
@@ -280,12 +280,12 @@ public class AgentAutoConfiguration {
                 ServiceEndpointResolver serviceEndpointResolver,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
-            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
-            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientSecret();
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
+            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientSecret();
             if (ValidationUtils.isNullOrEmpty(clientId)) {
                 throw new IllegalStateException(
                         "OAuth client ID is not configured. " +
-                                "Please set 'open-agent-auth.capabilities.oauth2-client.callback.client-id' in your configuration. " +
+                                "Please set 'open-agent-auth.capabilities.oauth2-client.client-id' in your configuration. " +
                                 "This is a required configuration for OAuth 2.0 flows."
                 );
             }
@@ -302,7 +302,7 @@ public class AgentAutoConfiguration {
          * </p>
          *
          * @param serviceEndpointResolver the service endpoint resolver
-         * @param openAgentAuthProperties      the global configuration properties
+         * @param openAgentAuthProperties the global configuration properties
          * @return the OAuth2TokenClient bean for agent operation authorization
          */
         @Bean(name = "agentOperationAuthorizationTokenClient")
@@ -311,12 +311,12 @@ public class AgentAutoConfiguration {
                 ServiceEndpointResolver serviceEndpointResolver,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
-            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientId();
-            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getClientSecret();
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
+            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientSecret();
             if (clientId == null || clientId.isBlank()) {
                 throw new IllegalStateException(
                         "OAuth client ID is not configured. " +
-                                "Please set 'open-agent-auth.server.callback.client-id' in your configuration. " +
+                                "Please set 'open-agent-auth.capabilities.oauth2-client.client-id' in your configuration. " +
                                 "This is a required configuration for OAuth 2.0 flows."
                 );
             }
@@ -333,7 +333,7 @@ public class AgentAutoConfiguration {
          *
          * @param oauth2TokenClient        the framework-level token client
          * @param sessionMappingBizService the session mapping business service
-         * @param openAgentAuthProperties       the global configuration properties
+         * @param openAgentAuthProperties  the global configuration properties
          * @return the OAuth2CallbackService bean
          */
         @Bean
@@ -362,7 +362,7 @@ public class AgentAutoConfiguration {
          * It delegates the business logic to OAuth2CallbackService.
          * </p>
          *
-         * @param callbackService    the callback service
+         * @param callbackService         the callback service
          * @param openAgentAuthProperties the global configuration properties
          * @return the OAuth2CallbackController bean
          */
@@ -458,7 +458,7 @@ public class AgentAutoConfiguration {
          * </ul>
          *
          * @param serviceEndpointResolver the service endpoint resolver for resolving PAR endpoint
-         * @param openAgentAuthProperties      the global configuration properties containing client credentials
+         * @param openAgentAuthProperties the global configuration properties containing client credentials
          * @return the configured OAuth2ParClient bean
          */
         @Bean
@@ -467,9 +467,8 @@ public class AgentAutoConfiguration {
                 ServiceEndpointResolver serviceEndpointResolver,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
-            var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOperationAuthorization().getOauth2Client();
-            String clientId = oauth2ClientProps.getClientId();
-            String clientSecret = oauth2ClientProps.getClientSecret();
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
+            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientSecret();
             return new DefaultOAuth2ParClient(serviceEndpointResolver, clientId, clientSecret);
         }
 
@@ -491,13 +490,18 @@ public class AgentAutoConfiguration {
         @ConditionalOnMissingBean
         public String jweEncryptionKeyId(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
             String keyId = openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption().getEncryptionKeyId();
+            
+            // Validate encryption key ID
+            if (keyId == null || keyId.isBlank()) {
+                throw new IllegalStateException("Encryption key ID must be configured via open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id");
+            }
 
             // Get key algorithm from key definition, not from encryption-algorithm
             // encryption-algorithm is for JWE (e.g., RSA-OAEP-256), but key generation uses JWS algorithm (e.g., RS256)
             // Need to find the key definition where key-id matches the encryptionKeyId
             KeyAlgorithm keyAlgorithm = null;
             for (Map.Entry<String, KeyDefinitionProperties> entry :
-                 openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().entrySet()) {
+                    openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().entrySet()) {
                 if (keyId.equals(entry.getValue().getKeyId())) {
                     keyAlgorithm = KeyAlgorithm.fromValue(entry.getValue().getAlgorithm());
                     break;
@@ -580,7 +584,7 @@ public class AgentAutoConfiguration {
             // Get or generate PAR-JWT signing key from KeyManager
             RSAKey parJwtSigningKey;
             try {
-                parJwtSigningKey =  (RSAKey) keyManager.getOrGenerateKey(keyId, keyAlgorithm);
+                parJwtSigningKey = (RSAKey) keyManager.getOrGenerateKey(keyId, keyAlgorithm);
             } catch (KeyManagementException e) {
                 throw new IllegalStateException("Failed to register PAR-JWT signing key with KeyManager", e);
             }
@@ -785,8 +789,18 @@ public class AgentAutoConfiguration {
             // Get the properties
             String authorizationServerUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AUTHORIZATION_SERVER).getBaseUrl();
             String agentUserIdpUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AGENT_USER_IDP).getBaseUrl();
-            String clientId = openAgentAuthProperties.getCapabilities().getOperationAuthorization().getOauth2Client().getClientId();
-            String oAuthCallbacksRedirectUri = openAgentAuthProperties.getCapabilities().getOperationAuthorization().getOauth2Client().getOauthCallbacksRedirectUri();
+            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
+
+            // Derive redirect URI from role issuer + callback endpoint
+            String callbackEndpoint = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getEndpoint();
+            String roleIssuer = null;
+            if (openAgentAuthProperties.getRoles() != null) {
+                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT);
+                if (role != null) {
+                    roleIssuer = role.getIssuer();
+                }
+            }
+            String oAuthCallbacksRedirectUri = (roleIssuer != null ? roleIssuer : "") + (callbackEndpoint != null ? callbackEndpoint : "/callback");
 
             // Create the agent
             return new DefaultAgent(
@@ -878,12 +892,18 @@ public class AgentAutoConfiguration {
                 }
             }
 
+            var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
+            
+            // Derive redirect URI from role issuer + callback endpoint
+            String callbackEndpoint = oauth2ClientProps.getCallback().getEndpoint();
+            String redirectUri = (issuer != null ? issuer : "") + (callbackEndpoint != null ? callbackEndpoint : "/callback");
+
             return AgentAapExecutorConfig.builder()
-                    .clientId(operationAuthProps.getOauth2Client().getClientId())
+                    .clientId(oauth2ClientProps.getClientId())
                     .channel(operationAuthProps.getAgentContext().getDefaultChannel())
                     .language(operationAuthProps.getAgentContext().getDefaultLanguage())
                     .platform(operationAuthProps.getAgentContext().getDefaultPlatform())
-                    .redirectUri(operationAuthProps.getOauth2Client().getOauthCallbacksRedirectUri())
+                    .redirectUri(redirectUri)
                     .agentClient(operationAuthProps.getAgentContext().getDefaultClient())
                     .expirationSeconds(operationAuthProps.getAuthorization().getExpirationSeconds())
                     .issuer(issuer)

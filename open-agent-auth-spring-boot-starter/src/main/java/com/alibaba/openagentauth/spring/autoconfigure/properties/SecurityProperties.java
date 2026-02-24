@@ -15,6 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Security configuration properties.
  * <p>
@@ -29,7 +32,8 @@ package com.alibaba.openagentauth.spring.autoconfigure.properties;
  *       enabled: true
  *     cors:
  *       enabled: false
- *       allowed-origins: "http://localhost:3000"
+ *       allowed-origins:
+ *         - http://localhost:3000
  * </pre>
  *
  * @since 1.0
@@ -138,11 +142,11 @@ public class SecurityProperties {
         /**
          * Allowed origins for CORS requests.
          * <p>
-         * A comma-separated list of origin URLs that are allowed to make
+         * A list of origin URLs that are allowed to make
          * cross-origin requests to this application.
          * </p>
          */
-        private String allowedOrigins = "";
+        private List<String> allowedOrigins = new ArrayList<>();
 
         /**
          * Gets whether CORS is enabled.
@@ -165,18 +169,18 @@ public class SecurityProperties {
         /**
          * Gets the allowed origins for CORS requests.
          *
-         * @return the comma-separated list of allowed origins
+         * @return the list of allowed origins
          */
-        public String getAllowedOrigins() {
+        public List<String> getAllowedOrigins() {
             return allowedOrigins;
         }
 
         /**
          * Sets the allowed origins for CORS requests.
          *
-         * @param allowedOrigins the comma-separated list of allowed origins
+         * @param allowedOrigins the list of allowed origins
          */
-        public void setAllowedOrigins(String allowedOrigins) {
+        public void setAllowedOrigins(List<String> allowedOrigins) {
             this.allowedOrigins = allowedOrigins;
         }
     }

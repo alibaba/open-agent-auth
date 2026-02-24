@@ -98,7 +98,9 @@ class AuditControllerTest {
             when(auditService.getEvent(EVENT_ID)).thenReturn(mockAuditEvent);
 
             // Act
-            ResponseEntity<AuditEvent> response = controller.getEvent(EVENT_ID);
+            AuditController.EventIdRequest request = new AuditController.EventIdRequest();
+            request.setEventId(EVENT_ID);
+            ResponseEntity<AuditEvent> response = controller.getEvent(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -114,7 +116,9 @@ class AuditControllerTest {
             when(auditService.getEvent(EVENT_ID)).thenReturn(null);
 
             // Act
-            ResponseEntity<AuditEvent> response = controller.getEvent(EVENT_ID);
+            AuditController.EventIdRequest request = new AuditController.EventIdRequest();
+            request.setEventId(EVENT_ID);
+            ResponseEntity<AuditEvent> response = controller.getEvent(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -129,7 +133,9 @@ class AuditControllerTest {
                     .thenThrow(new AuditStorageException("Storage error"));
 
             // Act
-            ResponseEntity<AuditEvent> response = controller.getEvent(EVENT_ID);
+            AuditController.EventIdRequest request = new AuditController.EventIdRequest();
+            request.setEventId(EVENT_ID);
+            ResponseEntity<AuditEvent> response = controller.getEvent(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -152,7 +158,10 @@ class AuditControllerTest {
             when(auditService.getEventsByTimeRange(startTime, endTime)).thenReturn(events);
 
             // Act
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(startTime, endTime);
+            AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
+            request.setStartTime(startTime);
+            request.setEndTime(endTime);
+            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -171,7 +180,10 @@ class AuditControllerTest {
             when(auditService.getEventsByTimeRange(startTime, endTime)).thenReturn(Collections.emptyList());
 
             // Act
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(startTime, endTime);
+            AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
+            request.setStartTime(startTime);
+            request.setEndTime(endTime);
+            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -183,7 +195,8 @@ class AuditControllerTest {
         @DisplayName("Should return 400 when both time parameters are null")
         void shouldReturn400WhenBothTimeParametersAreNull() {
             // Act
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(null, null);
+            AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
+            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -201,7 +214,10 @@ class AuditControllerTest {
                     .thenThrow(new AuditStorageException("Storage error"));
 
             // Act
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(startTime, endTime);
+            AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
+            request.setStartTime(startTime);
+            request.setEndTime(endTime);
+            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -218,7 +234,9 @@ class AuditControllerTest {
             when(auditService.getEventsByTimeRange(eq(startTime), any(Instant.class))).thenReturn(events);
 
             // Act
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(startTime, null);
+            AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
+            request.setStartTime(startTime);
+            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -235,7 +253,9 @@ class AuditControllerTest {
             when(auditService.getEventsByTimeRange(any(Instant.class), eq(endTime))).thenReturn(events);
 
             // Act
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(null, endTime);
+            AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
+            request.setEndTime(endTime);
+            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

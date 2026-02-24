@@ -110,11 +110,6 @@ public class OpenAgentAuthProperties {
     private SecurityProperties security = new SecurityProperties();
 
     /**
-     * Audit configuration.
-     */
-    private OpenAgentAuthAuditProperties audit = new OpenAgentAuthAuditProperties();
-
-    /**
      * Monitoring configuration.
      */
     private MonitoringProperties monitoring = new MonitoringProperties();
@@ -241,31 +236,6 @@ public class OpenAgentAuthProperties {
      */
     public void setSecurity(SecurityProperties security) {
         this.security = security;
-    }
-
-    /**
-     * Gets the audit configuration.
-     * <p>
-     * This configuration defines audit logging settings for tracking security events
-     * and system activities.
-     * </p>
-     *
-     * @return the audit properties
-     */
-    public OpenAgentAuthAuditProperties getAudit() {
-        return audit;
-    }
-
-    /**
-     * Sets the audit configuration.
-     * <p>
-     * This configuration controls audit logging functionality for security and compliance.
-     * </p>
-     *
-     * @param audit the audit properties to set
-     */
-    public void setAudit(OpenAgentAuthAuditProperties audit) {
-        this.audit = audit;
     }
 
     /**

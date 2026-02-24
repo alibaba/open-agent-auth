@@ -83,7 +83,7 @@ class DefaultEndpointsTest {
             assertThat(workloadEndpoints).hasSize(3);
             assertThat(workloadEndpoints).containsKey("workload.issue");
             assertThat(workloadEndpoints).containsKey("workload.revoke");
-            assertThat(workloadEndpoints).containsKey("workload.get");
+            assertThat(workloadEndpoints).containsKey("workload.retrieve");
         }
 
         @Test
@@ -95,7 +95,7 @@ class DefaultEndpointsTest {
             // Assert
             assertThat(workloadEndpoints.get("workload.issue")).isEqualTo("/api/v1/workloads/token/issue");
             assertThat(workloadEndpoints.get("workload.revoke")).isEqualTo("/api/v1/workloads/revoke");
-            assertThat(workloadEndpoints.get("workload.get")).isEqualTo("/api/v1/workloads/get");
+            assertThat(workloadEndpoints.get("workload.retrieve")).isEqualTo("/api/v1/workloads/get");
         }
     }
 
@@ -148,7 +148,7 @@ class DefaultEndpointsTest {
             // Assert
             assertThat(policyEndpoints).hasSize(3);
             assertThat(policyEndpoints).containsKey("policy.registry");
-            assertThat(policyEndpoints).containsKey("policy.get");
+            assertThat(policyEndpoints).containsKey("policy.retrieve");
             assertThat(policyEndpoints).containsKey("policy.delete");
         }
 
@@ -159,8 +159,8 @@ class DefaultEndpointsTest {
             Map<String, String> policyEndpoints = DefaultEndpoints.POLICY;
 
             // Assert
-            assertThat(policyEndpoints.get("policy.registry")).isEqualTo("/api/v1/policies");
-            assertThat(policyEndpoints.get("policy.get")).isEqualTo("/api/v1/policies/{policyId}");
+            assertThat(policyEndpoints.get("policy.registry")).isEqualTo("/api/v1/policies/register");
+            assertThat(policyEndpoints.get("policy.retrieve")).isEqualTo("/api/v1/policies/get");
         }
     }
 
@@ -177,7 +177,7 @@ class DefaultEndpointsTest {
             // Assert
             assertThat(bindingEndpoints).hasSize(3);
             assertThat(bindingEndpoints).containsKey("binding.registry");
-            assertThat(bindingEndpoints).containsKey("binding.get");
+            assertThat(bindingEndpoints).containsKey("binding.retrieve");
             assertThat(bindingEndpoints).containsKey("binding.delete");
         }
 
@@ -188,9 +188,9 @@ class DefaultEndpointsTest {
             Map<String, String> bindingEndpoints = DefaultEndpoints.BINDING;
 
             // Assert
-            assertThat(bindingEndpoints.get("binding.registry")).isEqualTo("/api/v1/bindings");
-            assertThat(bindingEndpoints.get("binding.get")).isEqualTo("/api/v1/bindings/{bindingInstanceId}");
-            assertThat(bindingEndpoints.get("binding.delete")).isEqualTo("/api/v1/bindings/{bindingInstanceId}");
+            assertThat(bindingEndpoints.get("binding.registry")).isEqualTo("/api/v1/bindings/register");
+            assertThat(bindingEndpoints.get("binding.retrieve")).isEqualTo("/api/v1/bindings/get");
+            assertThat(bindingEndpoints.get("binding.delete")).isEqualTo("/api/v1/bindings/delete");
         }
     }
 

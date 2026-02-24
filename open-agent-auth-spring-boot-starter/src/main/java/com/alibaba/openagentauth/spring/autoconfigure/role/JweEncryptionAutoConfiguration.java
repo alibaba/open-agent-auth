@@ -96,6 +96,13 @@ public class JweEncryptionAutoConfiguration {
             OperationAuthorizationProperties.PromptEncryptionProperties properties = 
                 openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption();
             
+            // Validate encryption key ID
+            String encryptionKeyId = properties.getEncryptionKeyId();
+            if (encryptionKeyId == null || encryptionKeyId.isBlank()) {
+                throw new IllegalStateException("Encryption key ID must be configured via " +
+                        "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id");
+            }
+            
             Object encryptionJwk;
             String keySource;
             
@@ -118,12 +125,12 @@ public class JweEncryptionAutoConfiguration {
                 try {
                     JWKSet jwkSet = JWKSet.load(new URL(jwksUrl));
                     // Find the key with matching key ID
-                    encryptionJwk = jwkSet.getKeyByKeyId(properties.getEncryptionKeyId());
+                    encryptionJwk = jwkSet.getKeyByKeyId(encryptionKeyId);
                     
                     if (encryptionJwk == null) {
                         throw new IllegalStateException(
                             "Encryption key not found in JWKS endpoint. Consumer: " + consumerName + 
-                            ", Key ID: " + properties.getEncryptionKeyId());
+                            ", Key ID: " + encryptionKeyId);
                     }
                     
                     keySource = "JWKS consumer '" + consumerName + "'";
@@ -136,7 +143,7 @@ public class JweEncryptionAutoConfiguration {
             } else {
                 // Use local KeyManager (Authorization Server role or backward compatibility)
                 logger.info("Using local KeyManager for encryption key");
-                encryptionJwk = keyManager.getSigningJWK(properties.getEncryptionKeyId());
+                encryptionJwk = keyManager.getSigningJWK(encryptionKeyId);
                 keySource = "local KeyManager";
             }
 
@@ -168,8 +175,13 @@ public class JweEncryptionAutoConfiguration {
             OperationAuthorizationProperties.PromptEncryptionProperties properties = 
                 openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption();
             
-            // Ensure the encryption key exists in KeyManager
+            // Validate encryption key ID
             String keyId = properties.getEncryptionKeyId();
+            if (keyId == null || keyId.isBlank()) {
+                throw new IllegalStateException("Encryption key ID must be configured via " +
+                        "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id");
+            }
+            
             KeyAlgorithm algorithm = KeyAlgorithm.RS256;
             
             try {

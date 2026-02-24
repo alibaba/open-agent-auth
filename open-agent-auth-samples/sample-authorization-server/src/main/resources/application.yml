@@ -97,11 +97,11 @@ open-agent-auth:
               - email
     oauth2-client:
       enabled: true
+      client-id: sample-authorization-server-id
+      client-secret: sample-authorization-server-secret
       callback:
         enabled: true
         endpoint: /callback
-        client-id: sample-authorization-server-id
-        client-secret: sample-authorization-server-secret
 
     operation-authorization:
       enabled: true

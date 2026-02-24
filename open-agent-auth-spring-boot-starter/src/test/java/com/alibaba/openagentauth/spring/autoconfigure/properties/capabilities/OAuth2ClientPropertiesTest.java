@@ -118,14 +118,19 @@ class OAuth2ClientPropertiesTest {
         callback.setEndpoint("/oauth2/callback");
         assertEquals("/oauth2/callback", callback.getEndpoint());
         
-        callback.setClientId("test-client");
-        assertEquals("test-client", callback.getClientId());
-        
-        callback.setClientSecret("test-secret");
-        assertEquals("test-secret", callback.getClientSecret());
-        
         callback.setAutoRegister(false);
         assertFalse(callback.isAutoRegister());
+    }
+
+    @Test
+    void testTopLevelCredentials() {
+        OAuth2ClientProperties properties = new OAuth2ClientProperties();
+
+        properties.setClientId("test-client");
+        assertEquals("test-client", properties.getClientId());
+
+        properties.setClientSecret("test-secret");
+        assertEquals("test-secret", properties.getClientSecret());
     }
 
     @Test

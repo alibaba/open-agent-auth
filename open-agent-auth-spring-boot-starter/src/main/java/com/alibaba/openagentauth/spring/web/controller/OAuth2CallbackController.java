@@ -99,9 +99,9 @@ public class OAuth2CallbackController {
         OAuth2CallbackRequest callbackRequest = new OAuth2CallbackRequest(code, state, error, errorDescription, request);
 
         // Get client ID from configuration
-        String clientId = properties.getCapabilities().getOAuth2Client().getCallback().getClientId();
+        String clientId = properties.getCapabilities().getOAuth2Client().getClientId();
         if (clientId == null || clientId.isBlank()) {
-            logger.error("OAuth client ID is not configured. Please set 'open-agent-auth.server.callback.client-id' in your configuration.");
+            logger.error("OAuth client ID is not configured. Please set 'open-agent-auth.capabilities.oauth2-client.client-id' in your configuration.");
             return ResponseEntity.internalServerError()
                     .body(Map.of(
                         "error", "server_error",

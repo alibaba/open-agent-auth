@@ -117,8 +117,8 @@ class AuthorizationServerAutoConfigurationTest {
             "open-agent-auth.infrastructures.service-discovery.services.resource-server.base-url=http://localhost:8080",
             "open-agent-auth.infrastructures.jwks.consumers.as-user-idp.issuer=http://localhost:8080",
             "open-agent-auth.infrastructures.jwks.consumers.as-user-idp.jwks-endpoint=http://localhost:8080/.well-known/jwks.json",
-            "open-agent-auth.capabilities.oauth2-client.callback.client-id=test-client-id",
-            "open-agent-auth.capabilities.oauth2-client.callback.client-secret=test-client-secret"
+            "open-agent-auth.capabilities.oauth2-client.client-id=test-client-id",
+            "open-agent-auth.capabilities.oauth2-client.client-secret=test-client-secret"
         );
 
     @TestConfiguration
@@ -658,8 +658,8 @@ class AuthorizationServerAutoConfigurationTest {
         void shouldFailWhenClientIdIsNotConfigured() {
             contextRunner
                 .withPropertyValues(
-                    "open-agent-auth.capabilities.oauth2-client.callback.client-id=",
-                    "open-agent-auth.capabilities.oauth2-client.callback.client-secret=test-secret"
+                    "open-agent-auth.capabilities.oauth2-client.client-id=",
+                    "open-agent-auth.capabilities.oauth2-client.client-secret=test-secret"
                 )
                 .run(context -> {
                     assertThat(context).hasFailed();

@@ -39,7 +39,7 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesPro
  *       endpoints:
  *         workload:
  *           revoke: /api/v1/workloads/revoke
- *           get: /api/v1/workloads/get
+ *           retrieve: /api/v1/workloads/get
  *           issue: /api/v1/workloads/token/issue
  * </pre>
  *
@@ -162,7 +162,7 @@ public class WorkloadIdentityProperties {
             private String revoke = "/api/v1/workloads/revoke";
 
             /**
-             * Get workload endpoint path.
+             * Retrieve workload endpoint path.
              * <p>
              * Retrieves information about a specific workload identity.
              * </p>
@@ -170,7 +170,7 @@ public class WorkloadIdentityProperties {
              * Default value: {@code /api/v1/workloads/get}
              * </p>
              */
-            private String get = "/api/v1/workloads/get";
+            private String retrieve = "/api/v1/workloads/get";
 
             /**
              * Issue workload token endpoint path.
@@ -203,21 +203,21 @@ public class WorkloadIdentityProperties {
             }
 
             /**
-             * Gets the get workload endpoint path.
+             * Gets the retrieve workload endpoint path.
              *
-             * @return the get workload endpoint path
+             * @return the retrieve workload endpoint path
              */
-            public String getGet() {
-                return get;
+            public String getRetrieve() {
+                return retrieve;
             }
 
             /**
-             * Sets the get workload endpoint path.
+             * Sets the retrieve workload endpoint path.
              *
-             * @param get the get workload endpoint path to set
+             * @param retrieve the retrieve workload endpoint path to set
              */
-            public void setGet(String get) {
-                this.get = get;
+            public void setRetrieve(String retrieve) {
+                this.retrieve = retrieve;
             }
 
             /**

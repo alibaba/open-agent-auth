@@ -112,11 +112,14 @@ Handles OAuth2 callback requests from the authorization server.
 
 ```yaml
 open-agent-auth:
-    role: agent  # or authorization-server
-    server:
+  capabilities:
+    oauth2-client:
+      enabled: true
+      client-id: your-client-id
+      client-secret: your-client-secret
       callback:
+        enabled: true
         endpoint: /callback
-        client-id: your-client-id
 ```
 
 ---
@@ -136,7 +139,7 @@ Manages agent workload identities and WIT issuance.
 | POST | `/api/v1/workloads/issue` | Issue WIT for existing workload |
 | POST | `/api/v1/workloads/token/issue` | Issue WIT with automatic workload management |
 | POST | `/api/v1/workloads/revoke` | Revoke workload identity |
-| POST | `/api/v1/workloads/get` | Get workload information |
+| POST | `/api/v1/workloads/get` | Retrieve workload information |
 
 #### Usage Example
 
@@ -414,9 +417,9 @@ Manages OPA policy registration.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/policies` | Register policy |
-| GET | `/api/v1/policies/{policyId}` | Get policy |
-| DELETE | `/api/v1/policies/{policyId}` | Delete policy |
+| POST | `/api/v1/policies/register` | Register policy |
+| GET | `/api/v1/policies/get` | Retrieve policy |
+| DELETE | `/api/v1/policies/delete` | Delete policy |
 
 #### Usage Example
 
@@ -529,9 +532,9 @@ Manages binding instances for agent-user binding.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/bindings` | Create binding instance |
-| GET | `/api/v1/bindings/{bindingId}` | Get binding instance |
-| DELETE | `/api/v1/bindings/{bindingId}` | Delete binding instance |
+| POST | `/api/v1/bindings/register` | Create binding instance |
+| GET | `/api/v1/bindings/get` | Retrieve binding instance |
+| DELETE | `/api/v1/bindings/delete` | Delete binding instance |
 
 ---
 
@@ -558,12 +561,19 @@ Manages binding instances for agent-user binding.
 
 ```yaml
 open-agent-auth:
-    role: agent  # or authorization-server, agent-idp, agent-user-idp, as-user-idp
-    enabled: true
-    server:
+  enabled: true
+  capabilities:
+    oauth2-client:
+      enabled: true
+      client-id: your-client-id
+      client-secret: your-client-secret
+      redirect-uri: https://your-app.com/callback
       callback:
-        endpoint: /callback
-        client-id: your-client-id
+        enabled: true
+  roles:
+    agent:
+      enabled: true
+      issuer: https://your-app.com
 ```
 
 ### 3. Use Controllers
@@ -607,37 +617,15 @@ public class MyController {
 
 ```yaml
 open-agent-auth:
-    # General configuration
-    enabled: true
-    role: agent
-    
-    # Server configuration
-    server:
+  capabilities:
+    oauth2-client:
+      enabled: true
+      client-id: your-client-id
+      client-secret: your-client-secret
       callback:
-        endpoint: /callback
-        client-id: your-client-id
-    
-    # Services configuration
-    services:
-      provider:
-        endpoints:
-          workload:
-            create: /api/v1/workloads/create
-            issue: /api/v1/workloads/issue
-            token-issue: /api/v1/workloads/token/issue
-            revoke: /api/v1/workloads/revoke
-            get: /api/v1/workloads/get
-          oauth2:
-            authorize: /oauth2/authorize
-    
-    # JWKS configuration
-    jwks:
-      provider:
-        path: /.well-known/jwks.json
-        cache-ttl-seconds: 3600
-    
-    # Login configuration
-    login:
+        enabled: true
+  roles:
+    agent:
       enabled: true
 ```
 

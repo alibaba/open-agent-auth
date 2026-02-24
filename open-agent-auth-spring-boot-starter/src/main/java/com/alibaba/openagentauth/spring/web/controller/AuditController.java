@@ -22,12 +22,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -45,8 +43,8 @@ import java.util.Optional;
  * <p>
  * <b>Endpoints:</b></p>
  * <ul>
- *   <li>GET /api/v1/audit/events/{eventId} - Get an audit event by ID</li>
- *   <li>GET /api/v1/audit/events - Get audit events with optional time range filters</li>
+ *   <li>POST /api/v1/audit/events/get - Get an audit event by ID</li>
+ *   <li>POST /api/v1/audit/events/list - Get audit events with optional time range filters</li>
  * </ul>
  *
  * @see AuditService
@@ -83,23 +81,23 @@ public class AuditController {
     /**
      * Retrieves an audit event by its unique identifier.
      *
-     * @param eventId the unique event identifier
+     * @param request the request containing event ID
      * @return the audit event if found, 404 if not found
      */
-    @GetMapping("${open-agent-auth.capabilities.audit.endpoints.event.get:/api/v1/audit/events/{eventId}}")
-    public ResponseEntity<AuditEvent> getEvent(@PathVariable String eventId) {
-        logger.debug("Getting audit event with ID: {}", eventId);
+    @PostMapping("${open-agent-auth.capabilities.audit.endpoints.event.retrieve:/api/v1/audit/events/get}")
+    public ResponseEntity<AuditEvent> getEvent(@RequestBody EventIdRequest request) {
+        logger.debug("Getting audit event with ID: {}", request.getEventId());
 
         try {
-            AuditEvent event = auditService.getEvent(eventId);
+            AuditEvent event = auditService.getEvent(request.getEventId());
             if (event != null) {
                 return ResponseEntity.ok(event);
             } else {
-                logger.warn("Audit event not found: {}", eventId);
+                logger.warn("Audit event not found: {}", request.getEventId());
                 return ResponseEntity.notFound().build();
             }
         } catch (AuditStorageException e) {
-            logger.error("Failed to retrieve audit event: {}", eventId, e);
+            logger.error("Failed to retrieve audit event: {}", request.getEventId(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -113,23 +111,20 @@ public class AuditController {
      * If neither is provided, returns a bad request.
      * </p>
      *
-     * @param startTime the start of the time range (inclusive)
-     * @param endTime   the end of the time range (inclusive)
+     * @param request the request containing time range parameters
      * @return a list of audit events in the specified range
      */
-    @GetMapping("${open-agent-auth.capabilities.audit.endpoints.events.list:/api/v1/audit/events}")
-    public ResponseEntity<List<AuditEvent>> getEventsByTimeRange(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime) {
+    @PostMapping("${open-agent-auth.capabilities.audit.endpoints.event.list:/api/v1/audit/events/list}")
+    public ResponseEntity<List<AuditEvent>> getEventsByTimeRange(@RequestBody TimeRangeRequest request) {
         
-        if (startTime == null && endTime == null) {
+        if (request.getStartTime() == null && request.getEndTime() == null) {
             logger.warn("Both startTime and endTime are null, returning bad request");
             return ResponseEntity.badRequest().build();
         }
 
         // Set default values for null parameters
-        Instant actualStartTime = startTime != null ? startTime : Instant.EPOCH;
-        Instant actualEndTime = endTime != null ? endTime : Instant.now().plusSeconds(86400);
+        Instant actualStartTime = request.getStartTime() != null ? request.getStartTime() : Instant.EPOCH;
+        Instant actualEndTime = request.getEndTime() != null ? request.getEndTime() : Instant.now().plusSeconds(86400);
 
         logger.debug("Getting audit events between {} and {}", actualStartTime, actualEndTime);
 
@@ -143,6 +138,45 @@ public class AuditController {
         } catch (AuditStorageException e) {
             logger.error("Failed to retrieve audit events by time range", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Request DTO for event ID.
+     */
+    public static class EventIdRequest {
+        private String eventId;
+
+        public String getEventId() {
+            return eventId;
+        }
+
+        public void setEventId(String eventId) {
+            this.eventId = eventId;
+        }
+    }
+
+    /**
+     * Request DTO for time range query.
+     */
+    public static class TimeRangeRequest {
+        private Instant startTime;
+        private Instant endTime;
+
+        public Instant getStartTime() {
+            return startTime;
+        }
+
+        public void setStartTime(Instant startTime) {
+            this.startTime = startTime;
+        }
+
+        public Instant getEndTime() {
+            return endTime;
+        }
+
+        public void setEndTime(Instant endTime) {
+            this.endTime = endTime;
         }
     }
 }

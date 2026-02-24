@@ -25,9 +25,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,9 +40,9 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>
  * <b>Endpoints:</b></p>
  * <ul>
- *   <li>GET /api/v1/bindings/{bindingInstanceId} - Get a binding instance by ID</li>
- *   <li>POST /api/v1/bindings - Create a new binding instance</li>
- *   <li>DELETE /api/v1/bindings/{bindingInstanceId} - Delete a binding instance</li>
+ *   <li>POST /api/v1/bindings/get - Get a binding instance by ID</li>
+ *   <li>POST /api/v1/bindings/register - Create a new binding instance</li>
+ *   <li>POST /api/v1/bindings/delete - Delete a binding instance</li>
  * </ul>
  *
  * @see BindingInstanceStore
@@ -74,21 +71,21 @@ public class BindingInstanceController {
     /**
      * Retrieves a binding instance by its ID.
      *
-     * @param bindingInstanceId the binding instance ID
+     * @param request the request containing binding instance ID
      * @return the binding instance if found
      */
-    @GetMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.binding.get:/api/v1/bindings/{bindingInstanceId}}")
-    public ResponseEntity<BindingInstance> getBinding(@PathVariable String bindingInstanceId) {
-        logger.debug("Getting binding instance with ID: {}", bindingInstanceId);
+    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.binding.retrieve:/api/v1/bindings/get}")
+    public ResponseEntity<BindingInstance> getBinding(@RequestBody BindingInstanceIdRequest request) {
+        logger.debug("Getting binding instance with ID: {}", request.getBindingInstanceId());
 
-        if (ValidationUtils.isNullOrEmpty(bindingInstanceId)) {
+        if (ValidationUtils.isNullOrEmpty(request.getBindingInstanceId())) {
             logger.warn("Binding instance ID is null or empty");
             return ResponseEntity.badRequest().build();
         }
 
-        BindingInstance binding = bindingInstanceStore.retrieve(bindingInstanceId);
+        BindingInstance binding = bindingInstanceStore.retrieve(request.getBindingInstanceId());
         if (binding == null) {
-            logger.warn("Binding instance not found: {}", bindingInstanceId);
+            logger.warn("Binding instance not found: {}", request.getBindingInstanceId());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
@@ -101,7 +98,7 @@ public class BindingInstanceController {
      * @param request the binding instance creation request
      * @return the created binding instance
      */
-    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.binding.registry:/api/v1/bindings}")
+    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.binding.registry:/api/v1/bindings/register}")
     public ResponseEntity<BindingInstance> createBinding(@RequestBody BindingInstanceRequest request) {
         logger.debug("Creating new binding instance for user: {}, workload: {}", 
                      request.getUserIdentity(), request.getWorkloadIdentity());
@@ -127,24 +124,24 @@ public class BindingInstanceController {
     /**
      * Deletes a binding instance by its ID.
      *
-     * @param bindingInstanceId the binding instance ID
+     * @param request the request containing binding instance ID
      * @return 204 No Content if successful
      */
-    @DeleteMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.binding.delete:/api/v1/bindings/{bindingInstanceId}}")
-    public ResponseEntity<Void> deleteBinding(@PathVariable String bindingInstanceId) {
-        logger.debug("Deleting binding instance with ID: {}", bindingInstanceId);
+    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.binding.delete:/api/v1/bindings/delete}")
+    public ResponseEntity<Void> deleteBinding(@RequestBody BindingInstanceIdRequest request) {
+        logger.debug("Deleting binding instance with ID: {}", request.getBindingInstanceId());
 
-        if (ValidationUtils.isNullOrEmpty(bindingInstanceId)) {
+        if (ValidationUtils.isNullOrEmpty(request.getBindingInstanceId())) {
             logger.warn("Binding instance ID is null or empty");
             return ResponseEntity.badRequest().build();
         }
 
-        if (!bindingInstanceStore.exists(bindingInstanceId)) {
-            logger.warn("Binding instance not found for deletion: {}", bindingInstanceId);
+        if (!bindingInstanceStore.exists(request.getBindingInstanceId())) {
+            logger.warn("Binding instance not found for deletion: {}", request.getBindingInstanceId());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        bindingInstanceStore.delete(bindingInstanceId);
+        bindingInstanceStore.delete(request.getBindingInstanceId());
         return ResponseEntity.noContent().build();
     }
 
@@ -205,6 +202,21 @@ public class BindingInstanceController {
 
         public void setExpiresAt(java.time.Instant expiresAt) {
             this.expiresAt = expiresAt;
+        }
+    }
+
+    /**
+     * Request DTO for binding instance ID.
+     */
+    public static class BindingInstanceIdRequest {
+        private String bindingInstanceId;
+
+        public String getBindingInstanceId() {
+            return bindingInstanceId;
+        }
+
+        public void setBindingInstanceId(String bindingInstanceId) {
+            this.bindingInstanceId = bindingInstanceId;
         }
     }
 }

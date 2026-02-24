@@ -114,7 +114,6 @@ class CapabilitiesPropertiesTest {
         
         assertNotNull(properties.getOperationAuthorization().getEndpoints());
         assertNotNull(properties.getOperationAuthorization().getPromptEncryption());
-        assertNotNull(properties.getOperationAuthorization().getOauth2Client());
         
         assertNotNull(properties.getUserAuthentication().getLoginPage());
         assertNotNull(properties.getUserAuthentication().getUserRegistry());

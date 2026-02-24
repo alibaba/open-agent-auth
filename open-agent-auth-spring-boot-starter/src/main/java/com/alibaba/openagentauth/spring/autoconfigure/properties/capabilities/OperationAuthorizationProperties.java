@@ -57,10 +57,6 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesPro
  *       agent-context:
  *         agent-client: my-agent
  *         channel: web
- *       # OAuth2 client configuration (authentication credentials)
- *       oauth2-client:
- *         client-id: my-agent
- *         client-secret: my-secret
  *       # Authorization behavior configuration (authorization policy)
  *       authorization:
  *         require-user-interaction: false
@@ -72,7 +68,6 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesPro
  * @see PromptEncryptionProperties
  * @see PromptProtectionProperties
  * @see AgentContextProperties
- * @see OAuth2ClientProperties
  * @see AuthorizationBehaviorProperties
  */
 public class OperationAuthorizationProperties {
@@ -124,14 +119,6 @@ public class OperationAuthorizationProperties {
      * </p>
      */
     private AgentContextProperties agentContext = new AgentContextProperties();
-
-    /**
-     * OAuth2 client configuration (authentication credentials layer).
-     * <p>
-     * Defines OAuth2 client credentials for authentication with the authorization server.
-     * </p>
-     */
-    private OAuth2ClientProperties oauth2Client = new OAuth2ClientProperties();
 
     /**
      * Authorization behavior configuration (authorization policy layer).
@@ -233,24 +220,6 @@ public class OperationAuthorizationProperties {
     }
 
     /**
-     * Gets the OAuth2 client configuration.
-     *
-     * @return the OAuth2 client configuration
-     */
-    public OAuth2ClientProperties getOauth2Client() {
-        return oauth2Client;
-    }
-
-    /**
-     * Sets the OAuth2 client configuration.
-     *
-     * @param oauth2Client the OAuth2 client configuration to set
-     */
-    public void setOauth2Client(OAuth2ClientProperties oauth2Client) {
-        this.oauth2Client = oauth2Client;
-    }
-
-    /**
      * Gets the authorization behavior configuration.
      *
      * @return the authorization behavior configuration
@@ -345,10 +314,10 @@ public class OperationAuthorizationProperties {
              * updating, and deleting policies.
              * </p>
              * <p>
-             * Default value: {@code /api/v1/policies}
+             * Default value: {@code /api/v1/policies/register}
              * </p>
              */
-            private String registry = "/api/v1/policies";
+            private String registry = "/api/v1/policies/register";
 
             /**
              * Delete policy endpoint path.
@@ -356,21 +325,21 @@ public class OperationAuthorizationProperties {
              * The endpoint for deleting a specific authorization policy.
              * </p>
              * <p>
-             * Default value: {@code /api/v1/policies/{policyId}}
+             * Default value: {@code /api/v1/policies/delete}
              * </p>
              */
-            private String delete = "/api/v1/policies/{policyId}";
+            private String delete = "/api/v1/policies/delete";
 
             /**
-             * Get policy endpoint path.
+             * Retrieve policy endpoint path.
              * <p>
              * The endpoint for retrieving a specific authorization policy.
              * </p>
              * <p>
-             * Default value: {@code /api/v1/policies/{policyId}}
+             * Default value: {@code /api/v1/policies/get}
              * </p>
              */
-            private String get = "/api/v1/policies/{policyId}";
+            private String retrieve = "/api/v1/policies/get";
 
             /**
              * Gets the policy registry endpoint path.
@@ -409,21 +378,21 @@ public class OperationAuthorizationProperties {
             }
 
             /**
-             * Gets the get policy endpoint path.
+             * Gets the retrieve policy endpoint path.
              *
-             * @return the get policy endpoint path
+             * @return the retrieve policy endpoint path
              */
-            public String getGet() {
-                return get;
+            public String getRetrieve() {
+                return retrieve;
             }
 
             /**
-             * Sets the get policy endpoint path.
+             * Sets the retrieve policy endpoint path.
              *
-             * @param get the get policy endpoint path to set
+             * @param retrieve the retrieve policy endpoint path to set
              */
-            public void setGet(String get) {
-                this.get = get;
+            public void setRetrieve(String retrieve) {
+                this.retrieve = retrieve;
             }
         }
 
@@ -443,21 +412,21 @@ public class OperationAuthorizationProperties {
              * with specific users, workloads, or agents.
              * </p>
              * <p>
-             * Default value: {@code /api/v1/bindings}
+             * Default value: {@code /api/v1/bindings/register}
              * </p>
              */
-            private String registry = "/api/v1/bindings";
+            private String registry = "/api/v1/bindings/register";
 
             /**
-             * Get binding endpoint path.
+             * Retrieve binding endpoint path.
              * <p>
              * The endpoint for retrieving a specific policy binding by its instance ID.
              * </p>
              * <p>
-             * Default value: {@code /api/v1/bindings/{bindingInstanceId}}
+             * Default value: {@code /api/v1/bindings/get}
              * </p>
              */
-            private String get = "/api/v1/bindings/{bindingInstanceId}";
+            private String retrieve = "/api/v1/bindings/get";
 
             /**
              * Delete binding endpoint path.
@@ -465,10 +434,10 @@ public class OperationAuthorizationProperties {
              * The endpoint for deleting a specific policy binding.
              * </p>
              * <p>
-             * Default value: {@code /api/v1/bindings/{bindingInstanceId}}
+             * Default value: {@code /api/v1/bindings/delete}
              * </p>
              */
-            private String delete = "/api/v1/bindings/{bindingInstanceId}";
+            private String delete = "/api/v1/bindings/delete";
 
             /**
              * Gets the binding registry endpoint path.
@@ -489,21 +458,21 @@ public class OperationAuthorizationProperties {
             }
 
             /**
-             * Gets the get binding endpoint path.
+             * Gets the retrieve binding endpoint path.
              *
-             * @return the get binding endpoint path
+             * @return the retrieve binding endpoint path
              */
-            public String getGet() {
-                return get;
+            public String getRetrieve() {
+                return retrieve;
             }
 
             /**
-             * Sets the get binding endpoint path.
+             * Sets the retrieve binding endpoint path.
              *
-             * @param get the get binding endpoint path to set
+             * @param retrieve the retrieve binding endpoint path to set
              */
-            public void setGet(String get) {
-                this.get = get;
+            public void setRetrieve(String retrieve) {
+                this.retrieve = retrieve;
             }
 
             /**
@@ -554,10 +523,10 @@ public class OperationAuthorizationProperties {
          * to locate the appropriate public key in the authorization server's JWKS endpoint.
          * </p>
          * <p>
-         * Default value: {@code jwe-encryption-key-001}
+         * Default value: {@code null}
          * </p>
          */
-        private String encryptionKeyId = "jwe-encryption-key-001";
+        private String encryptionKeyId = null;
 
         /**
          * Encryption algorithm.
@@ -815,7 +784,7 @@ public class OperationAuthorizationProperties {
          * Default value: {@code sample-agent-client}
          * </p>
          */
-        private String defaultClient = "sample-agent-client";
+        private String defaultClient;
 
         /**
          * Default channel type.
@@ -851,7 +820,7 @@ public class OperationAuthorizationProperties {
          * Default value: {@code sample-agent.platform}
          * </p>
          */
-        private String defaultPlatform = "sample-agent.platform";
+        private String defaultPlatform;
 
         /**
          * Default device fingerprint for tracking.
@@ -863,7 +832,7 @@ public class OperationAuthorizationProperties {
          * Default value: {@code sample-device}
          * </p>
          */
-        private String defaultDeviceFingerprint = "sample-device";
+        private String defaultDeviceFingerprint;
 
         /**
          * Gets the default agent client identifier.
@@ -953,94 +922,6 @@ public class OperationAuthorizationProperties {
          */
         public void setDefaultDeviceFingerprint(String defaultDeviceFingerprint) {
             this.defaultDeviceFingerprint = defaultDeviceFingerprint;
-        }
-    }
-
-    /**
-     * OAuth2 client configuration (authentication credentials layer).
-     * <p>
-     * Defines OAuth2 client credentials for authentication with the authorization server.
-     * </p>
-     */
-    public static class OAuth2ClientProperties {
-        /**
-         * OAuth 2.0 client ID for this agent.
-         * <p>
-         * The unique identifier for this agent as an OAuth 2.0 client with the
-         * authorization server.
-         * </p>
-         */
-        private String clientId;
-
-        /**
-         * OAuth 2.0 client secret for this agent.
-         * <p>
-         * The secret used to authenticate this agent with the authorization server.
-         * </p>
-         */
-        private String clientSecret;
-
-        /**
-         * OAuth callbacks redirect URI.
-         * <p>
-         * The URI where the authorization server will redirect the user after
-         * successful authorization for operation authorization requests.
-         * </p>
-         */
-        private String oauthCallbacksRedirectUri;
-
-        /**
-         * Gets the client ID.
-         *
-         * @return the client ID
-         */
-        public String getClientId() {
-            return clientId;
-        }
-
-        /**
-         * Sets the client ID.
-         *
-         * @param clientId the client ID to set
-         */
-        public void setClientId(String clientId) {
-            this.clientId = clientId;
-        }
-
-        /**
-         * Gets the client secret.
-         *
-         * @return the client secret
-         */
-        public String getClientSecret() {
-            return clientSecret;
-        }
-
-        /**
-         * Sets the client secret.
-         *
-         * @param clientSecret the client secret to set
-         */
-        public void setClientSecret(String clientSecret) {
-            this.clientSecret = clientSecret;
-        }
-
-        /**
-         * Gets the OAuth callbacks redirect URI.
-         *
-         * @return the OAuth callbacks redirect URI
-         */
-        public String getOauthCallbacksRedirectUri() {
-            return oauthCallbacksRedirectUri;
-        }
-
-        /**
-         * Sets the OAuth callbacks redirect URI.
-         *
-         * @param oauthCallbacksRedirectUri the OAuth callbacks redirect URI to set
-         */
-        public void setOauthCallbacksRedirectUri(String oauthCallbacksRedirectUri) {
-            this.oauthCallbacksRedirectUri = oauthCallbacksRedirectUri;
         }
     }
 
