@@ -17,14 +17,14 @@ package com.alibaba.openagentauth.spring.web.controller;
 
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenRequest;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenServer;
 import com.alibaba.openagentauth.spring.util.OAuth2ClientAuthenticator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,7 +46,7 @@ import java.util.Map;
  */
 @RestController
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnExpression("'${open-agent-auth.roles.agent-user-idp.enabled:false}' == 'true' or '${open-agent-auth.roles.authorization-server.enabled:false}' == 'true' or '${open-agent-auth.roles.as-user-idp.enabled:false}' == 'true'")
+@ConditionalOnBean(FrameworkOAuth2TokenServer.class)
 public class OAuth2TokenController {
 
     /**
@@ -60,19 +60,19 @@ public class OAuth2TokenController {
     private final FrameworkOAuth2TokenServer tokenServer;
 
     /**
-     * The DCR client store for validating client credentials.
+     * The client store for validating client credentials.
      */
-    private final OAuth2DcrClientStore clientStore;
+    private final OAuth2ClientStore clientStore;
 
     /**
      * Creates a new Token controller.
      *
      * @param tokenServer the token server
-     * @param clientStore the DCR client store for client authentication
+     * @param clientStore the client store for client authentication
      */
-    public OAuth2TokenController(FrameworkOAuth2TokenServer tokenServer, OAuth2DcrClientStore clientStore) {
+    public OAuth2TokenController(FrameworkOAuth2TokenServer tokenServer, OAuth2ClientStore clientStore) {
         this.tokenServer = ValidationUtils.validateNotNull(tokenServer, "Token server");
-        this.clientStore = ValidationUtils.validateNotNull(clientStore, "DCR client store");
+        this.clientStore = ValidationUtils.validateNotNull(clientStore, "client store");
         logger.info("OAuth2TokenController initialized with client store");
     }
 
@@ -87,7 +87,7 @@ public class OAuth2TokenController {
      * <ul>
      *   <li>Confidential clients MUST authenticate using HTTP Basic authentication</li>
      *   <li>Authorization header format: Basic base64(client_id:client_secret)</li>
-     *   <li>Client credentials are validated against the DCR client store</li>
+     *   * Client credentials are validated against the client store
      * </ul>
      *
      * @param grantType the grant type (e.g., authorization_code, refresh_token)

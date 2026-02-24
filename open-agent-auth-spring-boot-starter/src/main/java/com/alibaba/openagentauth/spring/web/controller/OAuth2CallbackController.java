@@ -23,7 +23,7 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthPr
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,7 +53,7 @@ import java.util.Map;
  */
 @RestController
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnExpression("'${open-agent-auth.roles.agent.enabled:false}' == 'true' or '${open-agent-auth.roles.authorization-server.enabled:false}' == 'true'")
+@ConditionalOnBean(OAuth2CallbackService.class)
 public class OAuth2CallbackController {
     
     private static final Logger logger = LoggerFactory.getLogger(OAuth2CallbackController.class);

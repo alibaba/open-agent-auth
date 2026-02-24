@@ -17,8 +17,9 @@ package com.alibaba.openagentauth.spring.web.controller;
 
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenRequest;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenServer;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,7 +66,7 @@ class OAuth2TokenControllerTest {
     private FrameworkOAuth2TokenServer tokenServer;
 
     @Mock
-    private OAuth2DcrClientStore clientStore;
+    private OAuth2ClientStore clientStore;
 
     private OAuth2TokenController controller;
 
@@ -85,7 +86,7 @@ class OAuth2TokenControllerTest {
         
         // Setup default client in DCR store with lenient() to avoid UnnecessaryStubbingException
         // for tests that don't use this client (e.g., missing auth header tests)
-        DcrResponse client = DcrResponse.builder()
+        OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                 .clientId(CLIENT_ID)
                 .clientSecret(CLIENT_SECRET)
                 .tokenEndpointAuthMethod("client_secret_basic")
@@ -356,7 +357,7 @@ class OAuth2TokenControllerTest {
             String publicClientId = "public-client";
             String authHeader = buildBasicAuthHeader(publicClientId, "any-secret");
             
-            DcrResponse publicClient = DcrResponse.builder()
+            OAuth2RegisteredClient publicClient = OAuth2RegisteredClient.builder()
                     .clientId(publicClientId)
                     .clientSecret(null)
                     .tokenEndpointAuthMethod("none")
@@ -383,7 +384,7 @@ class OAuth2TokenControllerTest {
             String jwtAuthClientId = "jwt-auth-client";
             String authHeader = buildBasicAuthHeader(jwtAuthClientId, CLIENT_SECRET);
             
-            DcrResponse jwtClient = DcrResponse.builder()
+            OAuth2RegisteredClient jwtClient = OAuth2RegisteredClient.builder()
                     .clientId(jwtAuthClientId)
                     .clientSecret(CLIENT_SECRET)
                     .tokenEndpointAuthMethod("private_key_jwt")

@@ -18,7 +18,7 @@ package com.alibaba.openagentauth.spring.web.controller;
 import com.alibaba.openagentauth.core.exception.oauth2.ParException;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
@@ -27,7 +27,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,7 +51,7 @@ import java.util.Map;
  */
 @RestController
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnExpression("'${open-agent-auth.roles.agent-user-idp.enabled:false}' == 'true' or '${open-agent-auth.roles.authorization-server.enabled:false}' == 'true' or '${open-agent-auth.roles.as-user-idp.enabled:false}' == 'true'")
+@ConditionalOnBean(OAuth2ParServer.class)
 public class OAuth2ParController {
 
     /**
@@ -65,19 +65,19 @@ public class OAuth2ParController {
     private final OAuth2ParServer parServer;
 
     /**
-     * The DCR client store for validating client credentials.
+     * The client store for validating client credentials.
      */
-    private final OAuth2DcrClientStore clientStore;
+    private final OAuth2ClientStore clientStore;
 
     /**
      * Creates a new PAR controller.
      *
      * @param parServer the PAR server
-     * @param clientStore the DCR client store for client authentication
+     * @param clientStore the client store for client authentication
      */
-    public OAuth2ParController(OAuth2ParServer parServer, OAuth2DcrClientStore clientStore) {
+    public OAuth2ParController(OAuth2ParServer parServer, OAuth2ClientStore clientStore) {
         this.parServer = ValidationUtils.validateNotNull(parServer, "PAR server");
-        this.clientStore = ValidationUtils.validateNotNull(clientStore, "DCR client store");
+        this.clientStore = ValidationUtils.validateNotNull(clientStore, "Client store");
         logger.info("OAuth2ParController initialized with client store");
     }
 
@@ -92,7 +92,7 @@ public class OAuth2ParController {
      *   <li>Client authentication is REQUIRED for PAR requests</li>
      *   <li>Confidential clients MUST authenticate using HTTP Basic authentication</li>
      *   <li>Authorization header format: Basic base64(client_id:client_secret)</li>
-     *   <li>Client credentials are validated against the DCR client store</li>
+     *   <li>Client credentials are validated against the client store</li>
      * </ul>
      *
      * @param requestBody the PAR request body as form data

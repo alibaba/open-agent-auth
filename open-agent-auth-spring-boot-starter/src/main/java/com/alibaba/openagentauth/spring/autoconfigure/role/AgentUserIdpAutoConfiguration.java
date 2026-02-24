@@ -17,30 +17,22 @@ package com.alibaba.openagentauth.spring.autoconfigure.role;
 
 import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
-import com.alibaba.openagentauth.core.protocol.oidc.api.AuthenticationProvider;
-import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenGenerator;
-import com.alibaba.openagentauth.core.protocol.oidc.factory.OidcFactory;
-import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultAuthenticationProvider;
-import com.alibaba.openagentauth.core.protocol.oidc.registry.InMemoryUserRegistry;
-import com.alibaba.openagentauth.core.protocol.oidc.registry.UserRegistry;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.DefaultOAuth2AuthorizationServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.OAuth2AuthorizationServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationCodeStorage;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.DefaultOAuth2DcrServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.InMemoryOAuth2DcrClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParRequestValidator;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParRequestValidator;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.store.InMemoryOAuth2ParRequestStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.store.OAuth2ParRequestStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.InMemoryOAuth2ClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.oidc.IdTokenGeneratorAdapter;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.DefaultOAuth2TokenServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.OAuth2TokenServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.TokenGenerator;
+import com.alibaba.openagentauth.core.protocol.oidc.api.AuthenticationProvider;
+import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenGenerator;
+import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultAuthenticationProvider;
+import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultIdTokenGenerator;
+import com.alibaba.openagentauth.core.protocol.oidc.registry.InMemoryUserRegistry;
+import com.alibaba.openagentauth.core.protocol.oidc.registry.UserRegistry;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.actor.UserIdentityProvider;
 import com.alibaba.openagentauth.framework.orchestration.DefaultUserIdentityProvider;
@@ -70,21 +62,21 @@ import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
 
 /**
  * Auto-configuration for the Agent User IDP role.
- * &lt;p&gt;
+ * <p>
  * This configuration class sets up the necessary components for the Agent User IDP role,
  * which provides OpenID Connect (OIDC) Identity Provider functionality for agents.
  * It enables agents to authenticate users and issue ID tokens.
- * &lt;/p&gt;
- * &lt;p&gt;
+ * </p>
+ * <p>
  * The Agent User IDP role provides:
- * &lt;/p&gt;
- * &lt;ul&gt;
- *   &lt;li&gt;OAuth 2.0 Authorization Server with PAR and DCR support&lt;/li&gt;
- *   &lt;li&gt;OpenID Connect (OIDC) Identity Provider functionality&lt;/li&gt;
- *   &lt;li&gt;Local user authentication (no external IDP required)&lt;/li&gt;
- *   &lt;li&gt;Session management for cross-domain OAuth flows&lt;/li&gt;
- *   &lt;li&gt;User consent page for authorization&lt;/li&gt;
- * &lt;/ul&gt;
+ * </p>
+ * <ul>
+ *   <li>OAuth 2.0 Authorization Server for OIDC flows</li>
+ *   <li>OpenID Connect (OIDC) Identity Provider functionality</li>
+ *   <li>Local user authentication (no external IDP required)</li>
+ *   <li>Session management for cross-domain OAuth flows</li>
+ *   <li>User consent page for authorization</li>
+ * </ul>
  *
  * @since 1.0
  */
@@ -107,12 +99,12 @@ public class AgentUserIdpAutoConfiguration {
 
         /**
          * Creates the SessionMappingStore bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This bean provides storage for session mappings across OAuth flows.
          * It allows sessions to be restored after OAuth callbacks when SameSite=Lax
          * causes session cookies to be lost during cross-domain redirects.
          * The default implementation uses in-memory storage.
-         * &lt;/p&gt;
+         * </p>
          *
          * @return the SessionMappingStore bean
          */
@@ -125,12 +117,12 @@ public class AgentUserIdpAutoConfiguration {
 
         /**
          * Creates the SessionMappingBizService bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This bean manages session mappings across OAuth flows. It is required
          * by OAuth2AuthorizationController for managing sessions that need to be
          * restored after OAuth callbacks when SameSite=Lax causes session cookies
          * to be lost during cross-domain redirects.
-         * &lt;/p&gt;
+         * </p>
          *
          * @param sessionMappingStore the session mapping store
          * @return the SessionMappingBizService bean
@@ -155,119 +147,72 @@ public class AgentUserIdpAutoConfiguration {
         private static final Logger logger = LoggerFactory.getLogger(OAuth2ServerConfiguration.class);
 
         /**
-         * Creates the PAR Request Store bean if not already defined.
-         * &lt;p&gt;
-         * This store provides storage for PAR requests.
-         * The default implementation uses in-memory storage.
-         * &lt;/p&gt;
-         *
-         * @return the PAR Request Store bean
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public OAuth2ParRequestStore parRequestStore() {
-            logger.info("Creating OAuth2ParRequestStore bean for Agent User IDP");
-            return new InMemoryOAuth2ParRequestStore();
-        }
-
-        /**
-         * Creates the PAR Server bean if not already defined.
-         * &lt;p&gt;
-         * This server provides PAR endpoint for processing PAR requests.
-         * The validator is created as a local variable to reduce global Bean count.
-         * &lt;/p&gt;
-         *
-         * @param parRequestStore the PAR request store
-         * @return the PAR Server bean
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public OAuth2ParServer parServer(OAuth2ParRequestStore parRequestStore) {
-            logger.info("Creating OAuth2ParServer bean for Agent User IDP");
-            OAuth2ParRequestValidator validator = new DefaultOAuth2ParRequestValidator();
-            return new DefaultOAuth2ParServer(parRequestStore, validator);
-        }
-
-        /**
          * Creates the Authorization Code Storage bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This storage provides storage for authorization codes.
-         * The default implementation uses in-memory storage with 600 seconds expiration.
-         * This bean is kept as an independent bean because Store classes hold state
-         * and should be managed by the Spring container for proper lifecycle management.
-         * &lt;/p&gt;
+         * The default implementation uses in-memory storage with expiration
+         * configured via {@code open-agent-auth.capabilities.oauth2-server.token.authorization-code-expiry}.
+         * </p>
          *
+         * @param openAgentAuthProperties the global configuration properties
          * @return the Authorization Code Storage bean
          */
         @Bean
         @ConditionalOnMissingBean
-        public OAuth2AuthorizationCodeStorage authorizationCodeStorage() {
-            logger.info("Creating OAuth2AuthorizationCodeStorage bean for Agent User IDP");
-            return new InMemoryOAuth2AuthorizationCodeStorage(600);
+        public OAuth2AuthorizationCodeStorage authorizationCodeStorage(OpenAgentAuthProperties openAgentAuthProperties) {
+            int authorizationCodeExpiry = openAgentAuthProperties.getCapabilities().getOAuth2Server().getToken().getAuthorizationCodeExpiry();
+            logger.info("Creating OAuth2AuthorizationCodeStorage bean for Agent User IDP with expiry: {} seconds", authorizationCodeExpiry);
+            return new InMemoryOAuth2AuthorizationCodeStorage(authorizationCodeExpiry);
         }
 
         /**
-         * Creates the DCR Client Store bean if not already defined.
-         * &lt;p&gt;
-         * This store provides storage for DCR client registrations.
+         * Creates the OAuth2 Client Store bean if not already defined.
+         * <p>
+         * This store provides storage for OAuth 2.0 client registrations.
          * The default implementation uses in-memory storage.
          * This bean is kept as an independent bean because Store classes hold state
          * and should be managed by the Spring container for proper lifecycle management.
-         * &lt;/p&gt;
+         * </p>
          *
-         * @return the DCR Client Store bean
+         * @return the OAuth2 Client Store bean
          */
         @Bean
         @ConditionalOnMissingBean
-        public OAuth2DcrClientStore dcrClientStore() {
-            logger.info("Creating OAuth2DcrClientStore bean for Agent User IDP");
-            return new InMemoryOAuth2DcrClientStore();
-        }
-
-        /**
-         * Creates the DCR Server bean if not already defined.
-         * &lt;p&gt;
-         * This server provides DCR endpoint for processing client registration requests.
-         * &lt;/p&gt;
-         *
-         * @param dcrClientStore the DCR client store
-         * @return the DCR Server bean
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public OAuth2DcrServer dcrServer(OAuth2DcrClientStore dcrClientStore) {
-            logger.info("Creating OAuth2DcrServer bean for Agent User IDP");
-            return new DefaultOAuth2DcrServer(dcrClientStore);
+        public OAuth2ClientStore clientStore() {
+            logger.info("Creating OAuth2ClientStore bean for Agent User IDP");
+            return new InMemoryOAuth2ClientStore();
         }
 
         /**
          * Creates the Authorization Server bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This server provides OAuth 2.0 authorization endpoint for processing authorization requests
-         * in the Agent User IDP role.
-         * &lt;/p&gt;
+         * in the Agent User IDP role. PAR is not required for IDP roles, so only the client store
+         * and authorization code storage are injected.
+         * </p>
          *
          * @param authorizationCodeStorage the authorization code storage
-         * @param parServer the PAR server
-         * @param dcrClientStore the DCR client store
+         * @param clientStore the client store for validating OAuth 2.0 clients
          * @return the Authorization Server bean
          */
         @Bean
         @ConditionalOnMissingBean
         public OAuth2AuthorizationServer authorizationServer(
                 OAuth2AuthorizationCodeStorage authorizationCodeStorage,
-                OAuth2ParServer parServer,
-                OAuth2DcrClientStore dcrClientStore) {
-            logger.info("Creating OAuth2AuthorizationServer bean for Agent User IDP");
-            return new DefaultOAuth2AuthorizationServer(authorizationCodeStorage, parServer, dcrClientStore);
+                OAuth2ClientStore clientStore
+        ) {
+            logger.info("Creating OAuth2AuthorizationServer bean for Agent User IDP (without PAR)");
+            return new DefaultOAuth2AuthorizationServer(authorizationCodeStorage, clientStore);
         }
 
         /**
          * Creates the Token Generator bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This generator provides token generation for ID Tokens (OIDC).
          * It uses the IdTokenGeneratorAdapter to bridge IdTokenGenerator and TokenGenerator.
-         * &lt;/p&gt;
+         * The token expiration is configured via
+         * {@code open-agent-auth.capabilities.oauth2-server.token.id-token-expiry}.
+         * </p>
          *
          * @param idTokenGenerator the ID Token generator
          * @param openAgentAuthProperties the global configuration properties
@@ -276,9 +221,12 @@ public class AgentUserIdpAutoConfiguration {
          */
         @Bean
         @ConditionalOnMissingBean
-        public TokenGenerator tokenGenerator(IdTokenGenerator idTokenGenerator, OpenAgentAuthProperties openAgentAuthProperties) {
+        public TokenGenerator tokenGenerator(
+                IdTokenGenerator idTokenGenerator,
+                OpenAgentAuthProperties openAgentAuthProperties
+        ) {
             logger.info("Creating TokenGenerator bean (IdTokenGeneratorAdapter) for Agent User IDP");
-            // Get issuer from roles configuration
+
             String issuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
                 var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_USER_IDP);
@@ -286,22 +234,26 @@ public class AgentUserIdpAutoConfiguration {
                     issuer = role.getIssuer();
                 }
             }
-            
+
             if (ValidationUtils.isNullOrEmpty(issuer)) {
                 throw new IllegalStateException(
                     "Agent User IDP issuer is not configured. Please set 'open-agent-auth.roles.agent-user-idp.issuer' in your configuration. " +
                     "This is a required configuration for ID Token generation."
                 );
             }
-            
-            return new IdTokenGeneratorAdapter(idTokenGenerator, issuer);
+
+            return new IdTokenGeneratorAdapter(
+                    idTokenGenerator,
+                    openAgentAuthProperties.getCapabilities().getOAuth2Server().getToken().getIdTokenExpiry(),
+                    issuer
+            );
         }
 
         /**
          * Creates the Token Server bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This server provides OAuth 2.0 token endpoint for issuing access tokens.
-         * &lt;/p&gt;
+         * </p>
          *
          * @param authorizationCodeStorage the authorization code storage
          * @param tokenGenerator the token generator
@@ -330,82 +282,12 @@ public class AgentUserIdpAutoConfiguration {
         private static final Logger logger = LoggerFactory.getLogger(OidcConfiguration.class);
 
         /**
-         * Creates the OidcFactory bean if not already defined.
-         * &lt;p&gt;
-         * This factory provides a centralized way to create OIDC components
-         * with consistent configuration. It uses the configuration from
-         * OpenAgentAuthProperties to set up the factory.
-         * &lt;/p&gt;
-         *
-         * @param keyManager the key manager for retrieving signing keys
-         * @param openAgentAuthProperties the global configuration properties
-         * @return the configured OIDC factory
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public OidcFactory oidcFactory(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
-            
-            // Get issuer from roles configuration
-            String issuer = null;
-            logger.debug("OpenAgentAuthProperties: {}", openAgentAuthProperties);
-            if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_USER_IDP);
-                logger.debug("Agent User IDP role: {}", role);
-                if (role != null) {
-                    issuer = role.getIssuer();
-                    logger.debug("Issuer from role: {}", issuer);
-                }
-            }
-            
-            if (ValidationUtils.isNullOrEmpty(issuer)) {
-                throw new IllegalStateException(
-                    "Agent User IDP issuer is not configured. Please set 'open-agent-auth.roles.agent-user-idp.issuer' in your configuration. " +
-                    "This is a required configuration for OIDC factory."
-                );
-            }
-
-            logger.info("Creating OidcFactory with issuer: {}", issuer);
-
-            // Get signing key configuration from infrastructure
-            var keyDefinitions = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys();
-            if (keyDefinitions == null || keyDefinitions.isEmpty()) {
-                throw new IllegalStateException(
-                    "No key definitions found in open-agent-auth.infrastructures.key-management.keys configuration. " +
-                    "Please configure at least one key for ID token signing."
-                );
-            }
-            
-            // Get the first key definition for ID token signing
-            // In production, you might want to specify which key to use via configuration
-            var keyDefinition = keyDefinitions.values().iterator().next();
-            String keyId = keyDefinition.getKeyId();
-            String algorithm = keyDefinition.getAlgorithm();
-            
-            if (ValidationUtils.isNullOrEmpty(keyId) || ValidationUtils.isNullOrEmpty(algorithm)) {
-                throw new IllegalStateException(
-                    "Key definition is missing required fields (keyId or algorithm). " +
-                    "Please ensure your key definition includes both keyId and algorithm."
-                );
-            }
-            
-            // Get signing JWK from KeyManager - ensure key exists first
-            Object signingKey = keyManager.getOrGenerateKey(keyId, KeyAlgorithm.fromValue(algorithm));
-            
-            return OidcFactory.builder()
-                    .issuer(issuer)
-                    .algorithm(algorithm)
-                    .signingKey(signingKey)
-                    .verificationKey(signingKey)
-                    .build();
-        }
-
-        /**
          * Creates the UserRegistry bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This bean provides user authentication and profile management.
          * The default implementation uses in-memory storage configured with demo users.
          * Users can override this bean to use custom implementations.
-         * &lt;/p&gt;
+         * </p>
          *
          * @param openAgentAuthProperties the global configuration properties
          * @return the configured user registry
@@ -426,20 +308,21 @@ public class AgentUserIdpAutoConfiguration {
 
         /**
          * Creates the IdTokenGenerator bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This generator is responsible for generating ID Tokens for authenticated users.
-         * Now uses the OidcFactory for consistent configuration.
-         * &lt;/p&gt;
+         * It directly constructs a {@link DefaultIdTokenGenerator} using the signing key
+         * from the key management infrastructure.
+         * </p>
          *
-         * @param oidcFactory the OIDC factory
+         * @param keyManager the key manager for retrieving signing keys
          * @param openAgentAuthProperties the global configuration properties
-         * @throws IllegalStateException if issuer is not configured
+         * @return the ID Token generator
+         * @throws IllegalStateException if issuer or key configuration is missing
          */
         @Bean
         @ConditionalOnMissingBean
-        public IdTokenGenerator idTokenGenerator(OidcFactory oidcFactory, OpenAgentAuthProperties openAgentAuthProperties) {
+        public IdTokenGenerator idTokenGenerator(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
 
-            // Get issuer from roles configuration
             String issuer = null;
             if (openAgentAuthProperties.getRoles() != null) {
                 var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_USER_IDP);
@@ -447,7 +330,7 @@ public class AgentUserIdpAutoConfiguration {
                     issuer = role.getIssuer();
                 }
             }
-            
+
             if (ValidationUtils.isNullOrEmpty(issuer)) {
                 throw new IllegalStateException(
                     "Agent User IDP issuer is not configured. Please set 'open-agent-auth.roles.agent-user-idp.issuer' in your configuration. " +
@@ -455,21 +338,33 @@ public class AgentUserIdpAutoConfiguration {
                 );
             }
 
-            logger.info("Creating IdTokenGenerator with issuer: {}", issuer);
+            // Get signing key from key management infrastructure
+            var keyConfig = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_ID_TOKEN_SIGNING);
+            if (keyConfig == null) {
+                throw new IllegalStateException(
+                    "ID token signing key '" + KEY_ID_TOKEN_SIGNING + "' is not configured. " +
+                    "Please configure 'open-agent-auth.infrastructures.key-management.keys." + KEY_ID_TOKEN_SIGNING + "' in your configuration."
+                );
+            }
 
-            // Use the OidcFactory to create the ID Token generator
-            return oidcFactory.createIdTokenGenerator();
+            String keyId = keyConfig.getKeyId();
+            String algorithm = keyConfig.getAlgorithm();
+            Object signingKey = keyManager.getOrGenerateKey(keyId, KeyAlgorithm.fromValue(algorithm));
+
+            logger.info("Creating IdTokenGenerator with issuer: {}, algorithm: {}", issuer, algorithm);
+
+            return new DefaultIdTokenGenerator(issuer, algorithm, signingKey);
         }
 
         /**
          * Creates the AuthenticationProvider bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This bean provides user authentication functionality. It uses the framework-provided
          * IdTokenGenerator and UserRegistry beans to create the authentication provider.
          * Unlike OidcFactory.createAuthenticationProvider(), this method uses the configured
          * UserRegistry bean instead of creating a new InMemoryUserRegistry, allowing user
          * configuration from YAML to take effect.
-         * &lt;/p&gt;
+         * </p>
          *
          * @param idTokenGenerator the ID Token generator provided by the framework
          * @param userRegistry the user registry provided by the framework
@@ -510,10 +405,10 @@ public class AgentUserIdpAutoConfiguration {
 
         /**
          * Creates the Agent User IDP Service bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This service manages user authentication and token issuance.
          * It provides the core functionality for the Agent User IDP role.
-         * &lt;/p&gt;
+         * </p>
          *
          * @param authenticationProvider the authentication provider for user authentication
          * @param tokenServer the OAuth2 token server for token issuance
@@ -555,11 +450,11 @@ public class AgentUserIdpAutoConfiguration {
 
         /**
          * Creates the Consent Page Provider bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This provider provides rendering and handling of the user consent page
          * for the OIDC authorization flow. The default implementation uses
          * a Thymeleaf template located at {@code oauth2/oidc_consent}.
-         * &lt;/p&gt;
+         * </p>
          *
          * @return the Consent Page Provider bean
          */
@@ -572,11 +467,11 @@ public class AgentUserIdpAutoConfiguration {
 
         /**
          * Creates the UserAuthenticationInterceptor bean if not already defined.
-         * &lt;p&gt;
+         * <p>
          * This bean provides local authentication for the Agent User IDP role.
          * It redirects unauthenticated users to the local login page instead of
          * an external IDP, since Agent User IDP itself is an IDP.
-         * &lt;/p&gt;
+         * </p>
          *
          * @param sessionMappingBizService the session mapping business service
          * @param openAgentAuthProperties the global configuration properties

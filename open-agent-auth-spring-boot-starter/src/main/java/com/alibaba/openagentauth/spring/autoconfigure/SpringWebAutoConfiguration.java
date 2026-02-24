@@ -15,6 +15,13 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure;
 
+import com.alibaba.openagentauth.spring.autoconfigure.role.AgentAutoConfiguration;
+import com.alibaba.openagentauth.spring.autoconfigure.role.AgentIdpAutoConfiguration;
+import com.alibaba.openagentauth.spring.autoconfigure.role.AgentUserIdpAutoConfiguration;
+import com.alibaba.openagentauth.spring.autoconfigure.role.AsUserIdpAutoConfiguration;
+import com.alibaba.openagentauth.spring.autoconfigure.role.AuthorizationServerAutoConfiguration;
+import com.alibaba.openagentauth.spring.autoconfigure.role.ResourceServerAutoConfiguration;
+import com.alibaba.openagentauth.spring.config.OAuth2AuthorizationConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.ComponentScan;
@@ -43,12 +50,19 @@ import org.springframework.context.annotation.ComponentScan;
  *
  * @since 1.0
  */
-@AutoConfiguration
+@AutoConfiguration(after = {
+        AgentUserIdpAutoConfiguration.class,
+        AgentIdpAutoConfiguration.class,
+        AsUserIdpAutoConfiguration.class,
+        AuthorizationServerAutoConfiguration.class,
+        ResourceServerAutoConfiguration.class,
+        AgentAutoConfiguration.class,
+        OAuth2AuthorizationConfiguration.class
+})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ComponentScan(
         basePackages = {
                 "com.alibaba.openagentauth.spring.web",
-                "com.alibaba.openagentauth.spring.config",
                 "com.alibaba.openagentauth.spring.autoconfigure.initializer"
         }
 )

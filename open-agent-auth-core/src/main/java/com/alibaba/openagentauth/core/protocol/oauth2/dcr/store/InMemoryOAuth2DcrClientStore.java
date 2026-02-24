@@ -15,12 +15,14 @@
  */
 package com.alibaba.openagentauth.core.protocol.oauth2.dcr.store;
 
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrRequest;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -88,8 +90,39 @@ public class InMemoryOAuth2DcrClientStore implements OAuth2DcrClientStore {
     }
 
     @Override
-    public DcrResponse retrieve(String clientId) {
+    public void register(OAuth2RegisteredClient client) {
+        ValidationUtils.validateNotNull(client, "Client");
+        String clientId = client.getClientId();
+        ValidationUtils.validateNotNull(clientId, "Client ID");
+
+        logger.debug("Registering client via OAuth2ClientStore.register for client_id: {}", clientId);
+
+        DcrResponse syntheticResponse = DcrResponse.builder()
+                .clientId(clientId)
+                .clientSecret(client.getClientSecret())
+                .clientIdIssuedAt(Instant.now().getEpochSecond())
+                .clientSecretExpiresAt(0L)
+                .redirectUris(client.getRedirectUris())
+                .clientName(client.getClientName())
+                .grantTypes(client.getGrantTypes())
+                .responseTypes(client.getResponseTypes())
+                .tokenEndpointAuthMethod(client.getTokenEndpointAuthMethod())
+                .scope(client.getScope())
+                .build();
+
+        clients.put(clientId, syntheticResponse);
+    }
+
+    @Override
+    public OAuth2RegisteredClient retrieve(String clientId) {
         logger.debug("Retrieving client registration for client_id: {}", clientId);
+        DcrResponse response = clients.get(clientId);
+        return response != null ? response.toRegisteredClient() : null;
+    }
+
+    @Override
+    public DcrResponse retrieveDcrResponse(String clientId) {
+        logger.debug("Retrieving full DCR response for client_id: {}", clientId);
         return clients.get(clientId);
     }
 
@@ -165,7 +198,7 @@ public class InMemoryOAuth2DcrClientStore implements OAuth2DcrClientStore {
     }
 
     @Override
-    public DcrResponse retrieveByClientName(String clientName) {
+    public OAuth2RegisteredClient retrieveByClientName(String clientName) {
         logger.debug("Retrieving client registration by client_name: {}", clientName);
         
         if (ValidationUtils.isNullOrEmpty(clientName)) {
@@ -177,7 +210,7 @@ public class InMemoryOAuth2DcrClientStore implements OAuth2DcrClientStore {
             DcrResponse response = entry.getValue();
             if (response != null && clientName.equals(response.getClientName())) {
                 logger.debug("Found client by client_name: {} -> client_id: {}", clientName, entry.getKey());
-                return response;
+                return response.toRegisteredClient();
             }
         }
         

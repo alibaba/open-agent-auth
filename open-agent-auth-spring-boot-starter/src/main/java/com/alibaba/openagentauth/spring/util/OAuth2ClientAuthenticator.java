@@ -15,8 +15,8 @@
  */
 package com.alibaba.openagentauth.spring.util;
 
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ import java.util.Base64;
  * <p>
  * <b>Security Considerations:</b></p>
  * <ul>
- *   <li>All authentication methods validate client credentials against the DCR store</li>
+ *   *   <li>All authentication methods validate client credentials against the client store</li>
  *   <li>Client secrets are compared using constant-time comparison to prevent timing attacks</li>
  *   <li>Detailed error messages are logged for debugging while returning generic errors to clients</li>
  * </ul>
@@ -85,18 +85,18 @@ public final class OAuth2ClientAuthenticator {
      *   <li>Extract and decode Base64 credentials</li>
      *   <li>Parse client_id:client_secret</li>
      *   <li>Validate client ID is not empty</li>
-     *   <li>Retrieve client from DCR store</li>
+     *   <li>Retrieve client from client store</li>
      *   <li>Validate client secret matches</li>
      *   <li>Validate token endpoint auth method supports client_secret_basic</li>
      * </ol>
      *
      * @param authorizationHeader the Authorization header value
-     * @param clientStore the DCR client store for retrieving client information
+     * @param clientStore the client store for retrieving client information
      * @return the authenticated client ID
      * @throws FrameworkOAuth2TokenException if authentication fails
      * @see <a href="https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1">RFC 6749 - Client Password</a>
      */
-    public static String authenticateWithBasicAuth(String authorizationHeader, OAuth2DcrClientStore clientStore) {
+    public static String authenticateWithBasicAuth(String authorizationHeader, OAuth2ClientStore clientStore) {
         // Validate Authorization header is present
         if (ValidationUtils.isNullOrEmpty(authorizationHeader)) {
             logger.error("Authorization header is missing");
@@ -141,8 +141,8 @@ public final class OAuth2ClientAuthenticator {
                     "Client authentication failed: Client ID is required");
         }
 
-        // Retrieve client from DCR store
-        DcrResponse client = clientStore.retrieve(clientId);
+        // Retrieve client from client store
+        OAuth2RegisteredClient client = clientStore.retrieve(clientId);
         if (client == null) {
             logger.error("Client not found: {}", clientId);
             throw FrameworkOAuth2TokenException.invalidClient(

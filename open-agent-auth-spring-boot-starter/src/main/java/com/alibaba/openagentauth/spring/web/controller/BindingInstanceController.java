@@ -21,7 +21,7 @@ import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.core.model.identity.AgentIdentity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,7 +54,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnExpression("'${open-agent-auth.roles.authorization-server.enabled:false}' == 'true'")
+@ConditionalOnBean(BindingInstanceStore.class)
 public class BindingInstanceController {
 
     private static final Logger logger = LoggerFactory.getLogger(BindingInstanceController.class);

@@ -15,8 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.util;
 
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,7 +55,7 @@ import static org.mockito.Mockito.when;
 class OAuth2ClientAuthenticatorTest {
 
     @Mock
-    private OAuth2DcrClientStore clientStore;
+    private OAuth2ClientStore clientStore;
 
     private static final String CLIENT_ID = "test-client-123";
     private static final String CLIENT_SECRET = "test-secret-456";
@@ -64,7 +65,7 @@ class OAuth2ClientAuthenticatorTest {
     void setUp() {
         // Setup default client in DCR store with lenient() to avoid UnnecessaryStubbingException
         // for tests that don't use this client (e.g., tests that fail before reaching client store)
-        DcrResponse client = DcrResponse.builder()
+        OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                 .clientId(CLIENT_ID)
                 .clientSecret(CLIENT_SECRET)
                 .tokenEndpointAuthMethod("client_secret_basic")
@@ -120,7 +121,7 @@ class OAuth2ClientAuthenticatorTest {
         void shouldAuthenticateWhenTokenEndpointAuthMethodIsNull() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(CLIENT_ID)
                     .clientSecret(CLIENT_SECRET)
                     .tokenEndpointAuthMethod(null)
@@ -222,7 +223,7 @@ class OAuth2ClientAuthenticatorTest {
             String specialSecret = "sec@#$%^&*()_+-={}[]|\\:;\"'<>,.?/~`";
             String authHeader = buildBasicAuthHeader(specialClientId, specialSecret);
 
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(specialClientId)
                     .clientSecret(specialSecret)
                     .tokenEndpointAuthMethod("client_secret_basic")
@@ -296,7 +297,7 @@ class OAuth2ClientAuthenticatorTest {
             // Given
             String emptySecret = "";
             String authHeader = buildBasicAuthHeader(CLIENT_ID, emptySecret);
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(CLIENT_ID)
                     .clientSecret(emptySecret)
                     .tokenEndpointAuthMethod("client_secret_basic")
@@ -316,7 +317,7 @@ class OAuth2ClientAuthenticatorTest {
             // Given
             String secretWithColon = "secret:with:colons";
             String authHeader = buildBasicAuthHeader(CLIENT_ID, secretWithColon);
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(CLIENT_ID)
                     .clientSecret(secretWithColon)
                     .tokenEndpointAuthMethod("client_secret_basic")
@@ -358,7 +359,7 @@ class OAuth2ClientAuthenticatorTest {
             // Given
             String publicClientId = "public-client";
             String authHeader = buildBasicAuthHeader(publicClientId, CLIENT_SECRET);
-            DcrResponse publicClient = DcrResponse.builder()
+            OAuth2RegisteredClient publicClient = OAuth2RegisteredClient.builder()
                     .clientId(publicClientId)
                     .clientSecret(null)
                     .tokenEndpointAuthMethod("none")
@@ -378,7 +379,7 @@ class OAuth2ClientAuthenticatorTest {
             // Given
             String emptySecretClient = "empty-secret-client";
             String authHeader = buildBasicAuthHeader(emptySecretClient, CLIENT_SECRET);
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(emptySecretClient)
                     .clientSecret("")
                     .tokenEndpointAuthMethod("client_secret_basic")
@@ -449,7 +450,7 @@ class OAuth2ClientAuthenticatorTest {
             // Given
             String jwtAuthClientId = "jwt-auth-client";
             String authHeader = buildBasicAuthHeader(jwtAuthClientId, CLIENT_SECRET);
-            DcrResponse jwtClient = DcrResponse.builder()
+            OAuth2RegisteredClient jwtClient = OAuth2RegisteredClient.builder()
                     .clientId(jwtAuthClientId)
                     .clientSecret(CLIENT_SECRET)
                     .tokenEndpointAuthMethod("private_key_jwt")
@@ -469,7 +470,7 @@ class OAuth2ClientAuthenticatorTest {
             // Given
             String postAuthClientId = "post-auth-client";
             String authHeader = buildBasicAuthHeader(postAuthClientId, CLIENT_SECRET);
-            DcrResponse postClient = DcrResponse.builder()
+            OAuth2RegisteredClient postClient = OAuth2RegisteredClient.builder()
                     .clientId(postAuthClientId)
                     .clientSecret(CLIENT_SECRET)
                     .tokenEndpointAuthMethod("client_secret_post")
@@ -488,7 +489,7 @@ class OAuth2ClientAuthenticatorTest {
         void shouldAuthenticateWhenClientUsesClientSecretBasic() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(CLIENT_ID)
                     .clientSecret(CLIENT_SECRET)
                     .tokenEndpointAuthMethod("client_secret_basic")
@@ -515,7 +516,7 @@ class OAuth2ClientAuthenticatorTest {
             String longClientId = "a".repeat(1000);
             String longSecret = "b".repeat(1000);
             String authHeader = buildBasicAuthHeader(longClientId, longSecret);
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(longClientId)
                     .clientSecret(longSecret)
                     .tokenEndpointAuthMethod("client_secret_basic")
@@ -537,7 +538,7 @@ class OAuth2ClientAuthenticatorTest {
             String unicodeClientId = "client-test-unicode";
             String unicodeSecret = "password-secret-key";
             String authHeader = buildBasicAuthHeader(unicodeClientId, unicodeSecret);
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(unicodeClientId)
                     .clientSecret(unicodeSecret)
                     .tokenEndpointAuthMethod("client_secret_basic")
@@ -559,7 +560,7 @@ class OAuth2ClientAuthenticatorTest {
             String utf8ClientId = "user@example.com";
             String utf8Secret = "p@ssw0rd!#$%^&*()";
             String authHeader = buildBasicAuthHeader(utf8ClientId, utf8Secret);
-            DcrResponse client = DcrResponse.builder()
+            OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
                     .clientId(utf8ClientId)
                     .clientSecret(utf8Secret)
                     .tokenEndpointAuthMethod("client_secret_basic")

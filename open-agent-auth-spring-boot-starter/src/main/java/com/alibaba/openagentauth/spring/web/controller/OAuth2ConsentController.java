@@ -25,8 +25,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -46,13 +47,14 @@ import org.springframework.web.servlet.view.RedirectView;
  */
 @RestController
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnExpression("'${open-agent-auth.roles.authorization-server.enabled:false}' == 'true'")
+@ConditionalOnBean(ConsentPageProvider.class)
 public class OAuth2ConsentController {
 
     private static final Logger logger = LoggerFactory.getLogger(OAuth2ConsentController.class);
 
     private final UserAuthenticationInterceptor userAuthenticationInterceptor;
     private final ConsentPageProvider consentPageProvider;
+    @Nullable
     private final OAuth2ParServer parServer;
     private final AapParJwtParser parJwtParser;
 
@@ -60,7 +62,7 @@ public class OAuth2ConsentController {
     public OAuth2ConsentController(
             UserAuthenticationInterceptor userAuthenticationInterceptor,
             ConsentPageProvider consentPageProvider,
-            OAuth2ParServer parServer) {
+            @Autowired(required = false) @Nullable OAuth2ParServer parServer) {
         this.userAuthenticationInterceptor = userAuthenticationInterceptor;
         this.consentPageProvider = consentPageProvider;
         this.parServer = parServer;
@@ -94,16 +96,20 @@ public class OAuth2ConsentController {
         // Extract PAR JWT claims, client ID and scope for display
         ParJwtClaims parJwtClaims = null;
         ParRequest parRequest = null;
-        try {
-            parRequest = parServer.retrieveRequest(requestUri);
-            if (parRequest != null && parRequest.getRequestJwt() != null && !parRequest.getRequestJwt().isBlank()) {
-                parJwtClaims = parJwtParser.parse(parRequest.getRequestJwt());
-                if (parJwtClaims != null) {
-                    logger.info("Successfully extracted PAR JWT claims for display with JTI: {}", parJwtClaims.getJwtId());
+        if (parServer != null) {
+            try {
+                parRequest = parServer.retrieveRequest(requestUri);
+                if (parRequest != null && parRequest.getRequestJwt() != null && !parRequest.getRequestJwt().isBlank()) {
+                    parJwtClaims = parJwtParser.parse(parRequest.getRequestJwt());
+                    if (parJwtClaims != null) {
+                        logger.info("Successfully extracted PAR JWT claims for display with JTI: {}", parJwtClaims.getJwtId());
+                    }
                 }
+            } catch (Exception e) {
+                logger.error("Error extracting PAR JWT claims for display", e);
             }
-        } catch (Exception e) {
-            logger.error("Error extracting PAR JWT claims for display", e);
+        } else {
+            logger.debug("PAR server not available, skipping PAR JWT claims extraction");
         }
 
         // Use framework's consent page provider with PAR claims if available

@@ -278,8 +278,8 @@ public class DefaultOAuth2DcrServer implements OAuth2DcrServer {
             throw DcrException.invalidClientId("Invalid registration access token");
         }
 
-        // Retrieve client
-        DcrResponse response = clientStore.retrieve(clientId);
+        // Retrieve full DCR response (not the generic OAuth2RegisteredClient)
+        DcrResponse response = clientStore.retrieveDcrResponse(clientId);
         if (response == null) {
             logger.error("Client not found: client_id={}", clientId);
             throw DcrException.invalidClientId("Client not found");

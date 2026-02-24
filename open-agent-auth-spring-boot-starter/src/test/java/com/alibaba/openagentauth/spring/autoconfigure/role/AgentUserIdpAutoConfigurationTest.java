@@ -22,12 +22,8 @@ import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.Defau
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.OAuth2AuthorizationServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationCodeStorage;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.InMemoryOAuth2DcrClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.store.InMemoryOAuth2ParRequestStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.store.OAuth2ParRequestStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.InMemoryOAuth2ClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.OAuth2TokenServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.TokenGenerator;
 import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenGenerator;
@@ -184,48 +180,6 @@ class AgentUserIdpAutoConfigurationTest {
     }
 
     @Nested
-    @DisplayName("OAuth2ParRequestStore Bean Tests")
-    class OAuth2ParRequestStoreBeanTests {
-
-        @Test
-        @DisplayName("Should create OAuth2ParRequestStore bean when not defined")
-        void shouldCreateOAuth2ParRequestStoreBeanWhenNotDefined() {
-            contextRunner
-                .run(context -> {
-                    assertThat(context).hasSingleBean(OAuth2ParRequestStore.class);
-                    OAuth2ParRequestStore store = context.getBean(OAuth2ParRequestStore.class);
-                    assertThat(store).isInstanceOf(InMemoryOAuth2ParRequestStore.class);
-                });
-        }
-    }
-
-    @Nested
-    @DisplayName("OAuth2ParServer Bean Tests")
-    class OAuth2ParServerBeanTests {
-
-        @Test
-        @DisplayName("Should create OAuth2ParServer bean when not defined")
-        void shouldCreateOAuth2ParServerBeanWhenNotDefined() {
-            contextRunner
-                .run(context -> {
-                    assertThat(context).hasSingleBean(OAuth2ParServer.class);
-                    OAuth2ParServer server = context.getBean(OAuth2ParServer.class);
-                    assertThat(server).isInstanceOf(DefaultOAuth2ParServer.class);
-                });
-        }
-
-        @Test
-        @DisplayName("Should depend on OAuth2ParRequestStore bean")
-        void shouldDependOnOAuth2ParRequestStoreBean() {
-            contextRunner
-                .run(context -> {
-                    assertThat(context).hasSingleBean(OAuth2ParServer.class);
-                    assertThat(context).hasSingleBean(OAuth2ParRequestStore.class);
-                });
-        }
-    }
-
-    @Nested
     @DisplayName("OAuth2AuthorizationCodeStorage Bean Tests")
     class OAuth2AuthorizationCodeStorageBeanTests {
 
@@ -242,17 +196,17 @@ class AgentUserIdpAutoConfigurationTest {
     }
 
     @Nested
-    @DisplayName("OAuth2DcrClientStore Bean Tests")
-    class OAuth2DcrClientStoreBeanTests {
+    @DisplayName("OAuth2ClientStore Bean Tests")
+    class OAuth2ClientStoreBeanTests {
 
         @Test
-        @DisplayName("Should create OAuth2DcrClientStore bean when not defined")
-        void shouldCreateOAuth2DcrClientStoreBeanWhenNotDefined() {
+        @DisplayName("Should create OAuth2ClientStore bean when not defined")
+        void shouldCreateOAuth2ClientStoreBeanWhenNotDefined() {
             contextRunner
                 .run(context -> {
-                    assertThat(context).hasSingleBean(OAuth2DcrClientStore.class);
-                    OAuth2DcrClientStore store = context.getBean(OAuth2DcrClientStore.class);
-                    assertThat(store).isInstanceOf(InMemoryOAuth2DcrClientStore.class);
+                    assertThat(context).hasSingleBean(OAuth2ClientStore.class);
+                    OAuth2ClientStore store = context.getBean(OAuth2ClientStore.class);
+                    assertThat(store).isInstanceOf(InMemoryOAuth2ClientStore.class);
                 });
         }
     }
@@ -361,7 +315,6 @@ class AgentUserIdpAutoConfigurationTest {
             contextRunner
                 .run(context -> {
                     assertThat(context).hasSingleBean(IdTokenGenerator.class);
-                    assertThat(context).hasSingleBean(OAuth2ParServer.class);
                 });
         }
 
@@ -382,7 +335,6 @@ class AgentUserIdpAutoConfigurationTest {
                 .run(context -> {
                     // Check that AgentUserIdpAutoConfiguration beans are not loaded
                     assertThat(context).doesNotHaveBean(IdTokenGenerator.class);
-                    assertThat(context).doesNotHaveBean(OAuth2ParServer.class);
                     assertThat(context).doesNotHaveBean(OAuth2AuthorizationServer.class);
                     assertThat(context).doesNotHaveBean(OAuth2TokenServer.class);
                     assertThat(context).doesNotHaveBean(TokenGenerator.class);

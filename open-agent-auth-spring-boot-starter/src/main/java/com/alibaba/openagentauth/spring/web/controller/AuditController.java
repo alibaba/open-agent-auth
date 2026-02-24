@@ -20,7 +20,7 @@ import com.alibaba.openagentauth.core.exception.audit.AuditStorageException;
 import com.alibaba.openagentauth.core.model.audit.AuditEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -55,7 +55,7 @@ import java.util.Optional;
  */
 @RestController
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnExpression("'${open-agent-auth.roles.authorization-server.enabled:false}' == 'true'")
+@ConditionalOnBean(AuditService.class)
 public class AuditController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuditController.class);

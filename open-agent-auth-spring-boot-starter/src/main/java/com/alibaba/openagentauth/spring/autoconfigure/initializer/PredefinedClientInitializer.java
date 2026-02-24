@@ -15,10 +15,8 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.initializer;
 
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrRequest;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ServerProperties;
 import jakarta.annotation.PostConstruct;
@@ -28,24 +26,28 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 /**
- * Auto-registration initializer for OAuth 2.0 clients.
+ * Auto-registration initializer for predefined OAuth 2.0 clients.
  * <p>
- * This component automatically registers OAuth 2.0 clients using the Dynamic Client
- * Registration (DCR) mechanism after all beans are created. It reads client
- * configurations from {@link OpenAgentAuthProperties} and registers them with
- * the DCR server.
+ * This component automatically registers OAuth 2.0 clients from static configuration
+ * (application.yml) into the {@link OAuth2ClientStore} after all beans are created.
+ * Unlike Dynamic Client Registration (DCR), this initializer works with predefined
+ * client configurations and does not require the DCR protocol.
  * </p>
  * <p>
- * <b>OAuth 2.0 Redirect URI Flow:</b></p>
+ * <b>Design Rationale:</b></p>
+ * <p>
+ * Predefined client registration is fundamentally different from DCR:
+ * </p>
  * <ul>
- *   <li>Client registers a list of allowed redirect URIs (redirect_uris)</li>
- *   <li>Client includes redirect_uri in the authorization request</li>
- *   <li>Authorization server validates that the requested redirect_uri is in the registered list</li>
- *   <li>Authorization server redirects to the requested redirect_uri (not the first one)</li>
+ *   <li>DCR (RFC 7591): Runtime protocol for unknown clients to self-register</li>
+ *   <li>Predefined registration: Static configuration loading at startup</li>
  * </ul>
+ * <p>
+ * By depending only on {@link OAuth2ClientStore}, this initializer can work with
+ * any role that has client storage capability, without requiring DCR infrastructure.
+ * </p>
  *
- * @see <a href="https://datatracker.ietf.org/doc/html/rfc7591">RFC 7591 - OAuth 2.0 Dynamic Client Registration</a>
- * @see <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3.1.2">RFC 6749 - Redirection Endpoint</a>
+ * @see <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2">RFC 6749 - Client Registration</a>
  * @since 1.0
  */
 @Component
@@ -54,23 +56,19 @@ public class PredefinedClientInitializer {
 
     private static final Logger logger = LoggerFactory.getLogger(PredefinedClientInitializer.class);
 
-    private final OAuth2DcrServer oauth2DcrServer;
-    private final OAuth2DcrClientStore oauth2DcrClientStore;
+    private final OAuth2ClientStore clientStore;
     private final OpenAgentAuthProperties openAgentAuthProperties;
 
     /**
      * Creates a new PredefinedClientInitializer.
      *
-     * @param oauth2DcrServer the DCR server
-     * @param oauth2DcrClientStore the DCR client store
+     * @param clientStore the client store for registering predefined clients
      * @param openAgentAuthProperties the global configuration properties
      */
     public PredefinedClientInitializer(
-            OAuth2DcrServer oauth2DcrServer,
-            OAuth2DcrClientStore oauth2DcrClientStore,
+            OAuth2ClientStore clientStore,
             OpenAgentAuthProperties openAgentAuthProperties) {
-        this.oauth2DcrServer = oauth2DcrServer;
-        this.oauth2DcrClientStore = oauth2DcrClientStore;
+        this.clientStore = clientStore;
         this.openAgentAuthProperties = openAgentAuthProperties;
     }
 
@@ -108,68 +106,39 @@ public class PredefinedClientInitializer {
     }
 
     /**
-     * Auto-registers a single client.
+     * Registers a single predefined client.
      *
-     * @param clientConfig the client configuration
+     * @param clientConfig the client configuration from application properties
      */
     private void initializeClient(OAuth2ServerProperties.AutoRegisterClientsProperties.AutoRegisterClientItemProperties clientConfig) {
-        logger.info("Auto-registering client: {}", clientConfig.getClientName());
+        logger.info("Registering predefined client: {}", clientConfig.getClientName());
 
-        // Build DCR request from configuration
-        DcrRequest.Builder requestBuilder = DcrRequest.builder()
-                .redirectUris(clientConfig.getRedirectUris())
+        String clientId = clientConfig.getClientId() != null
+                ? clientConfig.getClientId()
+                : clientConfig.getClientName();
+
+        OAuth2RegisteredClient registeredClient = OAuth2RegisteredClient.builder()
+                .clientId(clientId)
+                .clientSecret(clientConfig.getClientSecret())
                 .clientName(clientConfig.getClientName())
+                .redirectUris(clientConfig.getRedirectUris())
                 .grantTypes(clientConfig.getGrantTypes())
                 .responseTypes(clientConfig.getResponseTypes())
                 .tokenEndpointAuthMethod(clientConfig.getTokenEndpointAuthMethod())
-                .scope(String.join(" ", clientConfig.getScopes()));
-
-        DcrRequest dcrRequest = requestBuilder.build();
-
-        // Register the client with DCR server
-        DcrResponse dcrResponse = oauth2DcrServer.registerClient(dcrRequest);
-
-        // Determine client_id and client_secret
-        // Use configured values if provided, otherwise use generated values
-        String clientId = clientConfig.getClientId() != null
-                ? clientConfig.getClientId()
-                : dcrRequest.getClientName();
-
-        String clientSecret = clientConfig.getClientSecret() != null
-                ? clientConfig.getClientSecret()
-                : dcrResponse.getClientSecret();
-
-        String registrationAccessToken = dcrResponse.getRegistrationAccessToken();
-
-        // Create a new DcrResponse with custom client_id and client_secret
-        DcrResponse responseWithCustomCredentials = DcrResponse.builder()
-                .clientId(clientId)
-                .clientSecret(clientSecret)
-                .clientIdIssuedAt(dcrResponse.getClientIdIssuedAt())
-                .clientSecretExpiresAt(dcrResponse.getClientSecretExpiresAt())
-                .registrationAccessToken(registrationAccessToken)
-                .registrationClientUri(dcrResponse.getRegistrationClientUri())
-                .redirectUris(dcrResponse.getRedirectUris())
-                .clientName(dcrResponse.getClientName())
-                .grantTypes(dcrResponse.getGrantTypes())
-                .responseTypes(dcrResponse.getResponseTypes())
-                .tokenEndpointAuthMethod(dcrResponse.getTokenEndpointAuthMethod())
-                .scope(dcrResponse.getScope())
+                .scope(String.join(" ", clientConfig.getScopes()))
                 .build();
 
-        // Store the client with client_id as the key
-        oauth2DcrClientStore.store(clientId, registrationAccessToken, dcrRequest, responseWithCustomCredentials);
+        clientStore.register(registeredClient);
 
-        logger.info("Auto-registered client: {} with client_id: {} and redirect_uris: {}",
+        logger.info("Registered predefined client: {} with client_id: {} and redirect_uris: {}",
                 clientConfig.getClientName(),
                 clientId,
-                dcrResponse.getRedirectUris());
+                clientConfig.getRedirectUris());
 
-        // Log the credentials for easy reference
         logger.info("====================================================================");
         logger.info("IMPORTANT: Use the following credentials for client {}:", clientConfig.getClientName());
         logger.info("client_id: {}", clientId);
-        logger.info("client_secret: {}", clientSecret);
+        logger.info("client_secret: {}", clientConfig.getClientSecret());
         logger.info("====================================================================");
     }
 }

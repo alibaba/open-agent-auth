@@ -18,8 +18,9 @@ package com.alibaba.openagentauth.spring.web.controller;
 import com.alibaba.openagentauth.core.exception.oauth2.ParException;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,7 +67,7 @@ class OAuth2ParControllerTest {
     private OAuth2ParServer parServer;
 
     @Mock
-    private OAuth2DcrClientStore clientStore;
+    private OAuth2ClientStore clientStore;
 
     private OAuth2ParController controller;
 
@@ -104,7 +105,7 @@ class OAuth2ParControllerTest {
         controller = new OAuth2ParController(parServer, clientStore);
         
         // Mock client store to return a valid client
-        DcrResponse mockClient = DcrResponse.builder()
+        OAuth2RegisteredClient mockClient = OAuth2RegisteredClient.builder()
                 .clientId(CLIENT_ID)
                 .clientSecret(CLIENT_SECRET)
                 .tokenEndpointAuthMethod("client_secret_basic")

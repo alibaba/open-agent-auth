@@ -285,7 +285,7 @@ class DefaultOAuth2DcrServerTest {
                 .build();
 
             when(mockClientStore.validateToken(clientId, registrationAccessToken)).thenReturn(true);
-            when(mockClientStore.retrieve(clientId)).thenReturn(storedResponse);
+            when(mockClientStore.retrieveDcrResponse(clientId)).thenReturn(storedResponse);
 
             DcrResponse response = server.readClient(clientId, registrationAccessToken);
 
@@ -294,7 +294,7 @@ class DefaultOAuth2DcrServerTest {
             assertThat(response.getClientName()).isEqualTo("Test Client");
 
             verify(mockClientStore, times(1)).validateToken(clientId, registrationAccessToken);
-            verify(mockClientStore, times(1)).retrieve(clientId);
+            verify(mockClientStore, times(1)).retrieveDcrResponse(clientId);
         }
 
         @Test
@@ -340,14 +340,14 @@ class DefaultOAuth2DcrServerTest {
             String registrationAccessToken = "token-456";
 
             when(mockClientStore.validateToken(clientId, registrationAccessToken)).thenReturn(true);
-            when(mockClientStore.retrieve(clientId)).thenReturn(null);
+            when(mockClientStore.retrieveDcrResponse(clientId)).thenReturn(null);
 
             assertThatThrownBy(() -> server.readClient(clientId, registrationAccessToken))
                 .isInstanceOf(DcrException.class)
                 .hasMessageContaining("Client not found");
 
             verify(mockClientStore, times(1)).validateToken(clientId, registrationAccessToken);
-            verify(mockClientStore, times(1)).retrieve(clientId);
+            verify(mockClientStore, times(1)).retrieveDcrResponse(clientId);
         }
 
         @Test
@@ -395,7 +395,7 @@ class DefaultOAuth2DcrServerTest {
                 .build();
 
             when(mockClientStore.validateToken(clientId, registrationAccessToken)).thenReturn(true);
-            when(mockClientStore.retrieve(clientId)).thenReturn(existingResponse);
+            when(mockClientStore.retrieveDcrResponse(clientId)).thenReturn(existingResponse);
 
             DcrResponse updatedResponse = server.updateClient(clientId, registrationAccessToken, updateRequest);
 
@@ -435,7 +435,7 @@ class DefaultOAuth2DcrServerTest {
                 .build();
 
             when(mockClientStore.validateToken(clientId, registrationAccessToken)).thenReturn(true);
-            when(mockClientStore.retrieve(clientId)).thenReturn(existingResponse);
+            when(mockClientStore.retrieveDcrResponse(clientId)).thenReturn(existingResponse);
 
             DcrResponse updatedResponse = server.updateClient(clientId, registrationAccessToken, updateRequest);
 
@@ -494,7 +494,7 @@ class DefaultOAuth2DcrServerTest {
                 .build();
 
             when(mockClientStore.validateToken(clientId, registrationAccessToken)).thenReturn(true);
-            when(mockClientStore.retrieve(clientId)).thenReturn(existingResponse);
+            when(mockClientStore.retrieveDcrResponse(clientId)).thenReturn(existingResponse);
 
             assertThatThrownBy(() -> server.updateClient(clientId, registrationAccessToken, updateRequest))
                 .isInstanceOf(DcrException.class)
@@ -521,7 +521,7 @@ class DefaultOAuth2DcrServerTest {
                 .build();
 
             when(mockClientStore.validateToken(clientId, registrationAccessToken)).thenReturn(true);
-            when(mockClientStore.retrieve(clientId)).thenReturn(existingResponse);
+            when(mockClientStore.retrieveDcrResponse(clientId)).thenReturn(existingResponse);
 
             assertThatThrownBy(() -> server.updateClient(clientId, registrationAccessToken, updateRequest))
                 .isInstanceOf(DcrException.class)
@@ -565,12 +565,12 @@ class DefaultOAuth2DcrServerTest {
                 .build();
 
             when(mockClientStore.validateToken(clientId, registrationAccessToken)).thenReturn(true);
-            when(mockClientStore.retrieve(clientId)).thenReturn(storedResponse);
+            when(mockClientStore.retrieveDcrResponse(clientId)).thenReturn(storedResponse);
 
             server.deleteClient(clientId, registrationAccessToken);
 
             verify(mockClientStore, times(1)).validateToken(clientId, registrationAccessToken);
-            verify(mockClientStore, times(1)).retrieve(clientId);
+            verify(mockClientStore, times(1)).retrieveDcrResponse(clientId);
             verify(mockClientStore, times(1)).delete(clientId);
         }
 
@@ -617,14 +617,14 @@ class DefaultOAuth2DcrServerTest {
             String registrationAccessToken = "token-456";
 
             when(mockClientStore.validateToken(clientId, registrationAccessToken)).thenReturn(true);
-            when(mockClientStore.retrieve(clientId)).thenReturn(null);
+            when(mockClientStore.retrieveDcrResponse(clientId)).thenReturn(null);
 
             assertThatThrownBy(() -> server.deleteClient(clientId, registrationAccessToken))
                 .isInstanceOf(DcrException.class)
                 .hasMessageContaining("Client not found");
 
             verify(mockClientStore, times(1)).validateToken(clientId, registrationAccessToken);
-            verify(mockClientStore, times(1)).retrieve(clientId);
+            verify(mockClientStore, times(1)).retrieveDcrResponse(clientId);
             verify(mockClientStore, never()).delete(anyString());
         }
 
