@@ -56,61 +56,6 @@ public class ServiceProperties {
     private Map<String, ConsumerServiceProperties> consumers = new HashMap<>();
 
     /**
-     * Agent service configuration.
-     * <p>
-     * The AI Agent that requests access to protected resources.
-     * Default port: 8081
-     * </p>
-     */
-    private AgentService agent = new AgentService();
-
-    /**
-     * Agent IDP service configuration.
-     */
-    private AgentIdpService agentIdp = new AgentIdpService();
-
-    /**
-     * Agent User IDP service configuration.
-     */
-    private AgentUserIdpService agentUserIdp = new AgentUserIdpService();
-
-    /**
-     * AS User IDP service configuration.
-     * <p>
-     * The AS User IDP authenticates users for the Authorization Server.
-     * Default port: 8084
-     * </p>
-     */
-    private AsUserIdpService asUserIdp = new AsUserIdpService();
-
-    /**
-     * Authorization Server service configuration.
-     * <p>
-     * The Authorization Server issues Agent Operation Authorization Tokens (AOAT).
-     * Default port: 8085
-     * </p>
-     */
-    private AuthorizationServerService authorizationServer = new AuthorizationServerService();
-
-    /**
-     * Resource Server service configuration.
-     * <p>
-     * The Resource Server hosts protected resources.
-     * Default port: 8086
-     * </p>
-     */
-    private ResourceServerService resourceServer = new ResourceServerService();
-
-    /**
-     * OPA (Open Policy Agent) service configuration.
-     * <p>
-     * The OPA service provides policy evaluation capabilities.
-     * Default port: 8181
-     * </p>
-     */
-    private OpaService opa = new OpaService();
-
-    /**
      * Post-process the configuration to merge user-provided endpoints with defaults.
      * <p>
      * This method is called by Spring Boot after all properties have been bound.
@@ -126,15 +71,6 @@ public class ServiceProperties {
         for (ConsumerServiceProperties consumer : consumers.values()) {
             mergeEndpointsWithDefaults(consumer.getEndpoints());
         }
-        
-        // Merge service endpoints with defaults
-        mergeEndpointsWithDefaults(agent.getEndpoints());
-        mergeEndpointsWithDefaults(agentIdp.getEndpoints());
-        mergeEndpointsWithDefaults(agentUserIdp.getEndpoints());
-        mergeEndpointsWithDefaults(asUserIdp.getEndpoints());
-        mergeEndpointsWithDefaults(authorizationServer.getEndpoints());
-        mergeEndpointsWithDefaults(resourceServer.getEndpoints());
-        mergeEndpointsWithDefaults(opa.getEndpoints());
     }
 
     /**
@@ -186,61 +122,7 @@ public class ServiceProperties {
         this.consumers = consumers;
     }
 
-    public AgentService getAgent() {
-        return agent;
-    }
 
-    public void setAgent(AgentService agent) {
-        this.agent = agent;
-    }
-
-    public AgentIdpService getAgentIdp() {
-        return agentIdp;
-    }
-
-    public void setAgentIdp(AgentIdpService agentIdp) {
-        this.agentIdp = agentIdp;
-    }
-
-    public AgentUserIdpService getAgentUserIdp() {
-        return agentUserIdp;
-    }
-
-    public void setAgentUserIdp(AgentUserIdpService agentUserIdp) {
-        this.agentUserIdp = agentUserIdp;
-    }
-
-    public AsUserIdpService getAsUserIdp() {
-        return asUserIdp;
-    }
-
-    public void setAsUserIdp(AsUserIdpService asUserIdp) {
-        this.asUserIdp = asUserIdp;
-    }
-
-    public AuthorizationServerService getAuthorizationServer() {
-        return authorizationServer;
-    }
-
-    public void setAuthorizationServer(AuthorizationServerService authorizationServer) {
-        this.authorizationServer = authorizationServer;
-    }
-
-    public ResourceServerService getResourceServer() {
-        return resourceServer;
-    }
-
-    public void setResourceServer(ResourceServerService resourceServer) {
-        this.resourceServer = resourceServer;
-    }
-
-    public OpaService getOpa() {
-        return opa;
-    }
-
-    public void setOpa(OpaService opa) {
-        this.opa = opa;
-    }
 
     /**
      * Provider configuration (reuses ConsumerServiceProperties structure without application grouping).
@@ -364,76 +246,6 @@ public class ServiceProperties {
 
         public void setUseIssuerAsBaseUrl(boolean useIssuerAsBaseUrl) {
             this.useIssuerAsBaseUrl = useIssuerAsBaseUrl;
-        }
-    }
-
-    /**
-     * Agent service configuration.
-     */
-    public static class AgentService extends ConsumerServiceProperties {
-        public AgentService() {
-            // Default base URL for Agent
-            setBaseUrl("http://localhost:8081");
-        }
-    }
-
-    /**
-     * Agent IDP service configuration.
-     */
-    public static class AgentIdpService extends ConsumerServiceProperties {
-        public AgentIdpService() {
-            // Default base URL for Agent IDP
-            setBaseUrl("http://localhost:8082");
-        }
-    }
-
-    /**
-     * Agent User IDP service configuration.
-     */
-    public static class AgentUserIdpService extends ConsumerServiceProperties {
-        public AgentUserIdpService() {
-            // Default base URL for Agent User IDP
-            setBaseUrl("http://localhost:8083");
-        }
-    }
-
-    /**
-     * AS User IDP service configuration.
-     */
-    public static class AsUserIdpService extends ConsumerServiceProperties {
-        public AsUserIdpService() {
-            // Default base URL for AS User IDP
-            setBaseUrl("http://localhost:8084");
-        }
-    }
-
-    /**
-     * Authorization Server service configuration.
-     */
-    public static class AuthorizationServerService extends ConsumerServiceProperties {
-        public AuthorizationServerService() {
-            // Default base URL for Authorization Server
-            setBaseUrl("http://localhost:8085");
-        }
-    }
-
-    /**
-     * Resource Server service configuration.
-     */
-    public static class ResourceServerService extends ConsumerServiceProperties {
-        public ResourceServerService() {
-            // Default base URL for Resource Server
-            setBaseUrl("http://localhost:8086");
-        }
-    }
-
-    /**
-     * OPA service configuration.
-     */
-    public static class OpaService extends ConsumerServiceProperties {
-        public OpaService() {
-            // Default base URL for OPA (allowed to have localhost)
-            setBaseUrl("http://localhost:8181");
         }
     }
 }
