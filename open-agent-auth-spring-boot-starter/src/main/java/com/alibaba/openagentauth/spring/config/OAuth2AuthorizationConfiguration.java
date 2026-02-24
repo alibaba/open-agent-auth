@@ -30,11 +30,14 @@ import com.alibaba.openagentauth.framework.web.store.SessionMappingStore;
 import com.alibaba.openagentauth.framework.web.store.impl.InMemorySessionMappingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.alibaba.openagentauth.spring.autoconfigure.role.AgentUserIdpAutoConfiguration;
+import com.alibaba.openagentauth.spring.autoconfigure.role.AsUserIdpAutoConfiguration;
+import com.alibaba.openagentauth.spring.autoconfigure.role.AuthorizationServerAutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 import java.util.Objects;
@@ -60,7 +63,11 @@ import java.util.Optional;
  *
  * @since 1.0
  */
-@Configuration
+@AutoConfiguration(after = {
+        AgentUserIdpAutoConfiguration.class,
+        AsUserIdpAutoConfiguration.class,
+        AuthorizationServerAutoConfiguration.class
+})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnExpression("'${open-agent-auth.roles.agent-user-idp.enabled:false}' == 'true' or '${open-agent-auth.roles.authorization-server.enabled:false}' == 'true' or '${open-agent-auth.roles.as-user-idp.enabled:false}' == 'true'")
 public class OAuth2AuthorizationConfiguration {
@@ -81,10 +88,10 @@ public class OAuth2AuthorizationConfiguration {
     @Bean
     public AuthorizationFlowStrategy parAuthorizationFlowStrategy(
             OAuth2AuthorizationServer authorizationServer,
-            OAuth2ParServer parServer) {
+            Optional<OAuth2ParServer> parServer) {
         // Only create PAR strategy if PAR components are available
-        if (authorizationServer != null && parServer != null) {
-            return new ParAuthorizationFlowStrategy(authorizationServer, parServer);
+        if (parServer.isPresent()) {
+            return new ParAuthorizationFlowStrategy(authorizationServer, parServer.get());
         }
         return null;
     }
@@ -165,7 +172,7 @@ public class OAuth2AuthorizationConfiguration {
             Optional<UserAuthenticationInterceptor> userAuthenticationInterceptor,
             ConsentPageProvider consentPageProvider,
             SessionMappingBizService sessionMappingBizService,
-            OAuth2ParServer parServer,
+            Optional<OAuth2ParServer> parServer,
             Optional<AuditService> auditService
     ) {
         // Filter out null strategies (e.g., when PAR components are not available)
@@ -178,7 +185,7 @@ public class OAuth2AuthorizationConfiguration {
                 userAuthenticationInterceptor.orElse(null),
                 consentPageProvider,
                 sessionMappingBizService,
-                parServer,
+                parServer.orElse(null),
                 new AapParJwtParser(),
                 auditService.orElse(null)
         );

@@ -19,8 +19,8 @@ import com.alibaba.openagentauth.core.exception.oauth2.OAuth2AuthorizationExcept
 import com.alibaba.openagentauth.core.model.oauth2.authorization.AuthorizationCode;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import org.slf4j.Logger;
@@ -74,14 +74,14 @@ public class DefaultOAuth2AuthorizationServer implements OAuth2AuthorizationServ
     private final OAuth2AuthorizationCodeStorage codeStorage;
 
     /**
-     * PAR server for retrieving authorization requests.
+     * Client store for validating OAuth 2.0 clients.
      */
-    private final OAuth2ParServer OAuth2ParServer;
+    private final OAuth2ClientStore clientStore;
 
     /**
-     * DCR client store for validating OAuth 2.0 clients.
+     * PAR server for retrieving authorization requests. May be null if PAR is not supported.
      */
-    private final OAuth2DcrClientStore clientStore;
+    private final OAuth2ParServer parServer;
 
     /**
      * Default expiration time for authorization codes in seconds.
@@ -89,37 +89,51 @@ public class DefaultOAuth2AuthorizationServer implements OAuth2AuthorizationServ
     private final long defaultCodeExpirationSeconds;
 
     /**
-     * Creates a new DefaultAuthorizationServer with default expiration.
+     * Creates a new DefaultAuthorizationServer without PAR support.
+     * <p>
+     * This constructor is suitable for IDP roles that only need the traditional
+     * OAuth 2.0 authorization code flow without Pushed Authorization Requests.
+     * </p>
      *
      * @param codeStorage the storage backend for authorization codes
-     * @param OAuth2ParServer the PAR server for retrieving authorization requests
-     * @param clientStore the DCR client store for validating OAuth 2.0 clients
+     * @param clientStore the client store for validating OAuth 2.0 clients
      */
-    public DefaultOAuth2AuthorizationServer(OAuth2AuthorizationCodeStorage codeStorage, OAuth2ParServer OAuth2ParServer, OAuth2DcrClientStore clientStore) {
-        this(codeStorage, OAuth2ParServer, clientStore, DEFAULT_CODE_EXPIRATION_SECONDS);
+    public DefaultOAuth2AuthorizationServer(OAuth2AuthorizationCodeStorage codeStorage, OAuth2ClientStore clientStore) {
+        this(codeStorage, clientStore, null, DEFAULT_CODE_EXPIRATION_SECONDS);
     }
 
     /**
-     * Creates a new DefaultAuthorizationServer with custom expiration.
+     * Creates a new DefaultAuthorizationServer with PAR support.
      *
      * @param codeStorage the storage backend for authorization codes
-     * @param OAuth2ParServer the PAR server for retrieving authorization requests
-     * @param clientStore the DCR client store for validating OAuth 2.0 clients
+     * @param clientStore the client store for validating OAuth 2.0 clients
+     * @param parServer the PAR server for retrieving authorization requests, may be null
+     */
+    public DefaultOAuth2AuthorizationServer(OAuth2AuthorizationCodeStorage codeStorage, OAuth2ClientStore clientStore, OAuth2ParServer parServer) {
+        this(codeStorage, clientStore, parServer, DEFAULT_CODE_EXPIRATION_SECONDS);
+    }
+
+    /**
+     * Creates a new DefaultAuthorizationServer with full configuration.
+     *
+     * @param codeStorage the storage backend for authorization codes
+     * @param clientStore the client store for validating OAuth 2.0 clients
+     * @param parServer the PAR server for retrieving authorization requests, may be null
      * @param defaultCodeExpirationSeconds the default expiration time in seconds
      */
     public DefaultOAuth2AuthorizationServer(
             OAuth2AuthorizationCodeStorage codeStorage,
-            OAuth2ParServer OAuth2ParServer,
-            OAuth2DcrClientStore clientStore,
+            OAuth2ClientStore clientStore,
+            OAuth2ParServer parServer,
             long defaultCodeExpirationSeconds
     ) {
         this.codeStorage = ValidationUtils.validateNotNull(codeStorage, "Code storage");
-        this.OAuth2ParServer = ValidationUtils.validateNotNull(OAuth2ParServer, "PAR server");
         this.clientStore = ValidationUtils.validateNotNull(clientStore, "Client store");
+        this.parServer = parServer;
         this.defaultCodeExpirationSeconds = defaultCodeExpirationSeconds;
         
-        logger.info("DefaultAuthorizationServer initialized with code expiration: {} seconds", 
-                defaultCodeExpirationSeconds);
+        logger.info("DefaultAuthorizationServer initialized with code expiration: {} seconds, PAR support: {}", 
+                defaultCodeExpirationSeconds, parServer != null);
     }
 
     /**
@@ -142,9 +156,9 @@ public class DefaultOAuth2AuthorizationServer implements OAuth2AuthorizationServ
 
         try {
             // Step 1: Validate client and redirect URI, and get the actual client with resolved client_id
-            DcrResponse client = validateClientAndRedirectUri(clientId, redirectUri);
+            OAuth2RegisteredClient client = validateClientAndRedirectUri(clientId, redirectUri);
             
-            // Step 2: Generate authorization code with the actual client_id from DcrResponse
+            // Step 2: Generate authorization code with the actual client_id from OAuth2RegisteredClient
             return createAuthorizationCode(
                     subject,
                     client.getClientId(),
@@ -178,13 +192,17 @@ public class DefaultOAuth2AuthorizationServer implements OAuth2AuthorizationServ
         logger.info("Processing authorization for subject: {}, request_uri: {}", subject, requestUri);
 
         try {
-            // Step 1: Retrieve the PAR request
-            ParRequest parRequest = OAuth2ParServer.retrieveRequest(requestUri);
+            // Step 1: Retrieve the PAR request (requires PAR support)
+            if (parServer == null) {
+                throw OAuth2AuthorizationException.serverError(
+                        "PAR-based authorization is not supported. PAR server is not configured.", null);
+            }
+            ParRequest parRequest = parServer.retrieveRequest(requestUri);
             logger.debug("PAR request retrieved: client_id={}", parRequest.getClientId());
 
             // Step 2: Validate client and redirect URI, and get the actual client with resolved client_id
             // This is necessary because parRequest.getClientId() might be client_name instead of actual client_id
-            DcrResponse client = validateClientAndRedirectUri(parRequest.getClientId(), parRequest.getRedirectUri());
+            OAuth2RegisteredClient client = validateClientAndRedirectUri(parRequest.getClientId(), parRequest.getRedirectUri());
             
             logger.debug("Using actual client_id: {} (original from PAR: {})", client.getClientId(), parRequest.getClientId());
 
@@ -219,8 +237,12 @@ public class DefaultOAuth2AuthorizationServer implements OAuth2AuthorizationServ
         logger.debug("Validating authorization request for request_uri: {}", requestUri);
 
         try {
-            // Retrieve the PAR request
-            ParRequest parRequest = OAuth2ParServer.retrieveRequest(requestUri);
+            // Retrieve the PAR request (requires PAR support)
+            if (parServer == null) {
+                throw OAuth2AuthorizationException.serverError(
+                        "PAR-based request validation is not supported. PAR server is not configured.", null);
+            }
+            ParRequest parRequest = parServer.retrieveRequest(requestUri);
             if (parRequest == null) {
                 logger.error("PAR request not found for request_uri: {}", requestUri);
                 return false;
@@ -264,13 +286,13 @@ public class DefaultOAuth2AuthorizationServer implements OAuth2AuthorizationServ
      * 
      * @param clientId    the OAuth 2.0 client identifier (may be client_id or client_name)
      * @param redirectUri the redirect URI to validate
-     * @return the validated DcrResponse with the actual client_id
+     * @return the validated OAuth2RegisteredClient with the actual client_id
      * @throws OAuth2AuthorizationException if validation fails
      */
-    private DcrResponse validateClientAndRedirectUri(String clientId, String redirectUri) {
+    private OAuth2RegisteredClient validateClientAndRedirectUri(String clientId, String redirectUri) {
 
         // Step 1: Validate client exists. First, try to find client by client_id
-        DcrResponse client = clientStore.retrieve(clientId);
+        OAuth2RegisteredClient client = clientStore.retrieve(clientId);
 
         // If not found, try to find client by client_name (fallback for development/testing)
         if (client == null) {
@@ -390,18 +412,18 @@ public class DefaultOAuth2AuthorizationServer implements OAuth2AuthorizationServ
     /**
      * Gets the PAR server.
      *
-     * @return the PAR server
+     * @return the PAR server, or null if PAR is not supported
      */
     public OAuth2ParServer getParServer() {
-        return OAuth2ParServer;
+        return parServer;
     }
 
     /**
-     * Gets the DCR client store.
+     * Gets the client store.
      *
-     * @return the DCR client store
+     * @return the client store
      */
-    public OAuth2DcrClientStore getClientStore() {
+    public OAuth2ClientStore getClientStore() {
         return clientStore;
     }
 

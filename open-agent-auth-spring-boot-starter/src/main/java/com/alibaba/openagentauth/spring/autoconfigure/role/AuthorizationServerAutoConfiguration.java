@@ -31,6 +31,7 @@ import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.Defau
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.OAuth2AuthorizationServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationCodeStorage;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.DefaultOAuth2DcrServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.InMemoryOAuth2DcrClientStore;
@@ -242,9 +243,9 @@ public class AuthorizationServerAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        public OAuth2AuthorizationServer authorizationServer(OAuth2AuthorizationCodeStorage authorizationCodeStorage, OAuth2ParServer parServer, OAuth2DcrClientStore dcrClientStore) {
-            logger.info("Creating OAuth2AuthorizationServer bean");
-            return new DefaultOAuth2AuthorizationServer(authorizationCodeStorage, parServer, dcrClientStore);
+        public OAuth2AuthorizationServer authorizationServer(OAuth2AuthorizationCodeStorage authorizationCodeStorage, OAuth2ClientStore clientStore, OAuth2ParServer parServer) {
+            logger.info("Creating OAuth2AuthorizationServer bean (with PAR support)");
+            return new DefaultOAuth2AuthorizationServer(authorizationCodeStorage, clientStore, parServer);
         }
 
         @Bean

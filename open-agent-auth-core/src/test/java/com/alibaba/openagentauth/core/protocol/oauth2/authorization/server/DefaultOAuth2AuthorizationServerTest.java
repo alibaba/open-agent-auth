@@ -19,8 +19,9 @@ import com.alibaba.openagentauth.core.exception.oauth2.OAuth2AuthorizationExcept
 import com.alibaba.openagentauth.core.model.oauth2.authorization.AuthorizationCode;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -56,7 +57,7 @@ class DefaultOAuth2AuthorizationServerTest {
     private OAuth2ParServer OAuth2ParServer;
 
     @Mock
-    private OAuth2DcrClientStore clientStore;
+    private OAuth2ClientStore clientStore;
 
     private DefaultOAuth2AuthorizationServer server;
 
@@ -68,7 +69,7 @@ class DefaultOAuth2AuthorizationServerTest {
 
     @BeforeEach
     void setUp() {
-        server = new DefaultOAuth2AuthorizationServer(codeStorage, OAuth2ParServer, clientStore);
+        server = new DefaultOAuth2AuthorizationServer(codeStorage, clientStore, OAuth2ParServer);
     }
 
     @Nested
@@ -80,10 +81,10 @@ class DefaultOAuth2AuthorizationServerTest {
         void shouldSuccessfullyAuthorizeAndGenerateAuthorizationCode() {
             // Arrange
             ParRequest parRequest = createValidParRequest();
-            DcrResponse clientResponse = createDcrResponse();
+            OAuth2RegisteredClient registeredClient = createRegisteredClient();
             
             when(OAuth2ParServer.retrieveRequest(TEST_REQUEST_URI)).thenReturn(parRequest);
-            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(clientResponse);
+            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(registeredClient);
 
             // Act
             AuthorizationCode authCode = server.authorize(TEST_REQUEST_URI, TEST_SUBJECT);
@@ -139,10 +140,10 @@ class DefaultOAuth2AuthorizationServerTest {
         void shouldGenerateUniqueAuthorizationCodes() {
             // Arrange
             ParRequest parRequest = createValidParRequest();
-            DcrResponse clientResponse = createDcrResponse();
+            OAuth2RegisteredClient registeredClient = createRegisteredClient();
             
             when(OAuth2ParServer.retrieveRequest(TEST_REQUEST_URI)).thenReturn(parRequest);
-            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(clientResponse);
+            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(registeredClient);
 
             // Act
             AuthorizationCode code1 = server.authorize(TEST_REQUEST_URI, TEST_SUBJECT);
@@ -158,13 +159,13 @@ class DefaultOAuth2AuthorizationServerTest {
             // Arrange
             long customExpiration = 300L;
             DefaultOAuth2AuthorizationServer serverWithCustomExpiration = 
-                    new DefaultOAuth2AuthorizationServer(codeStorage, OAuth2ParServer, clientStore, customExpiration);
+                    new DefaultOAuth2AuthorizationServer(codeStorage, clientStore, OAuth2ParServer, customExpiration);
             
             ParRequest parRequest = createValidParRequest();
-            DcrResponse clientResponse = createDcrResponse();
+            OAuth2RegisteredClient registeredClient = createRegisteredClient();
             
             when(OAuth2ParServer.retrieveRequest(TEST_REQUEST_URI)).thenReturn(parRequest);
-            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(clientResponse);
+            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(registeredClient);
 
             // Act
             AuthorizationCode authCode = serverWithCustomExpiration.authorize(TEST_REQUEST_URI, TEST_SUBJECT);
@@ -318,6 +319,130 @@ class DefaultOAuth2AuthorizationServerTest {
         }
     }
 
+    @Nested
+    @DisplayName("Without PAR Support")
+    class WithoutParSupport {
+
+        private DefaultOAuth2AuthorizationServer serverWithoutPar;
+
+        @BeforeEach
+        void setUp() {
+            serverWithoutPar = new DefaultOAuth2AuthorizationServer(codeStorage, clientStore);
+        }
+
+        @Test
+        @DisplayName("Should successfully authorize with traditional flow (no PAR)")
+        void shouldSuccessfullyAuthorizeWithTraditionalFlow() {
+            // Arrange
+            OAuth2RegisteredClient registeredClient = createRegisteredClient();
+            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(registeredClient);
+
+            // Act
+            AuthorizationCode authCode = serverWithoutPar.authorize(
+                    TEST_SUBJECT, TEST_CLIENT_ID, TEST_REDIRECT_URI, "read write");
+
+            // Assert
+            assertThat(authCode).isNotNull();
+            assertThat(authCode.getCode()).isNotEmpty();
+            assertThat(authCode.getClientId()).isEqualTo(TEST_CLIENT_ID);
+            assertThat(authCode.getRedirectUri()).isEqualTo(TEST_REDIRECT_URI);
+            assertThat(authCode.getSubject()).isEqualTo(TEST_SUBJECT);
+            assertThat(authCode.isUsed()).isFalse();
+
+            verify(clientStore).retrieve(TEST_CLIENT_ID);
+            verify(codeStorage).store(any(AuthorizationCode.class));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when PAR-based authorize is called without PAR server")
+        void shouldThrowExceptionWhenParBasedAuthorizeCalledWithoutParServer() {
+            // Act & Assert
+            assertThatThrownBy(() -> serverWithoutPar.authorize(TEST_REQUEST_URI, TEST_SUBJECT))
+                    .isInstanceOf(OAuth2AuthorizationException.class)
+                    .hasMessageContaining("PAR-based authorization is not supported");
+        }
+
+        @Test
+        @DisplayName("Should return false when validateRequest is called without PAR server")
+        void shouldReturnFalseWhenValidateRequestCalledWithoutParServer() {
+            // Act - validateRequest catches the internal exception and returns false
+            boolean result = serverWithoutPar.validateRequest(TEST_REQUEST_URI);
+
+            // Assert
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should return null PAR server when created without PAR")
+        void shouldReturnNullParServerWhenCreatedWithoutPar() {
+            // Act & Assert
+            assertThat(serverWithoutPar.getParServer()).isNull();
+        }
+
+        @Test
+        @DisplayName("Should return client store when created without PAR")
+        void shouldReturnClientStoreWhenCreatedWithoutPar() {
+            // Act & Assert
+            assertThat(serverWithoutPar.getClientStore()).isEqualTo(clientStore);
+        }
+    }
+
+    @Nested
+    @DisplayName("Traditional Authorization Flow")
+    class TraditionalAuthorizationFlow {
+
+        @Test
+        @DisplayName("Should authorize with traditional flow using client_name fallback")
+        void shouldAuthorizeWithTraditionalFlowUsingClientNameFallback() {
+            // Arrange
+            OAuth2RegisteredClient registeredClient = createRegisteredClient();
+            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(null);
+            when(clientStore.retrieveByClientName(TEST_CLIENT_ID)).thenReturn(registeredClient);
+
+            // Act
+            AuthorizationCode authCode = server.authorize(
+                    TEST_SUBJECT, TEST_CLIENT_ID, TEST_REDIRECT_URI, "read write");
+
+            // Assert
+            assertThat(authCode).isNotNull();
+            assertThat(authCode.getClientId()).isEqualTo(TEST_CLIENT_ID);
+            verify(clientStore).retrieve(TEST_CLIENT_ID);
+            verify(clientStore).retrieveByClientName(TEST_CLIENT_ID);
+        }
+
+        @Test
+        @DisplayName("Should throw exception when client not found in traditional flow")
+        void shouldThrowExceptionWhenClientNotFoundInTraditionalFlow() {
+            // Arrange
+            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(null);
+            when(clientStore.retrieveByClientName(TEST_CLIENT_ID)).thenReturn(null);
+
+            // Act & Assert
+            assertThatThrownBy(() -> server.authorize(
+                    TEST_SUBJECT, TEST_CLIENT_ID, TEST_REDIRECT_URI, "read write"))
+                    .isInstanceOf(OAuth2AuthorizationException.class)
+                    .hasMessageContaining("Client not found");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when redirect URI is not registered")
+        void shouldThrowExceptionWhenRedirectUriIsNotRegistered() {
+            // Arrange
+            OAuth2RegisteredClient registeredClient = OAuth2RegisteredClient.builder()
+                    .clientId(TEST_CLIENT_ID)
+                    .clientName(TEST_CLIENT_ID)
+                    .redirectUris(List.of("https://other.com/callback"))
+                    .build();
+            when(clientStore.retrieve(TEST_CLIENT_ID)).thenReturn(registeredClient);
+
+            // Act & Assert
+            assertThatThrownBy(() -> server.authorize(
+                    TEST_SUBJECT, TEST_CLIENT_ID, TEST_REDIRECT_URI, "read write"))
+                    .isInstanceOf(OAuth2AuthorizationException.class)
+                    .hasMessageContaining("Redirect URI not registered");
+        }
+    }
+
     // Helper methods
 
     private ParRequest createValidParRequest() {
@@ -332,6 +457,14 @@ class DefaultOAuth2AuthorizationServerTest {
 
     private DcrResponse createDcrResponse() {
         return DcrResponse.builder()
+                .clientId(TEST_CLIENT_ID)
+                .clientName(TEST_CLIENT_ID)
+                .redirectUris(List.of(TEST_REDIRECT_URI))
+                .build();
+    }
+
+    private OAuth2RegisteredClient createRegisteredClient() {
+        return OAuth2RegisteredClient.builder()
                 .clientId(TEST_CLIENT_ID)
                 .clientName(TEST_CLIENT_ID)
                 .redirectUris(List.of(TEST_REDIRECT_URI))

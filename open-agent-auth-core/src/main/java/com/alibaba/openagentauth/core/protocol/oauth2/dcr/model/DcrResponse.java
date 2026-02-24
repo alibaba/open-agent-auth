@@ -15,6 +15,7 @@
  */
 package com.alibaba.openagentauth.core.protocol.oauth2.dcr.model;
 
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -245,6 +246,24 @@ public class DcrResponse {
      */
     public boolean isClientSecretExpiring() {
         return clientSecretExpiresAt != null && clientSecretExpiresAt > 0;
+    }
+
+    /**
+     * Converts this DcrResponse to an OAuth2RegisteredClient.
+     *
+     * @return the converted OAuth2RegisteredClient
+     */
+    public OAuth2RegisteredClient toRegisteredClient() {
+        return OAuth2RegisteredClient.builder()
+                .clientId(this.clientId)
+                .clientSecret(this.clientSecret)
+                .redirectUris(this.redirectUris)
+                .clientName(this.clientName)
+                .grantTypes(this.grantTypes)
+                .responseTypes(this.responseTypes)
+                .tokenEndpointAuthMethod(this.tokenEndpointAuthMethod)
+                .scope(this.scope)
+                .build();
     }
 
     /**

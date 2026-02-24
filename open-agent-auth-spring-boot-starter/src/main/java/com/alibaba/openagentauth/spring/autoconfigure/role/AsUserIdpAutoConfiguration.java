@@ -21,16 +21,9 @@ import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.Defau
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.OAuth2AuthorizationServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationCodeStorage;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.DefaultOAuth2DcrServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.InMemoryOAuth2DcrClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParRequestValidator;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParRequestValidator;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.store.InMemoryOAuth2ParRequestStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.par.store.OAuth2ParRequestStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.InMemoryOAuth2ClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
+
 import com.alibaba.openagentauth.core.protocol.oauth2.token.oidc.IdTokenGeneratorAdapter;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.DefaultOAuth2TokenServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.OAuth2TokenServer;
@@ -136,12 +129,14 @@ public class AsUserIdpAutoConfiguration {
      * Creates the IdTokenGenerator bean if not already defined.
      * <p>
      * This generator is responsible for generating ID Tokens for authenticated users.
+     * It directly constructs a {@link DefaultIdTokenGenerator} using the signing key
+     * from the key management infrastructure.
      * </p>
      *
-     * @param keyManager the key manager
+     * @param keyManager the key manager for retrieving signing keys
      * @param openAgentAuthProperties the global configuration properties
      * @return the IdTokenGenerator bean
-     * @throws IllegalStateException if issuer is not configured
+     * @throws IllegalStateException if issuer or key configuration is missing
      */
     @Bean
     @ConditionalOnMissingBean
@@ -149,7 +144,6 @@ public class AsUserIdpAutoConfiguration {
             KeyManager keyManager,
             OpenAgentAuthProperties openAgentAuthProperties) {
 
-        // Get issuer from roles configuration
         String issuer = null;
         if (openAgentAuthProperties.getRoles() != null) {
             var role = openAgentAuthProperties.getRoles().get(ROLE_AS_USER_IDP);
@@ -165,27 +159,22 @@ public class AsUserIdpAutoConfiguration {
             );
         }
 
-        logger.info("Creating IdTokenGenerator with issuer: {}", issuer);
-
-        // Get signing key configuration
-        String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_ID_TOKEN_SIGNING).getKeyId();
-        String algorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_ID_TOKEN_SIGNING).getAlgorithm();
-        
-        // Get or generate ID Token signing key
-        Object signingJWK;
-        try {
-            signingJWK = keyManager.getSigningJWK(keyId);
-        } catch (Exception e) {
-            logger.warn("Failed to get ID token signing key, generating new key: {}", e.getMessage());
-            keyManager.generateKeyPair(KeyAlgorithm.ES256, keyId);
-            signingJWK = keyManager.getSigningJWK(keyId);
+        // Get signing key from key management infrastructure
+        var keyConfig = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_ID_TOKEN_SIGNING);
+        if (keyConfig == null) {
+            throw new IllegalStateException(
+                "ID token signing key '" + KEY_ID_TOKEN_SIGNING + "' is not configured. " +
+                "Please configure 'open-agent-auth.infrastructures.key-management.keys." + KEY_ID_TOKEN_SIGNING + "' in your configuration."
+            );
         }
 
-        return new DefaultIdTokenGenerator(
-                issuer,
-                algorithm,
-                signingJWK
-        );
+        String keyId = keyConfig.getKeyId();
+        String algorithm = keyConfig.getAlgorithm();
+        Object signingKey = keyManager.getOrGenerateKey(keyId, KeyAlgorithm.fromValue(algorithm));
+
+        logger.info("Creating IdTokenGenerator with issuer: {}, algorithm: {}", issuer, algorithm);
+
+        return new DefaultIdTokenGenerator(issuer, algorithm, signingKey);
     }
 
     /**
@@ -364,93 +353,40 @@ public class AsUserIdpAutoConfiguration {
     }
 
     /**
-     * Creates the PAR Request Store bean if not already defined.
+     * Creates the OAuth2 Client Store bean if not already defined.
      * <p>
-     * This store provides storage for PAR requests.
+     * This store provides storage for OAuth 2.0 client registrations.
      * The default implementation uses in-memory storage.
      * </p>
      *
-     * @return the PAR Request Store bean
+     * @return the OAuth2 Client Store bean
      */
     @Bean
     @ConditionalOnMissingBean
-    public OAuth2ParRequestStore parRequestStore() {
-        logger.info("Creating OAuth2ParRequestStore bean");
-        return new InMemoryOAuth2ParRequestStore();
-    }
-
-    /**
-     * Creates the PAR Server bean if not already defined.
-     * <p>
-     * This server provides PAR endpoint for processing PAR requests.
-     * Note: OAuth2ParRequestValidator is created as a local variable since it's a stateless validator.
-     * </p>
-     *
-     * @param parRequestStore the PAR request store
-     * @return the PAR Server bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2ParServer parServer(OAuth2ParRequestStore parRequestStore) {
-        logger.info("Creating OAuth2ParServer bean");
-        OAuth2ParRequestValidator validator = new DefaultOAuth2ParRequestValidator();
-        return new DefaultOAuth2ParServer(parRequestStore, validator);
-    }
-
-    /**
-     * Creates the DCR Client Store bean if not already defined.
-     * <p>
-     * This store provides storage for DCR client registrations.
-     * The default implementation uses in-memory storage.
-     * </p>
-     *
-     * @return the DCR Client Store bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2DcrClientStore dcrClientStore() {
-        logger.info("Creating OAuth2DcrClientStore bean");
-        return new InMemoryOAuth2DcrClientStore();
-    }
-
-    /**
-     * Creates the DCR Server bean if not already defined.
-     * <p>
-     * This server provides OAuth 2.0 Dynamic Client Registration endpoint
-     * for processing DCR requests.
-     * </p>
-     *
-     * @param dcrClientStore the DCR client store
-     * @return the DCR Server bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public OAuth2DcrServer dcrServer(OAuth2DcrClientStore dcrClientStore) {
-        logger.info("Creating OAuth2DcrServer bean for AS User IDP");
-        // Note: WIMSE authenticator should be configured separately in production
-        // For development/testing, we use an empty authenticator list
-        return new DefaultOAuth2DcrServer(dcrClientStore);
+    public OAuth2ClientStore clientStore() {
+        logger.info("Creating OAuth2ClientStore bean for AS User IDP");
+        return new InMemoryOAuth2ClientStore();
     }
 
     /**
      * Creates the Authorization Server bean if not already defined.
      * <p>
      * This server provides OAuth 2.0 authorization endpoint for processing authorization requests.
+     * PAR is not required for IDP roles, so only the client store and authorization code storage
+     * are injected.
      * </p>
      *
      * @param authorizationCodeStorage the authorization code storage
-     * @param parServer the PAR server
-     * @param dcrClientStore the DCR client store
+     * @param clientStore the client store for validating OAuth 2.0 clients
      * @return the Authorization Server bean
      */
     @Bean
     @ConditionalOnMissingBean
     public OAuth2AuthorizationServer authorizationServer(
             OAuth2AuthorizationCodeStorage authorizationCodeStorage,
-            OAuth2ParServer parServer,
-            OAuth2DcrClientStore dcrClientStore) {
-        logger.info("Creating OAuth2AuthorizationServer bean");
-        return new DefaultOAuth2AuthorizationServer(authorizationCodeStorage, parServer, dcrClientStore);
+            OAuth2ClientStore clientStore) {
+        logger.info("Creating OAuth2AuthorizationServer bean for AS User IDP (without PAR)");
+        return new DefaultOAuth2AuthorizationServer(authorizationCodeStorage, clientStore);
     }
 
     /**

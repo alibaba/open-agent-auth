@@ -32,7 +32,7 @@ import com.alibaba.openagentauth.framework.model.response.WorkloadResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -73,7 +73,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnExpression("'${open-agent-auth.roles.agent-idp.enabled:false}' == 'true'")
+@ConditionalOnBean(AgentIdentityProvider.class)
 public class WorkloadController {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkloadController.class);

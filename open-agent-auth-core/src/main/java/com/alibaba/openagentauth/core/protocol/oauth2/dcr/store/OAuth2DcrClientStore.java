@@ -15,15 +15,17 @@
  */
 package com.alibaba.openagentauth.core.protocol.oauth2.dcr.store;
 
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrRequest;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 
 /**
  * Storage interface for Dynamic Client Registration (DCR) client metadata.
  * <p>
- * This interface defines the contract for storing and retrieving OAuth 2.0 client
- * registration information. Implementations can use various storage backends such
- * as in-memory, database, or distributed cache.
+ * This interface extends {@link OAuth2ClientStore} with DCR-specific operations
+ * for managing client registrations according to RFC 7591. While {@code OAuth2ClientStore}
+ * provides read-only client lookup capabilities, this interface adds the full CRUD
+ * operations needed for dynamic client registration.
  * </p>
  * <p>
  * <b>Storage Requirements:</b></p>
@@ -34,10 +36,11 @@ import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
  *   <li>Handle concurrent access safely</li>
  * </ul>
  *
+ * @see OAuth2ClientStore
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc7591">RFC 7591 - OAuth 2.0 Dynamic Client Registration</a>
  * @since 1.0
  */
-public interface OAuth2DcrClientStore {
+public interface OAuth2DcrClientStore extends OAuth2ClientStore {
 
     /**
      * Stores a newly registered client.
@@ -50,12 +53,18 @@ public interface OAuth2DcrClientStore {
     void store(String clientId, String registrationAccessToken, DcrRequest request, DcrResponse response);
 
     /**
-     * Retrieves a client by its client ID.
+     * Retrieves the full DCR response for a client by its client ID.
+     * <p>
+     * Unlike {@link OAuth2ClientStore#retrieve(String)} which returns a generic
+     * {@code OAuth2RegisteredClient}, this method returns the complete DCR response
+     * including DCR-specific fields such as registration access token, registration
+     * client URI, and client secret expiration.
+     * </p>
      *
      * @param clientId the client identifier
-     * @return the DCR response with client metadata, or null if not found
+     * @return the full DCR response, or null if not found
      */
-    DcrResponse retrieve(String clientId);
+    DcrResponse retrieveDcrResponse(String clientId);
 
     /**
      * Retrieves a client by its registration access token.
@@ -82,14 +91,6 @@ public interface OAuth2DcrClientStore {
     void delete(String clientId);
 
     /**
-     * Checks if a client exists.
-     *
-     * @param clientId the client identifier
-     * @return true if the client exists, false otherwise
-     */
-    boolean exists(String clientId);
-
-    /**
      * Validates a registration access token for a client.
      *
      * @param clientId the client identifier
@@ -97,18 +98,5 @@ public interface OAuth2DcrClientStore {
      * @return true if the token is valid for the client, false otherwise
      */
     boolean validateToken(String clientId, String registrationAccessToken);
-
-    /**
-     * Retrieves a client by its client name.
-     * <p>
-     * This method is useful for authorization flows where the client_id
-     * may be confused with the client_name. It allows fallback lookup
-     * by client_name when client_id lookup fails.
-     * </p>
-     *
-     * @param clientName the client name
-     * @return the DCR response with client metadata, or null if not found
-     */
-    DcrResponse retrieveByClientName(String clientName);
 
 }
