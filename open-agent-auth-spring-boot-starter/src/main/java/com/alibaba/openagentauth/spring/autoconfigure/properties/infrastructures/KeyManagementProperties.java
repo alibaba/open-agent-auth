@@ -15,7 +15,6 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import java.util.HashMap;
@@ -27,6 +26,11 @@ import java.util.Map;
  * This class defines the configuration for cryptographic key management infrastructure,
  * including key providers and key definitions. It enables the application to manage
  * cryptographic keys from various sources such as in-memory storage.
+ * </p>
+ * <p>
+ * This class is not independently bound via {@code @ConfigurationProperties}.
+ * Instead, it is nested within {@link com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties}
+ * and bound as part of the {@code open-agent-auth.infrastructures.key-management} prefix through the parent class.
  * </p>
  * <p>
  * <b>Configuration Example:</b></p>
@@ -58,7 +62,6 @@ import java.util.Map;
  * @see KeyProviderProperties
  * @see KeyDefinitionProperties
  */
-@ConfigurationProperties(prefix = "open-agent-auth.infrastructures.key-management")
 public class KeyManagementProperties {
 
     /**

@@ -22,18 +22,7 @@ import com.alibaba.openagentauth.core.crypto.key.store.InMemoryKeyStore;
 import com.alibaba.openagentauth.core.token.TokenService;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.AuditProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ClientProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OAuth2ServerProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.UserAuthenticationProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.WorkloadIdentityProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksInfrastructureProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyManagementProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.ServiceDiscoveryProperties;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
 import org.slf4j.Logger;
@@ -64,20 +53,7 @@ import org.springframework.context.annotation.Bean;
  * @since 1.0
  */
 @AutoConfiguration
-@EnableConfigurationProperties({
-    OpenAgentAuthProperties.class,
-    InfrastructureProperties.class,
-    CapabilitiesProperties.class,
-    OAuth2ServerProperties.class,
-    OAuth2ClientProperties.class,
-    WorkloadIdentityProperties.class,
-    OperationAuthorizationProperties.class,
-    UserAuthenticationProperties.class,
-    KeyManagementProperties.class,
-    JwksInfrastructureProperties.class,
-    ServiceDiscoveryProperties.class,
-    AuditProperties.class
-})
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 @ConditionalOnProperty(prefix = "open-agent-auth", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CoreAutoConfiguration {
 

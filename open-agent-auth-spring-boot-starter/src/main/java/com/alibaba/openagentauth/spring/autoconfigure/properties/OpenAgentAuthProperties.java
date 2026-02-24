@@ -16,6 +16,7 @@
 package com.alibaba.openagentauth.spring.autoconfigure.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -78,11 +79,13 @@ public class OpenAgentAuthProperties {
     /**
      * Infrastructure configuration (shared across all roles).
      */
+    @NestedConfigurationProperty
     private InfrastructureProperties infrastructures = new InfrastructureProperties();
 
     /**
      * Capabilities configuration (composable functional features).
      */
+    @NestedConfigurationProperty
     private CapabilitiesProperties capabilities = new CapabilitiesProperties();
 
     /**

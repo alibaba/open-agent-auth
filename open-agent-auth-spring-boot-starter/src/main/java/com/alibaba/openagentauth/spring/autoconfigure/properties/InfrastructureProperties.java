@@ -18,13 +18,17 @@ package com.alibaba.openagentauth.spring.autoconfigure.properties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksInfrastructureProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyManagementProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.ServiceDiscoveryProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Infrastructure configuration properties for the Open Agent Auth framework.
  * <p>
  * This class defines the infrastructure-level configuration shared across all roles,
  * including trust domain, key management, JWKS, and service discovery.
+ * </p>
+ * <p>
+ * This class is not independently bound via {@code @ConfigurationProperties}.
+ * Instead, it is nested within {@link OpenAgentAuthProperties} and bound as part of
+ * the {@code open-agent-auth.infrastructures} prefix through the parent class.
  * </p>
  * <p>
  * <b>Configuration Example:</b></p>
@@ -62,7 +66,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @see JwksInfrastructureProperties
  * @see ServiceDiscoveryProperties
  */
-@ConfigurationProperties(prefix = "open-agent-auth.infrastructures")
 public class InfrastructureProperties {
 
     /**

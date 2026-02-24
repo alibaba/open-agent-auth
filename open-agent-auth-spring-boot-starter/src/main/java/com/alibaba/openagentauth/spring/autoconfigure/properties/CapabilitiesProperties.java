@@ -21,13 +21,18 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OA
 import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.OperationAuthorizationProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.UserAuthenticationProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.WorkloadIdentityProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 /**
  * Capabilities configuration properties for the Open Agent Auth framework.
  * <p>
  * This class defines capability-level configurations that can be composed by roles.
  * Each capability represents a functional feature that can be enabled/disabled independently.
+ * </p>
+ * <p>
+ * This class is not independently bound via {@code @ConfigurationProperties}.
+ * Instead, it is nested within {@link OpenAgentAuthProperties} and bound as part of
+ * the {@code open-agent-auth.capabilities} prefix through the parent class.
  * </p>
  * <p>
  * <b>Capabilities Overview:</b></p>
@@ -74,7 +79,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @see UserAuthenticationProperties
  * @see AuditProperties
  */
-@ConfigurationProperties(prefix = "open-agent-auth.capabilities")
 public class CapabilitiesProperties {
 
     /**
@@ -84,6 +88,7 @@ public class CapabilitiesProperties {
      * token issuance, and client management.
      * </p>
      */
+    @NestedConfigurationProperty
     private OAuth2ServerProperties oauth2Server = new OAuth2ServerProperties();
 
     /**
@@ -93,6 +98,7 @@ public class CapabilitiesProperties {
      * tokens from authorization servers.
      * </p>
      */
+    @NestedConfigurationProperty
     private OAuth2ClientProperties oauth2Client = new OAuth2ClientProperties();
 
     /**
@@ -101,6 +107,7 @@ public class CapabilitiesProperties {
      * Provides workload identity management and token issuance for applications and services.
      * </p>
      */
+    @NestedConfigurationProperty
     private WorkloadIdentityProperties workloadIdentity = new WorkloadIdentityProperties();
 
     /**
@@ -110,6 +117,7 @@ public class CapabilitiesProperties {
      * and policy evaluation.
      * </p>
      */
+    @NestedConfigurationProperty
     private OperationAuthorizationProperties operationAuthorization = new OperationAuthorizationProperties();
 
     /**
@@ -119,6 +127,7 @@ public class CapabilitiesProperties {
      * and session management.
      * </p>
      */
+    @NestedConfigurationProperty
     private UserAuthenticationProperties userAuthentication = new UserAuthenticationProperties();
 
     /**
@@ -128,6 +137,7 @@ public class CapabilitiesProperties {
      * user actions, agent operations, and system activities.
      * </p>
      */
+    @NestedConfigurationProperty
     private AuditProperties audit = new AuditProperties();
 
     /**

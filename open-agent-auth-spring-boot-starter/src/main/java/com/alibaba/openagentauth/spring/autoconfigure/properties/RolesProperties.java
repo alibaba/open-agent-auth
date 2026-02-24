@@ -108,6 +108,7 @@ public class RolesProperties {
      * Role configuration properties.
      */
     public static class RoleProperties {
+
         /**
          * Whether this role is enabled.
          */

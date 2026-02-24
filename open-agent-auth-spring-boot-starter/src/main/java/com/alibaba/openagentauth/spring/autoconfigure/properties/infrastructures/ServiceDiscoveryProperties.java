@@ -16,7 +16,6 @@
 package com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures;
 
 import com.alibaba.openagentauth.spring.autoconfigure.properties.DefaultEndpoints;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import java.util.HashMap;
@@ -31,6 +30,11 @@ import java.util.Map;
  * Consul, and Eureka.
  * </p>
  * <p>
+ * This class is not independently bound via {@code @ConfigurationProperties}.
+ * Instead, it is nested within {@link com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties}
+ * and bound as part of the {@code open-agent-auth.infrastructures.service-discovery} prefix through the parent class.
+ * </p>
+ * <p>
  * <b>Note:</b> Endpoints can be partially configured. If an endpoint is not specified,
  * it will use the default value from {@link DefaultEndpoints}. To override a specific
  * endpoint, simply specify it in the YAML configuration. To use all defaults, you can
@@ -40,7 +44,6 @@ import java.util.Map;
  * @since 1.0
  * @see ServiceDefinitionProperties
  */
-@ConfigurationProperties(prefix = "open-agent-auth.infrastructures.service-discovery")
 public class ServiceDiscoveryProperties {
 
     /**

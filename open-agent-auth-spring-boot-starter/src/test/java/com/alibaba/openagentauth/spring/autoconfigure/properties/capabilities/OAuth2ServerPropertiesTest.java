@@ -15,7 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities;
 
+import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,8 +35,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ContextConfiguration
-@EnableConfigurationProperties(OAuth2ServerProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class OAuth2ServerPropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -63,7 +68,7 @@ class OAuth2ServerPropertiesTest {
 
     @Test
     void testGetterSetter() {
-        OAuth2ServerProperties properties = new OAuth2ServerProperties();
+        OAuth2ServerProperties properties = openAgentAuthProperties.getCapabilities().getOAuth2Server();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -88,8 +93,7 @@ class OAuth2ServerPropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = OAuth2ServerProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.capabilities.oauth2-server", annotation.prefix());
+        assertNull(annotation, "OAuth2ServerProperties should not have @ConfigurationProperties annotation as it is nested within parent properties");
     }
 
     @Test
@@ -193,7 +197,7 @@ class OAuth2ServerPropertiesTest {
 
     @Test
     void testBoundaryValues() {
-        OAuth2ServerProperties properties = new OAuth2ServerProperties();
+        OAuth2ServerProperties properties = openAgentAuthProperties.getCapabilities().getOAuth2Server();
         
         properties.setEnabled(true);
         assertTrue(properties.isEnabled());
@@ -209,7 +213,7 @@ class OAuth2ServerPropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        OAuth2ServerProperties properties1 = new OAuth2ServerProperties();
+        OAuth2ServerProperties properties1 = openAgentAuthProperties.getCapabilities().getOAuth2Server();
         OAuth2ServerProperties properties2 = new OAuth2ServerProperties();
         
         properties1.setEnabled(true);

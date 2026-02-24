@@ -22,6 +22,7 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.Op
 import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.UserAuthenticationProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities.WorkloadIdentityProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +30,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -37,8 +39,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @since 2.0
  */
 @SpringBootTest(classes = TestConfiguration.class)
-@EnableConfigurationProperties(CapabilitiesProperties.class)
+@EnableConfigurationProperties(OpenAgentAuthProperties.class)
 class CapabilitiesPropertiesTest {
+
+    @Autowired
+    private OpenAgentAuthProperties openAgentAuthProperties;
 
     @Test
     void testDefaultValues() {
@@ -61,7 +66,7 @@ class CapabilitiesPropertiesTest {
 
     @Test
     void testGetterSetter() {
-        CapabilitiesProperties properties = new CapabilitiesProperties();
+        CapabilitiesProperties properties = openAgentAuthProperties.getCapabilities();
         
         OAuth2ServerProperties oauth2Server = new OAuth2ServerProperties();
         oauth2Server.setEnabled(true);
@@ -96,7 +101,7 @@ class CapabilitiesPropertiesTest {
 
     @Test
     void testNestedProperties() {
-        CapabilitiesProperties properties = new CapabilitiesProperties();
+        CapabilitiesProperties properties = openAgentAuthProperties.getCapabilities();
         
         assertNotNull(properties.getOAuth2Server().getEndpoints());
         assertNotNull(properties.getOAuth2Server().getToken());
@@ -120,13 +125,12 @@ class CapabilitiesPropertiesTest {
     @Test
     void testConfigurationPropertiesAnnotation() {
         ConfigurationProperties annotation = CapabilitiesProperties.class.getAnnotation(ConfigurationProperties.class);
-        assertNotNull(annotation);
-        assertEquals("open-agent-auth.capabilities", annotation.prefix());
+        assertNull(annotation, "CapabilitiesProperties should not have @ConfigurationProperties annotation as it is nested within parent properties");
     }
 
     @Test
     void testBoundaryValues() {
-        CapabilitiesProperties properties = new CapabilitiesProperties();
+        CapabilitiesProperties properties = openAgentAuthProperties.getCapabilities();
         
         properties.getOAuth2Server().setEnabled(true);
         assertTrue(properties.getOAuth2Server().isEnabled());
@@ -141,7 +145,7 @@ class CapabilitiesPropertiesTest {
 
     @Test
     void testNotNullConstraints() {
-        CapabilitiesProperties properties = new CapabilitiesProperties();
+        CapabilitiesProperties properties = openAgentAuthProperties.getCapabilities();
         
         assertNotNull(properties.getOAuth2Server());
         assertNotNull(properties.getOAuth2Client());
@@ -153,7 +157,7 @@ class CapabilitiesPropertiesTest {
 
     @Test
     void testPropertyIndependence() {
-        CapabilitiesProperties properties1 = new CapabilitiesProperties();
+        CapabilitiesProperties properties1 = openAgentAuthProperties.getCapabilities();
         CapabilitiesProperties properties2 = new CapabilitiesProperties();
         
         properties1.getOAuth2Server().setEnabled(true);

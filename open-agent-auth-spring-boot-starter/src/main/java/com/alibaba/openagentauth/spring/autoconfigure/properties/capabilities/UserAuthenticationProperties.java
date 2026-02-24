@@ -15,7 +15,7 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.capabilities;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesProperties;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +26,11 @@ import java.util.List;
  * This class defines configuration for the User Authentication capability,
  * which provides user identity authentication including login page,
  * user registry, and session management.
+ * </p>
+ * <p>
+ * This class is not independently bound via {@code @ConfigurationProperties}.
+ * Instead, it is nested within {@link CapabilitiesProperties} and bound as part of
+ * the {@code open-agent-auth.capabilities.user-authentication} prefix through the parent class hierarchy.
  * </p>
  * <p>
  * <b>Configuration Example:</b></p>
@@ -50,7 +55,6 @@ import java.util.List;
  * @see LoginPageProperties
  * @see UserRegistryProperties
  */
-@ConfigurationProperties(prefix = "open-agent-auth.capabilities.user-authentication")
 public class UserAuthenticationProperties {
 
     /**
