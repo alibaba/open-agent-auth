@@ -31,11 +31,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Install Chromium
+      - name: Verify Chrome installation
         run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser
-          chromium-browser --version
+          # GitHub Actions ubuntu-latest runners come with Google Chrome pre-installed.
+          # No need to install via apt/snap (which can hang due to snap daemon issues).
+          google-chrome --version || chromium-browser --version
 
       - name: Build project
         run: mvn clean install -DskipTests -B -ntp
