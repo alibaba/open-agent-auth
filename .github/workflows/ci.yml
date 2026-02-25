@@ -32,11 +32,16 @@ jobs:
           cache: maven
 
       - name: Build & Test with JaCoCo
+        id: build
         run: mvn clean verify -Paggregate-report -B -ntp
 
       - name: Publish Test Results
         uses: dorny/test-reporter@v1
-        if: always()
+        if: >-
+          always()
+          && (steps.build.outcome == 'success' || steps.build.outcome == 'failure')
+          && github.event_name != 'pull_request'
+             || github.event.pull_request.head.repo.full_name == github.repository
         with:
           name: Test Results (JDK ${{ matrix.java }})
           path: '**/target/surefire-reports/TEST-*.xml'
@@ -44,9 +49,12 @@ jobs:
 
       - name: Generate JaCoCo Coverage Report
         uses: madrapps/jacoco-report@v1.7.1
-        if: always()
+        if: >-
+          always()
+          && (steps.build.outcome == 'success' || steps.build.outcome == 'failure')
+          && github.event_name == 'pull_request'
         with:
-          paths: '**/target/site/jacoco/jacoco.xml,**/target/site/jacoco-aggregate/jacoco.xml'
+          paths: '**/target/site/jacoco-aggregate/jacoco.xml'
           token: ${{ secrets.GITHUB_TOKEN }}
           title: Code Coverage Report
           update-comment: true
@@ -57,20 +65,24 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: coverage
         run: |
-          # Find the aggregate report first, fall back to individual reports
           REPORT=$(find . -path "*/jacoco-aggregate/jacoco.xml" -type f | head -1)
           if [ -z "$REPORT" ]; then
             REPORT=$(find . -path "*/site/jacoco/jacoco.xml" -type f | head -1)
           fi
 
           if [ -n "$REPORT" ]; then
-            # Parse JaCoCo XML to extract line coverage
-            MISSED=$(grep -o 'type="LINE"[^/]*' "$REPORT" | tail -1 | grep -o 'missed="[0-9]*"' | grep -o '[0-9]*')
-            COVERED=$(grep -o 'type="LINE"[^/]*' "$REPORT" | tail -1 | grep -o 'covered="[0-9]*"' | grep -o '[0-9]*')
+            # Extract the last (root-level) LINE counter from the report
+            # Use awk to reliably parse missed/covered from the last LINE counter element
+            MISSED=$(awk -F'"' '/<counter type="LINE"/{missed=$4} END{print missed}' "$REPORT")
+            COVERED=$(awk -F'"' '/<counter type="LINE"/{covered=$6} END{print covered}' "$REPORT")
 
-            if [ -n "$MISSED" ] && [ -n "$COVERED" ]; then
+            if [ -n "$MISSED" ] && [ -n "$COVERED" ] && [ "$MISSED" -ge 0 ] 2>/dev/null && [ "$COVERED" -ge 0 ] 2>/dev/null; then
               TOTAL=$((MISSED + COVERED))
-              PERCENTAGE=$((COVERED * 100 / TOTAL))
+              if [ "$TOTAL" -gt 0 ]; then
+                PERCENTAGE=$((COVERED * 100 / TOTAL))
+              else
+                PERCENTAGE=0
+              fi
               echo "coverage=$PERCENTAGE" >> $GITHUB_OUTPUT
               echo "Coverage: $PERCENTAGE% ($COVERED/$TOTAL lines)"
             else
