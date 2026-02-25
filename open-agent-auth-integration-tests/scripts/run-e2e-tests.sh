@@ -76,8 +76,7 @@ RESTART_ARGS=()
 if [ "$DEBUG_MODE" = true ]; then
     RESTART_ARGS+=("--debug")
 fi
-if [ "$SKIP_BUILD" = false ]; then
-    # Only pass --skip-build if we want to skip the build step in sample-start.sh
+if [ "$SKIP_BUILD" = true ]; then
     RESTART_ARGS+=("--skip-build")
 fi
 # Add mock-llm profile to enable Mock LLM for sample-agent during E2E tests
@@ -90,13 +89,6 @@ echo -e "${YELLOW}────────────────────�
 echo ""
 
 cd "$PROJECT_ROOT/.."
-
-# Set JAVA_HOME to JDK 17 if available
-JAVA_HOME_17=$(/usr/libexec/java_home -v 17 2>/dev/null)
-if [ -n "$JAVA_HOME_17" ] && [ -d "$JAVA_HOME_17" ]; then
-    export JAVA_HOME="$JAVA_HOME_17"
-    echo -e "${YELLOW}Using JDK 17: $JAVA_HOME${NC}"
-fi
 
 if [ "$SKIP_BUILD" = false ]; then
     if ! mvn clean install -DskipTests; then
@@ -178,13 +170,7 @@ echo ""
 
 cd "$PROJECT_ROOT"
 
-# Set JAVA_HOME to JDK 17 if available
-JAVA_HOME_17=$(/usr/libexec/java_home -v 17 2>/dev/null)
-if [ -n "$JAVA_HOME_17" ] && [ -d "$JAVA_HOME_17" ]; then
-    export JAVA_HOME="$JAVA_HOME_17"
-    echo -e "${YELLOW}Using JDK 17: $JAVA_HOME${NC}"
-    echo ""
-fi
+
 
 # Run the tests
 TEST_START_TIME=$(date +%s)

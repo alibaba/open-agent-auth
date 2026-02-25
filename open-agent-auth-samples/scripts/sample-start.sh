@@ -133,11 +133,14 @@ if [ "$SKIP_BUILD" = false ]; then
     echo -e "${YELLOW}[1/7] Building project...${NC}"
     # Build from parent directory and install to local repository
     cd "$PROJECT_ROOT/.."
-    # Force use JAVA_HOME with JDK 17 if available
-    JAVA_HOME_17=$(/usr/libexec/java_home -v 17 2>/dev/null)
-    if [ -n "$JAVA_HOME_17" ] && [ -d "$JAVA_HOME_17" ]; then
-        export JAVA_HOME="$JAVA_HOME_17"
-        echo -e "${YELLOW}Using JDK 17: $JAVA_HOME${NC}"
+    # Use JAVA_HOME with JDK 17 if available (cross-platform)
+    if command -v /usr/libexec/java_home &>/dev/null; then
+        # macOS
+        JAVA_HOME_17=$(/usr/libexec/java_home -v 17 2>/dev/null || true)
+        if [ -n "$JAVA_HOME_17" ] && [ -d "$JAVA_HOME_17" ]; then
+            export JAVA_HOME="$JAVA_HOME_17"
+            echo -e "${YELLOW}Using JDK 17: $JAVA_HOME${NC}"
+        fi
     fi
     # Build with spring-boot:repackage to create executable JARs
     mvn clean package -DskipTests
