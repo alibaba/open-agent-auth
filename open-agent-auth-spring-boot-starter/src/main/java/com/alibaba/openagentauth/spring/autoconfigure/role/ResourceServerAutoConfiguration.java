@@ -18,7 +18,6 @@ package com.alibaba.openagentauth.spring.autoconfigure.role;
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
 import com.alibaba.openagentauth.core.binding.RemoteBindingInstanceStore;
 import com.alibaba.openagentauth.core.crypto.key.KeyManager;
-import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
 import com.alibaba.openagentauth.core.policy.api.PolicyEvaluator;
 import com.alibaba.openagentauth.core.policy.api.PolicyRegistry;
 import com.alibaba.openagentauth.core.policy.evaluator.LightweightPolicyEvaluator;
@@ -27,16 +26,13 @@ import com.alibaba.openagentauth.core.protocol.wimse.wit.WitValidator;
 import com.alibaba.openagentauth.core.protocol.wimse.wpt.WptValidator;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.core.token.aoat.AoatValidator;
-import com.alibaba.openagentauth.core.trust.model.TrustAnchor;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.framework.orchestration.DefaultResourceServer;
 import com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.ServiceProperties;
 import com.alibaba.openagentauth.spring.util.DefaultServiceEndpointResolver;
-import com.nimbusds.jose.jwk.ECKey;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.RSAKey;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -46,7 +42,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -138,60 +133,13 @@ public class ResourceServerAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public WitValidator witValidator(OpenAgentAuthProperties openAgentAuthProperties, KeyManager keyManager) {
-        logger.info("Creating WitValidator bean for Resource Server");
+
         String witKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
-        try {
-            // Resolve the WIT verification key using KeyManager
-            JWK witJwk = (JWK) keyManager.resolveKey(witKeyId);
+        String trustDomain = openAgentAuthProperties.getInfrastructures().getTrustDomain();
+        logger.info("Creating WitValidator bean for Resource Server. Key ID: {}, Trust Domain: {}", witKeyId, trustDomain);
 
-            if (witJwk == null) {
-                throw new IllegalStateException(
-                        "WIT verification key '" + witKeyId + "' not found via KeyManager"
-                );
-            }
-
-            // Validate that the key is an ECKey
-            if (!(witJwk instanceof ECKey witSigningKey)) {
-                throw new IllegalStateException(
-                        "WIT verification key '" + witKeyId + "' is not an ECKey. Actual type: " + witJwk.getClass().getSimpleName()
-                );
-            }
-
-            logger.info("Resolved wit-verification key via KeyManager: keyId={}, algorithm={}, curve={}",
-                    witSigningKey.getKeyID(),
-                    witSigningKey.getAlgorithm(),
-                    witSigningKey.getCurve());
-
-            // Create TrustDomain from infrastructure configuration
-            String trustDomain = openAgentAuthProperties.getInfrastructures().getTrustDomain();
-            TrustDomain trustDomainObj = new TrustDomain(trustDomain);
-
-            // Create TrustAnchor with the EC public key from Agent IDP
-            // WIT uses algorithm configured in YAML (default: ES256)
-            String witAlgorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getAlgorithm();
-            KeyAlgorithm keyAlgorithm = KeyAlgorithm.valueOf(witAlgorithm);
-            TrustAnchor trustAnchor;
-            try {
-                trustAnchor = new TrustAnchor(
-                        witSigningKey.toPublicKey(),
-                        witSigningKey.getKeyID(),
-                        keyAlgorithm,
-                        trustDomainObj
-                );
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to convert ECKey to PublicKey", e);
-            }
-
-            logger.info("Created TrustAnchor: keyId={}, algorithm={}, trustDomain={}",
-                    trustAnchor.getKeyId(),
-                    trustAnchor.getAlgorithm(),
-                    trustAnchor.getTrustDomain().getDomainId());
-
-            // Create WitValidator with TrustAnchor
-            return new WitValidator(trustAnchor);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create WitValidator for Resource Server", e);
-        }
+        TrustDomain trustDomainObj = new TrustDomain(trustDomain);
+        return new WitValidator(keyManager, witKeyId, trustDomainObj);
     }
 
     /**
@@ -207,50 +155,20 @@ public class ResourceServerAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public AoatValidator aoatValidator(OpenAgentAuthProperties openAgentAuthProperties, KeyManager keyManager) {
-        logger.info("Creating AoatValidator bean for Resource Server");
-
         String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_AOAT_VERIFICATION).getKeyId();
-        try {
-            // Resolve the AOAT verification key using KeyManager
-            JWK aoatJwk = (JWK) keyManager.resolveKey(aoatKeyId);
+        logger.info("Creating AoatValidator bean for Resource Server. Key ID: {}", aoatKeyId);
 
-            if (aoatJwk == null) {
-                throw new IllegalStateException(
-                        "AOAT verification key '" + aoatKeyId + "' not found via KeyManager"
-                );
+        String authorizationServerIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AUTHORIZATION_SERVER).getIssuer();
+
+        String resourceServerIssuer = null;
+        if (openAgentAuthProperties.getRoles() != null) {
+            var role = openAgentAuthProperties.getRoles().get(ROLE_RESOURCE_SERVER);
+            if (role != null) {
+                resourceServerIssuer = role.getIssuer();
             }
-
-            // Validate that the key is an RSAKey
-            if (!(aoatJwk instanceof RSAKey aoatSigningKey)) {
-                throw new IllegalStateException(
-                        "AOAT verification key '" + aoatKeyId + "' is not an RSAKey. Actual type: " + aoatJwk.getClass().getSimpleName()
-                );
-            }
-
-            logger.info("Resolved aoat-verification key via KeyManager: keyId={}, algorithm={}",
-                    aoatSigningKey.getKeyID(),
-                    aoatSigningKey.getAlgorithm());
-
-            // Create AoatValidator with the correct verification key, issuer, and audience
-            String authorizationServerIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AUTHORIZATION_SERVER).getIssuer();
-            
-            // Get issuer from roles configuration
-            String resourceServerIssuer = null;
-            if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get(ROLE_RESOURCE_SERVER);
-                if (role != null) {
-                    resourceServerIssuer = role.getIssuer();
-                }
-            }
-            
-            return new AoatValidator(
-                    aoatSigningKey,
-                    authorizationServerIssuer,
-                    resourceServerIssuer
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create AoatValidator for Resource Server", e);
         }
+
+        return new AoatValidator(keyManager, aoatKeyId, authorizationServerIssuer, resourceServerIssuer);
     }
 
     /**

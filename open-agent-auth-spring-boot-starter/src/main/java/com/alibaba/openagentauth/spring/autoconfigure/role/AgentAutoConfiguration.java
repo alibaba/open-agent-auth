@@ -41,11 +41,12 @@ import com.alibaba.openagentauth.core.protocol.wimse.workload.client.RestWorkloa
 import com.alibaba.openagentauth.core.protocol.wimse.workload.client.WorkloadClient;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.core.token.TokenService;
-import com.alibaba.openagentauth.core.trust.model.TrustAnchor;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 
 import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
+
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 
 import com.alibaba.openagentauth.framework.actor.Agent;
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
@@ -64,14 +65,9 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures
 import com.alibaba.openagentauth.spring.util.DefaultServiceEndpointResolver;
 import com.alibaba.openagentauth.spring.web.controller.OAuth2CallbackController;
 import com.alibaba.openagentauth.spring.web.interceptor.SpringAgentAuthenticationInterceptor;
-import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.jwk.source.RemoteJWKSet;
-import com.nimbusds.jose.proc.SecurityContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -88,7 +84,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -410,22 +405,10 @@ public class AgentAutoConfiguration {
          */
         @Bean
         @ConditionalOnMissingBean
-        public IdTokenValidator idTokenValidator(OpenAgentAuthProperties properties) {
-            try {
-                String jwksEndpoint = properties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AGENT_USER_IDP).getJwksEndpoint();
-
-                if (ValidationUtils.isNullOrEmpty(jwksEndpoint)) {
-                    throw new IllegalStateException(
-                            "Agent User IDP JWKS endpoint is not configured. Please set 'agent-user-idp.jwks-endpoint' in your configuration."
-                    );
-                }
-
-                JWKSource<SecurityContext> jwkSource = new RemoteJWKSet<>(new URL(jwksEndpoint));
-                return new DefaultIdTokenValidator(jwkSource);
-
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to create IdTokenValidator: " + e.getMessage(), e);
-            }
+        public IdTokenValidator idTokenValidator(KeyManager keyManager, OpenAgentAuthProperties properties) {
+            String keyId = properties.getInfrastructures().getKeyManagement().getKeys().get(KEY_ID_TOKEN_VERIFICATION).getKeyId();
+            logger.info("Creating IdTokenValidator bean. Key ID: {}", keyId);
+            return new DefaultIdTokenValidator(keyManager, keyId);
         }
 
         /**
@@ -593,84 +576,25 @@ public class AgentAutoConfiguration {
         }
 
         /**
-         * WIT verification key fetched from Agent IDP's JWKS endpoint.
+         * WitValidator bean that verifies WIT signatures from Agent IDP.
          * <p>
-         * This key is used to verify WIT signatures issued by the Agent IDP.
-         * The Agent IDP uses ES256 algorithm (EC key with P-256 curve) by default, so we fetch the public key
-         * from the JWKS endpoint to ensure signature verification works correctly.
-         * </p>
-         * <p>
-         * This bean will fail to initialize if the Agent IDP is not available or returns invalid keys.
-         * This is intentional - the system cannot operate without a valid WIT verification key.
-         * No fallback mechanism is provided, as it would only mask configuration issues and
-         * provide a false sense of security.
+         * Uses {@link KeyManager#resolveVerificationKey(String)} to obtain the verification key.
          * </p>
          *
-         * @return the EC public key for WIT verification
-         * @throws IllegalStateException if the Agent IDP is unavailable or returns invalid keys
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public ECKey witVerificationKey(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
-            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
-            try {
-                logger.info("Resolving WIT verification key via KeyManager. Key ID: {}", keyId);
-                JWK resolvedKey = (JWK) keyManager.resolveKey(keyId);
-                if (!(resolvedKey instanceof ECKey)) {
-                    throw new IllegalStateException("WIT signing key is not an EC key. " +
-                            "Expected EC key with P-256 curve for ES256 algorithm, but got: " + resolvedKey.getKeyType());
-                }
-                ECKey ecPublicKey = (ECKey) resolvedKey;
-                logger.info("Successfully resolved WIT verification key. Key ID: {}, Algorithm: {}, Curve: {}",
-                        ecPublicKey.getKeyID(), ecPublicKey.getAlgorithm(), ecPublicKey.getCurve());
-                return ecPublicKey;
-            } catch (Exception e) {
-                logger.error("Failed to resolve WIT verification key: {}", e.getMessage(), e);
-                throw new IllegalStateException(
-                        "Failed to initialize WIT verification key. Key ID: " + keyId + ". " +
-                                "Please ensure the key is properly configured in open-agent-auth.infrastructures.key-management.keys", e);
-            }
-        }
-
-        /**
-         * WitValidator bean that uses the correct WIT verification key from Agent IDP.
-         * <p>
-         * This bean overrides the default WitValidator from CoreAutoConfiguration to ensure
-         * that WIT signatures are verified using the correct public key from Agent IDP's JWKS endpoint.
-         * </p>
-         *
-         * @param witVerificationKey the WIT verification key fetched from Agent IDP
+         * @param keyManager the key manager for resolving verification keys
+         * @param openAgentAuthProperties the configuration properties
          * @return the configured WitValidator bean
          */
         @Bean
         @ConditionalOnMissingBean
-        public WitValidator witValidator(ECKey witVerificationKey, OpenAgentAuthProperties openAgentAuthProperties) {
+        public WitValidator witValidator(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
+            
+            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
             String trustDomain = openAgentAuthProperties.getInfrastructures().getTrustDomain();
-            logger.info("Creating WitValidator bean with verification key from Agent IDP. Key ID: {}, Trust Domain: {}",
-                    witVerificationKey.getKeyID(), trustDomain);
+            logger.info("Creating WitValidator bean. Key ID: {}, Trust Domain: {}", keyId, trustDomain);
 
-            // Create TrustDomain from string
             TrustDomain trustDomainObj = new TrustDomain(trustDomain);
-
-            // Create TrustAnchor with the EC public key from Agent IDP
-            // WIT uses ES256 algorithm (ECDSA with P-256 curve)
-            TrustAnchor trustAnchor;
-            try {
-                trustAnchor = new TrustAnchor(
-                        witVerificationKey.toPublicKey(),
-                        witVerificationKey.getKeyID(),
-                        KeyAlgorithm.ES256,
-                        trustDomainObj
-                );
-            } catch (JOSEException e) {
-                throw new IllegalStateException("Failed to convert ECKey to PublicKey", e);
-            }
-
-            logger.info("Created TrustAnchor: keyId={}, algorithm={}, trustDomain={}",
-                    trustAnchor.getKeyId(), trustAnchor.getAlgorithm(), trustAnchor.getTrustDomain().getDomainId());
-
-            // Create WitValidator with TrustAnchor
-            return new WitValidator(trustAnchor);
+            return new WitValidator(keyManager, keyId, trustDomainObj);
         }
     }
 

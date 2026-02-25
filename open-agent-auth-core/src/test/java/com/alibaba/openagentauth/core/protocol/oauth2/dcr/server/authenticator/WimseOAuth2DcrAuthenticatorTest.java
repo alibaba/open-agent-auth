@@ -25,6 +25,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
@@ -34,6 +35,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.Date;
@@ -66,26 +71,31 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("WIMSE DCR Authenticator Tests - RFC 7591 + WIMSE")
 class WimseOAuth2DcrAuthenticatorTest {
 
+    private static final String VERIFICATION_KEY_ID = "test-verification-key";
+
     private WimseOAuth2DcrAuthenticator authenticator;
     private RSAKey signingKey;
-    private RSAKey verificationKey;
+    private KeyManager keyManager;
     private ECKey wptPublicKey;
     private TrustDomain trustDomain;
     private WitGenerator witGenerator;
 
     @BeforeEach
-    void setUp() throws JOSEException {
+    void setUp() throws Exception {
         // Generate RSA key pair for WIT signing (as per WIMSE specification)
         RSAKeyGenerator rsaKeyGenerator = new RSAKeyGenerator(2048);
         signingKey = rsaKeyGenerator.keyID("wit-signing-key").generate();
-        verificationKey = signingKey.toPublicJWK();
+
+        // Create mock KeyManager
+        keyManager = mock(KeyManager.class);
+        when(keyManager.resolveVerificationKey(anyString())).thenReturn(signingKey.toPublicJWK());
 
         // Generate EC key pair for WPT (Workload Proof Token)
         ECKeyGenerator ecKeyGenerator = new ECKeyGenerator(Curve.P_256);
         wptPublicKey = ecKeyGenerator.keyID("wpt-key").generate().toPublicJWK();
 
         trustDomain = new TrustDomain("wimse://example.com");
-        authenticator = new WimseOAuth2DcrAuthenticator(verificationKey, trustDomain);
+        authenticator = new WimseOAuth2DcrAuthenticator(keyManager, VERIFICATION_KEY_ID, trustDomain);
         witGenerator = new WitGenerator(signingKey, trustDomain, JWSAlgorithm.RS256);
     }
 
@@ -94,17 +104,25 @@ class WimseOAuth2DcrAuthenticatorTest {
     class ConstructorValidationTests {
 
         @Test
-        @DisplayName("Should throw IllegalArgumentException when verification key is null")
-        void shouldThrowExceptionWhenVerificationKeyIsNull() {
-            assertThatThrownBy(() -> new WimseOAuth2DcrAuthenticator(null, trustDomain))
+        @DisplayName("Should throw IllegalArgumentException when KeyManager is null")
+        void shouldThrowExceptionWhenKeyManagerIsNull() {
+            assertThatThrownBy(() -> new WimseOAuth2DcrAuthenticator(null, VERIFICATION_KEY_ID, trustDomain))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Verification key cannot be null");
+                    .hasMessageContaining("Key manager cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalArgumentException when verification key ID is empty")
+        void shouldThrowExceptionWhenVerificationKeyIdIsEmpty() {
+            assertThatThrownBy(() -> new WimseOAuth2DcrAuthenticator(keyManager, "", trustDomain))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Verification key ID");
         }
 
         @Test
         @DisplayName("Should throw IllegalArgumentException when trust domain is null")
         void shouldThrowExceptionWhenTrustDomainIsNull() {
-            assertThatThrownBy(() -> new WimseOAuth2DcrAuthenticator(verificationKey, null))
+            assertThatThrownBy(() -> new WimseOAuth2DcrAuthenticator(keyManager, VERIFICATION_KEY_ID, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Trust domain cannot be null");
         }

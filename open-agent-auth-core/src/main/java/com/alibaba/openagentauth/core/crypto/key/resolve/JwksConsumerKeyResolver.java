@@ -184,4 +184,14 @@ public class JwksConsumerKeyResolver implements KeyResolver {
         jwkSetCache.remove(consumerName);
         logger.info("Cleared JWKS cache for consumer: {}", consumerName);
     }
+
+    /**
+     * Gets the JWKS endpoint URL for the specified consumer.
+     *
+     * @param consumerName the consumer name
+     * @return the endpoint URL, or {@code null} if the consumer is not registered
+     */
+    public String getConsumerEndpoint(String consumerName) {
+        return consumerEndpoints.get(consumerName);
+    }
 }

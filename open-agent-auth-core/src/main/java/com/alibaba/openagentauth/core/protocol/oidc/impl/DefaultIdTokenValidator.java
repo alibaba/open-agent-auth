@@ -15,29 +15,23 @@
  */
 package com.alibaba.openagentauth.core.protocol.oidc.impl;
 
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
+import com.alibaba.openagentauth.core.exception.crypto.KeyManagementException;
+import com.alibaba.openagentauth.core.crypto.verify.SignatureVerificationUtils;
 import com.alibaba.openagentauth.core.exception.oidc.IdTokenException;
 import com.alibaba.openagentauth.core.model.oidc.IdToken;
 import com.alibaba.openagentauth.core.model.oidc.IdTokenClaims;
 import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenValidator;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
-import com.nimbusds.jose.JWSAlgorithm;
+
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.ECDSAVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKMatcher;
-import com.nimbusds.jose.jwk.JWKSelector;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.interfaces.ECPublicKey;
-import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.Instant;
 import java.util.Date;
@@ -79,9 +73,14 @@ public class DefaultIdTokenValidator implements IdTokenValidator {
     private static final long DEFAULT_CLOCK_SKEW_SECONDS = 300;
 
     /**
-     * The signing key for verification.
+     * The KeyManager for resolving verification keys.
      */
-    private final Object verificationKey;
+    private final KeyManager keyManager;
+
+    /**
+     * The verification key ID used for signature verification.
+     */
+    private final String verificationKeyId;
 
     /**
      * The allowed clock skew in seconds.
@@ -91,25 +90,26 @@ public class DefaultIdTokenValidator implements IdTokenValidator {
     /**
      * Creates a new DefaultIdTokenValidator with default clock skew.
      *
-     * @param verificationKey the verification key
+     * @param keyManager the KeyManager for resolving verification keys
+     * @param verificationKeyId the key ID to use for signature verification
+     * @throws IllegalArgumentException if keyManager is null or verificationKeyId is empty
      */
-    public DefaultIdTokenValidator(Object verificationKey) {
-        this(verificationKey, DEFAULT_CLOCK_SKEW_SECONDS);
+    public DefaultIdTokenValidator(KeyManager keyManager, String verificationKeyId) {
+        this(keyManager, verificationKeyId, DEFAULT_CLOCK_SKEW_SECONDS);
     }
 
     /**
      * Creates a new DefaultIdTokenValidator with custom clock skew.
      *
-     * @param verificationKey the verification key
+     * @param keyManager the KeyManager for resolving verification keys
+     * @param verificationKeyId the key ID to use for signature verification
      * @param clockSkewSeconds the allowed clock skew in seconds
+     * @throws IllegalArgumentException if keyManager is null or verificationKeyId is empty
      */
-    public DefaultIdTokenValidator(Object verificationKey, long clockSkewSeconds) {
-
-        // Validate the verification key
-        this.verificationKey = ValidationUtils.validateNotNull(verificationKey, "Verification key");
+    public DefaultIdTokenValidator(KeyManager keyManager, String verificationKeyId, long clockSkewSeconds) {
+        this.keyManager = ValidationUtils.validateNotNull(keyManager, "KeyManager");
+        this.verificationKeyId = ValidationUtils.validateNotEmpty(verificationKeyId, "Verification key ID");
         this.clockSkewSeconds = clockSkewSeconds;
-        
-        logger.info("DefaultIdTokenValidator initialized with clock skew: {} seconds", clockSkewSeconds);
     }
 
     /**
@@ -213,8 +213,10 @@ public class DefaultIdTokenValidator implements IdTokenValidator {
             // Parse the signed JWT
             SignedJWT signedJWT = SignedJWT.parse(token);
 
-            // Verify the signature
-            JWSVerifier verifier = createVerifier(signedJWT.getHeader().getAlgorithm(), signedJWT.getHeader().getKeyID());
+            // Verify the signature using KeyManager
+            JWK verificationKey = keyManager.resolveVerificationKey(verificationKeyId);
+            JWSVerifier verifier = SignatureVerificationUtils.createVerifier(verificationKey);
+            
             if (!signedJWT.verify(verifier)) {
                 throw new IdTokenException("Invalid JWT signature");
             }
@@ -227,6 +229,12 @@ public class DefaultIdTokenValidator implements IdTokenValidator {
             // Build and return the IdToken
             return IdToken.builder().tokenValue(token).claims(claims).build();
 
+        } catch (KeyManagementException e) {
+            logger.error("Failed to resolve verification key", e);
+            throw new IdTokenException("Failed to resolve verification key: " + e.getMessage(), e);
+        } catch (JOSEException e) {
+            logger.error("Failed to create verifier", e);
+            throw new IdTokenException("Failed to create verifier: " + e.getMessage(), e);
         } catch (IdTokenException e) {
             throw e;
         } catch (Exception e) {
@@ -235,153 +243,6 @@ public class DefaultIdTokenValidator implements IdTokenValidator {
         }
     }
 
-    /**
-     * Creates a JWT verifier based on the algorithm.
-     *
-     * @param algorithm the JWS algorithm
-     * @param keyId the key ID (optional, used for JWKSource)
-     * @return the JWT verifier
-     * @throws IdTokenException if the verifier cannot be created
-     */
-    private JWSVerifier createVerifier(JWSAlgorithm algorithm, String keyId) {
-
-        // Validate the algorithm
-        if (algorithm == null) {
-            throw new IdTokenException("Algorithm cannot be null");
-        }
-
-        // If verification key is JWKSource, fetch the JWK and create verifier
-        if (verificationKey instanceof JWKSource) {
-            return createJWKSourceVerifier(algorithm, keyId);
-        }
-
-        // Create the verifier based on key type
-        if (JWSAlgorithm.Family.RSA.contains(algorithm)) {
-            return createRSAVerifier(algorithm);
-        }
-        if (JWSAlgorithm.Family.EC.contains(algorithm)) {
-            return createECVerifier(algorithm);
-        }
-
-        throw new IdTokenException("Unsupported verification algorithm: " + algorithm);
-    }
-
-    /**
-     * Creates an RSA verifier.
-     *
-     * @param algorithm the JWS algorithm
-     * @return the RSA verifier
-     * @throws IdTokenException if the verifier cannot be created
-     */
-    private JWSVerifier createRSAVerifier(JWSAlgorithm algorithm) {
-        try {
-            if (verificationKey instanceof RSAKey) {
-                return new RSASSAVerifier((RSAKey) verificationKey);
-            }
-            if (verificationKey instanceof RSAPublicKey) {
-                return new RSASSAVerifier((RSAPublicKey) verificationKey);
-            }
-            throw new IdTokenException(String.format(
-                    "Invalid verification key for RSA algorithm: %s. Expected RSAKey or RSAPublicKey, got %s",
-                    algorithm,
-                    verificationKey.getClass().getSimpleName()));
-        } catch (IdTokenException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("Failed to create RSA verifier", e);
-            throw new IdTokenException("Failed to create RSA verifier: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Creates an EC verifier.
-     *
-     * @param algorithm the JWS algorithm
-     * @return the EC verifier
-     * @throws IdTokenException if the verifier cannot be created
-     */
-    private JWSVerifier createECVerifier(JWSAlgorithm algorithm) {
-        try {
-            if (verificationKey instanceof ECKey) {
-                return new ECDSAVerifier((ECKey) verificationKey);
-            }
-            if (verificationKey instanceof ECPublicKey) {
-                return new ECDSAVerifier((ECPublicKey) verificationKey);
-            }
-            throw new IdTokenException(String.format(
-                    "Invalid verification key for EC algorithm: %s. Expected ECKey or ECPublicKey, got %s",
-                    algorithm,
-                    verificationKey.getClass().getSimpleName()));
-        } catch (IdTokenException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("Failed to create EC verifier", e);
-            throw new IdTokenException("Failed to create EC verifier: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Creates a verifier using JWKSource.
-     * <p>
-     * This method fetches the appropriate JWK from the JWKSource based on the
-     * algorithm and key ID, then creates a corresponding verifier.
-     * </p>
-     *
-     * @param algorithm the JWS algorithm
-     * @param keyId the key ID (optional)
-     * @return the JWS verifier
-     * @throws IdTokenException if the verifier cannot be created
-     */
-    @SuppressWarnings("unchecked")
-    private JWSVerifier createJWKSourceVerifier(JWSAlgorithm algorithm, String keyId) {
-        try {
-            JWKSource<SecurityContext> jwkSource = (JWKSource<SecurityContext>) verificationKey;
-            
-            // Create a JWK selector to get the appropriate JWK
-            JWKMatcher.Builder matcherBuilder = new JWKMatcher.Builder()
-                    .algorithm(algorithm);
-            
-            // If key ID is provided, match by key ID for better precision
-            if (!ValidationUtils.isNullOrEmpty(keyId)) {
-                matcherBuilder.keyID(keyId);
-            }
-            
-            JWKSelector selector = new JWKSelector(matcherBuilder.build());
-            
-            // Get the JWK from the source
-            List<JWK> jwkList = jwkSource.get(selector, null);
-            
-            if (jwkList == null || jwkList.isEmpty()) {
-                logger.warn("No JWK found for algorithm: {}, keyId: {}. Retrying with algorithm only.", algorithm, keyId);
-                // Retry without key ID for backward compatibility
-                selector = new JWKSelector(new JWKMatcher.Builder().algorithm(algorithm).build());
-                jwkList = jwkSource.get(selector, null);
-                
-                if (jwkList == null || jwkList.isEmpty()) {
-                    throw new IdTokenException("No JWK found for algorithm: " + algorithm);
-                }
-            }
-            
-            // Use the first matching JWK
-            JWK jwk = jwkList.get(0);
-            logger.debug("Found JWK for signature verification: kid={}, kty={}, alg={}", 
-                    jwk.getKeyID(), jwk.getKeyType(), jwk.getAlgorithm());
-            
-            // Create verifier based on JWK type
-            if (jwk instanceof RSAKey) {
-                return new RSASSAVerifier((RSAKey) jwk);
-            } else if (jwk instanceof ECKey) {
-                return new ECDSAVerifier((ECKey) jwk);
-            } else {
-                throw new IdTokenException("Unsupported JWK type: " + jwk.getKeyType());
-            }
-        } catch (IdTokenException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("Failed to create JWKSource verifier", e);
-            throw new IdTokenException("Failed to create JWKSource verifier: " + e.getMessage(), e);
-        }
-    }
     /**
      * Converts JWTClaimsSet to IdTokenClaims.
      *
@@ -647,12 +508,21 @@ public class DefaultIdTokenValidator implements IdTokenValidator {
     }
 
     /**
-     * Gets the verification key.
+     * Gets the KeyManager used for signature verification.
      *
-     * @return the verification key
+     * @return the KeyManager
      */
-    public Object getVerificationKey() {
-        return verificationKey;
+    public KeyManager getKeyManager() {
+        return keyManager;
+    }
+
+    /**
+     * Gets the verification key ID used for signature verification.
+     *
+     * @return the verification key ID
+     */
+    public String getVerificationKeyId() {
+        return verificationKeyId;
     }
 
     /**

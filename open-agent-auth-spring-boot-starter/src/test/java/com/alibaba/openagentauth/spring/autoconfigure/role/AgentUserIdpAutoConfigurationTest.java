@@ -47,6 +47,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -112,8 +113,9 @@ class AgentUserIdpAutoConfigurationTest {
         }
 
         @Bean
-        public IdTokenValidator idTokenValidator(ServiceProperties serviceProperties) {
-            return new DefaultIdTokenValidator(serviceProperties);
+        public IdTokenValidator idTokenValidator() {
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            return new DefaultIdTokenValidator(mockKeyManager, "test-key");
         }
 
         @Bean

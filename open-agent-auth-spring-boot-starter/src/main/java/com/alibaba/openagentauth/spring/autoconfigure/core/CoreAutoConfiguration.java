@@ -28,6 +28,7 @@ import com.alibaba.openagentauth.core.crypto.key.store.KeyStore;
 import com.alibaba.openagentauth.core.token.TokenService;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
+import com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksConsumerProperties;
@@ -206,7 +207,7 @@ public class CoreAutoConfiguration {
                 String keyName = entry.getKey();
                 KeyDefinitionProperties keyProps = entry.getValue();
 
-                if (keyName.contains("wit-signing") && keyProps.getProvider() != null) {
+                if (keyName.contains(ConfigConstants.KEY_WIT_SIGNING) && keyProps.getProvider() != null) {
                     keyId = keyProps.getKeyId();
                     if (keyProps.getAlgorithm() != null && !keyProps.getAlgorithm().isBlank()) {
                         try {

@@ -22,6 +22,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
@@ -29,6 +30,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.text.ParseException;
 import java.time.Instant;
@@ -163,11 +168,14 @@ class WitGeneratorTest {
 
         @Test
         @DisplayName("Should be verifiable by WitValidator")
-        void shouldBeVerifiableByWitValidator() throws JOSEException, ParseException {
+        void shouldBeVerifiableByWitValidator() throws Exception {
             // Given
             long expirationSeconds = 3600;
             String wptPublicKeyJson = wptPublicKey.toJSONString();
-            WitValidator validator = new WitValidator(verificationKey, trustDomain);
+            String verificationKeyId = "test-verification-key";
+            KeyManager mockKeyManager = mock(KeyManager.class);
+            when(mockKeyManager.resolveVerificationKey(anyString())).thenReturn(verificationKey);
+            WitValidator validator = new WitValidator(mockKeyManager, verificationKeyId, trustDomain);
 
             // When
             WorkloadIdentityToken wit = witGenerator.generateWit(workloadId, wptPublicKeyJson, expirationSeconds);

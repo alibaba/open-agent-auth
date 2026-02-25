@@ -24,7 +24,7 @@ import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.core.protocol.wimse.wit.WitExtractor;
 import com.alibaba.openagentauth.core.protocol.wimse.wit.WitFormatValidator;
 import com.alibaba.openagentauth.core.protocol.wimse.wit.WitValidator;
-import com.nimbusds.jose.jwk.RSAKey;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,13 +72,15 @@ public class WimseOAuth2DcrAuthenticator implements OAuth2DcrAuthenticator {
     /**
      * Creates a new WIMSE DCR authenticator.
      *
-     * @param verificationKey the RSA public key used for verifying WIT signatures
+     * @param keyManager the key manager for resolving verification keys (supports key rotation)
+     * @param verificationKeyId the key ID used to resolve the WIT verification key
      * @param trustDomain the expected trust domain for validation
-     * @throws IllegalArgumentException if verificationKey or trustDomain is null
+     * @throws IllegalArgumentException if any parameter is null or verificationKeyId is empty
      */
-    public WimseOAuth2DcrAuthenticator(RSAKey verificationKey, TrustDomain trustDomain) {
+    public WimseOAuth2DcrAuthenticator(KeyManager keyManager, String verificationKeyId, TrustDomain trustDomain) {
         this.witValidator = new WitValidator(
-                ValidationUtils.validateNotNull(verificationKey, "Verification key"),
+                ValidationUtils.validateNotNull(keyManager, "Key manager"),
+                ValidationUtils.validateNotEmpty(verificationKeyId, "Verification key ID"),
                 ValidationUtils.validateNotNull(trustDomain, "Trust domain")
         );
         logger.info("WimseDcrAuthenticator initialized with trust domain: {}", trustDomain.getDomainId());

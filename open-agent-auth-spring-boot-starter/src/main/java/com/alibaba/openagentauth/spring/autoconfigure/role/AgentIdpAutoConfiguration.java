@@ -15,6 +15,7 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.role;
 
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenValidator;
 import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultIdTokenValidator;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.store.InMemoryWorkloadRegistry;
@@ -24,12 +25,11 @@ import com.alibaba.openagentauth.framework.actor.AgentIdentityProvider;
 import com.alibaba.openagentauth.framework.orchestration.DefaultAgentIdentityProvider;
 import com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
+import com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksConsumerProperties;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksInfrastructureProperties;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.jwk.source.RemoteJWKSet;
-import com.nimbusds.jose.proc.SecurityContext;
+
+import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -38,11 +38,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-
-import java.net.URL;
-import java.util.Optional;
-
-import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
 
 /**
  * Auto-configuration for Agent IDP role.
@@ -180,8 +175,9 @@ public class AgentIdpAutoConfiguration {
 
         // Agent User IDP issuer for ID Token validation
         String agentUserIdpIssuer = null;
-        if (openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().containsKey(SERVICE_AGENT_USER_IDP)) {
-            agentUserIdpIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AGENT_USER_IDP).getIssuer();
+        InfrastructureProperties infrastructures = openAgentAuthProperties.getInfrastructures();
+        if (infrastructures.getJwks().getConsumers().containsKey(SERVICE_AGENT_USER_IDP)) {
+            agentUserIdpIssuer = infrastructures.getJwks().getConsumers().get(SERVICE_AGENT_USER_IDP).getIssuer();
         }
 
         if (ValidationUtils.isNullOrEmpty(agentUserIdpIssuer)) {
@@ -191,8 +187,7 @@ public class AgentIdpAutoConfiguration {
             );
         }
 
-        logger.info("Creating AgentIdentityProvider with issuer: {}, agentUserIdpIssuer: {}",
-                issuer, agentUserIdpIssuer);
+        logger.info("Creating AgentIdentityProvider with issuer: {}, agentUserIdpIssuer: {}", issuer, agentUserIdpIssuer);
 
         return new DefaultAgentIdentityProvider(
                 tokenService,
@@ -207,8 +202,6 @@ public class AgentIdpAutoConfiguration {
      * Creates the IdTokenValidator bean for Agent IDP.
      * <p>
      * This validator is configured to validate ID Tokens issued by the Agent User IDP.
-     * It uses the Agent User IDP's JWKS endpoint to fetch the public keys needed for
-     * signature verification.
      * </p>
      *
      * <p><b>Important:</b> The Agent User IDP's issuer URL is configured separately from
@@ -219,41 +212,15 @@ public class AgentIdpAutoConfiguration {
      *   <li>Agent IDP needs to validate ID Tokens from Agent User IDP</li>
      * </ul>
      *
+     * @param keyManager the key manager for resolving verification keys
      * @param properties the configuration properties
      * @return the configured IdTokenValidator bean
      */
     @Bean
     @ConditionalOnMissingBean
-    public IdTokenValidator idTokenValidator(OpenAgentAuthProperties properties) {
-        try {
-            // Get Agent User IDP's JWKS endpoint from consumers configuration
-            String jwksEndpoint = Optional.ofNullable(properties.getInfrastructures().getJwks())
-                    .map(JwksInfrastructureProperties::getConsumers)
-                    .map(consumers -> consumers.get(SERVICE_AGENT_USER_IDP))
-                    .map(JwksConsumerProperties::getJwksEndpoint)
-                    .orElse(null);
-
-            // JWKS endpoint is required
-            if (ValidationUtils.isNullOrEmpty(jwksEndpoint)) {
-                throw new IllegalStateException(
-                        "Agent User IDP JWKS endpoint is not configured. Please set 'agent-user-idp.jwks-endpoint' in your configuration."
-                );
-            }
-
-            logger.info("Creating IdTokenValidator with JWKS endpoint: {}", jwksEndpoint);
-
-            // Create JWKSource that fetches keys from Agent User IDP's JWKS endpoint
-            JWKSource<SecurityContext> jwkSource = new RemoteJWKSet<>(new URL(jwksEndpoint));
-
-            // Create IdTokenValidator with the JWKSource
-            IdTokenValidator validator = new DefaultIdTokenValidator(jwkSource);
-
-            logger.info("IdTokenValidator created successfully for Agent User IDP JWKs: {}", jwksEndpoint);
-            return validator;
-
-        } catch (Exception e) {
-            logger.error("Failed to create IdTokenValidator", e);
-            throw new IllegalStateException("Failed to create IdTokenValidator: " + e.getMessage(), e);
-        }
+    public IdTokenValidator idTokenValidator(KeyManager keyManager, OpenAgentAuthProperties properties) {
+        String keyId = properties.getInfrastructures().getKeyManagement().getKeys().get(KEY_ID_TOKEN_VERIFICATION).getKeyId();
+        logger.info("Creating IdTokenValidator bean. Key ID: {}", keyId);
+        return new DefaultIdTokenValidator(keyManager, keyId);
     }
 }

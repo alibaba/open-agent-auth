@@ -96,6 +96,9 @@ public final class ConfigConstants {
     // ==================== Key Management Names ====================
     // Used in: getKeyManagement().getKeys().get(KEY_*)
 
+    /** Key name for WIT signing (EC private key for Agent IDP). */
+    public static final String KEY_WIT_SIGNING = "wit-signing";
+
     /** Key name for WIT verification (EC public key from Agent IDP). */
     public static final String KEY_WIT_VERIFICATION = "wit-verification";
 
@@ -108,6 +111,9 @@ public final class ConfigConstants {
     /** Key name for JWE encryption (RSA public key from Authorization Server). */
     public static final String KEY_JWE_ENCRYPTION = "jwe-encryption";
 
+    /** Key name for JWE decryption (RSA private key for Authorization Server). */
+    public static final String KEY_JWE_DECRYPTION = "jwe-decryption";
+
     /** Key name for AOAT signing (RSA private key for Authorization Server). */
     public static final String KEY_AOAT_SIGNING = "aoat-signing";
 
@@ -116,6 +122,9 @@ public final class ConfigConstants {
 
     /** Key name for ID Token signing (EC private key for User IDPs). */
     public static final String KEY_ID_TOKEN_SIGNING = "id-token-signing";
+
+    /** Key name for ID Token verification (EC public key from User IDPs, fetched via JWKS). */
+    public static final String KEY_ID_TOKEN_VERIFICATION = "id-token-verification";
 
     // ==================== Well-Known Paths ====================
 

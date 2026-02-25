@@ -512,6 +512,35 @@ public class DefaultKeyManager implements KeyManager {
     }
 
     /**
+     * Resolves a verification JWK for the specified key ID.
+     * <p>
+     * Each invocation resolves the key fresh from the underlying source,
+     * supporting dynamic key rotation without application restarts.
+     * For remote keys, the resolution is delegated to the {@link JwksConsumerKeyResolver}
+     * which handles caching and refresh internally.
+     * </p>
+     *
+     * @param keyId the key identifier to resolve
+     * @return the resolved JWK for verification
+     * @throws KeyManagementException if the key cannot be resolved
+     */
+    @Override
+    public JWK resolveVerificationKey(String keyId) throws KeyManagementException {
+        if (ValidationUtils.isNullOrEmpty(keyId)) {
+            throw new IllegalArgumentException("Key ID cannot be null or empty");
+        }
+
+        Object resolved = resolveKey(keyId);
+        if (resolved instanceof JWK jwk) {
+            logger.debug("Resolved verification key for keyId='{}': kid={}, kty={}",
+                    keyId, jwk.getKeyID(), jwk.getKeyType());
+            return jwk;
+        }
+        throw new KeyManagementException(
+                "Resolved key is not a JWK: " + (resolved != null ? resolved.getClass().getName() : "null"));
+    }
+
+    /**
      * Finds a {@link KeyDefinition} by matching the key ID field.
      * <p>
      * The key definitions map is keyed by the configuration key name (e.g., "wit-verification"),
