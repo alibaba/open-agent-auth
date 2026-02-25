@@ -22,61 +22,20 @@ spring:
 open-agent-auth:
   enabled: true
   
-  # Infrastructure configuration
+  # Infrastructure: only trust-domain is required; keys, JWKS consumers,
+  # service-discovery entries are all inferred from roles + peers.
   infrastructures:
     trust-domain: wimse://default.trust.domain
-    
-    key-management:
-      providers:
-        local:
-          type: in-memory
-      keys:
-        # Signing keys (stored locally, contain private keys)
-        par-jwt-signing:
-          key-id: par-jwt-signing-key
-          algorithm: RS256
-          provider: local
-        vc-signing:
-          key-id: vc-signing-key
-          algorithm: ES256
-          provider: local
-        jwe-encryption:
-          key-id: jwe-encryption-key-001
-          algorithm: RS256
-          jwks-consumer: authorization-server  # Public key fetched from JWKS for encryption
-        
-        # Verification keys (public keys fetched from JWKS)
-        wit-verification:
-          key-id: wit-signing-key
-          algorithm: ES256
-          jwks-consumer: agent-idp  # Public key fetched from JWKS for verification
-        id-token-verification:
-          key-id: agent-user-id-token-signing-key
-          algorithm: ES256
-          jwks-consumer: agent-user-idp  # Public key fetched from JWKS for verification
-    
-    jwks:
-      provider:
-        enabled: true
-      consumers:
-        agent-user-idp:
-          enabled: true
-          issuer: http://localhost:8083
-        agent-idp:
-          enabled: true
-          issuer: http://localhost:8082
-        authorization-server:
-          enabled: true
-          issuer: http://localhost:8085
 
-    service-discovery:
-      services:
-        agent-user-idp:
-          base-url: http://localhost:8083
-        agent-idp:
-          base-url: http://localhost:8082
-        authorization-server:
-          base-url: http://localhost:8085
+  # Peers: declare the services this agent communicates with.
+  # Each peer automatically generates JWKS consumer + service-discovery entries.
+  peers:
+    agent-user-idp:
+      issuer: http://localhost:8083
+    agent-idp:
+      issuer: http://localhost:8082
+    authorization-server:
+      issuer: http://localhost:8085
   
   # Capabilities configuration
   capabilities:
@@ -91,25 +50,18 @@ open-agent-auth:
     
     operation-authorization:
       enabled: true
-      # Prompt encryption configuration (technical implementation)
       prompt-encryption:
         enabled: true
-        encryption-key-id: jwe-encryption-key-001
-        jwks-consumer: authorization-server
-      # Prompt protection configuration (business logic)
       prompt-protection:
         enabled: true
         encryption-enabled: true
         sanitization-level: MEDIUM
-      # Agent context configuration (runtime information)
-      # These values serve as defaults and can be overridden at runtime
       agent-context:
         default-client: sample-agent-client
         default-channel: web
         default-language: zh-CN
         default-platform: sample-agent.platform
         default-device-fingerprint: sample-device
-      # Authorization behavior configuration (authorization policy)
       authorization:
         require-user-interaction: false
         expiration-seconds: 3600

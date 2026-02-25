@@ -78,7 +78,6 @@ public class JwksInfrastructureProperties {
      * enabling efficient JWT signature validation without repeatedly fetching the keys.
      * </p>
      */
-    @NestedConfigurationProperty
     private Map<String, JwksConsumerProperties> consumers = new HashMap<>();
 
     /**

@@ -39,7 +39,6 @@ All roles share the following common properties:
 |----------|------|-------------|----------|
 | `enabled` | Boolean | Whether this role is enabled | Yes |
 | `issuer` | String | Issuer URL for this role instance | Yes |
-| `instance-id` | String | Instance identifier for multi-instance deployments | No |
 
 ### Role Configuration Structure
 
@@ -48,8 +47,6 @@ roles:
   <role-name>:
     enabled: boolean              # Whether role is enabled
     issuer: string                # Issuer URL
-    instance-id: string           # Optional: Instance identifier
-
 ```
 
 ---
@@ -69,7 +66,6 @@ open-agent-auth:
     agent:
       enabled: true
       issuer: https://agent.example.com
-      instance-id: agent-001
 ```
 
 #### Required Capabilities
@@ -99,7 +95,6 @@ open-agent-auth:
     agent-idp:
       enabled: true
       issuer: https://agent-idp.example.com
-      instance-id: agent-idp-001
 ```
 
 #### Required Capabilities
@@ -127,7 +122,6 @@ open-agent-auth:
     agent-user-idp:
       enabled: true
       issuer: https://agent-user-idp.example.com
-      instance-id: agent-user-idp-001
 ```
 
 #### Required Capabilities
@@ -156,7 +150,6 @@ open-agent-auth:
     authorization-server:
       enabled: true
       issuer: https://auth-server.example.com
-      instance-id: auth-server-001
 ```
 
 #### Required Capabilities
@@ -187,7 +180,6 @@ open-agent-auth:
     resource-server:
       enabled: true
       issuer: https://resource-server.example.com
-      instance-id: resource-server-001
 ```
 
 #### Required Capabilities
@@ -215,7 +207,6 @@ open-agent-auth:
     as-user-idp:
       enabled: true
       issuer: https://as-user-idp.example.com
-      instance-id: as-user-idp-001
 ```
 
 #### Required Capabilities
@@ -231,35 +222,6 @@ open-agent-auth:
 - **User Management**: Manage user identities
 - **User Registry**: Maintain registry of authorized users
 
----
-
-## Multi-Instance Deployment
-
-### Overview
-
-Roles can be deployed as multiple instances using the `instance-id` property. This is useful for high availability and load balancing.
-
-### Configuration
-
-```yaml
-open-agent-auth:
-  roles:
-    authorization-server-primary:
-      enabled: true
-      issuer: https://auth-primary.example.com
-      instance-id: auth-server-001
-    
-    authorization-server-secondary:
-      enabled: true
-      issuer: https://auth-secondary.example.com
-      instance-id: auth-server-002
-```
-
-### Use Cases
-
-- **High Availability**: Deploy multiple instances for redundancy
-- **Load Balancing**: Distribute load across instances
-- **Geographic Distribution**: Deploy instances in different regions
 
 ---
 

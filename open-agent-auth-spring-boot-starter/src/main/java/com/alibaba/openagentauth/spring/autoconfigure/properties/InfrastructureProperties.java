@@ -18,6 +18,7 @@ package com.alibaba.openagentauth.spring.autoconfigure.properties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksInfrastructureProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyManagementProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.ServiceDiscoveryProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 /**
  * Infrastructure configuration properties for the Open Agent Auth framework.
@@ -100,6 +101,7 @@ public class InfrastructureProperties {
      * tokens from other services within the trust domain.
      * </p>
      */
+    @NestedConfigurationProperty
     private KeyManagementProperties keyManagement = new KeyManagementProperties();
 
     /**
@@ -116,6 +118,7 @@ public class InfrastructureProperties {
      * JWKS is used for verifying JWT signatures from other services in the trust domain.
      * </p>
      */
+    @NestedConfigurationProperty
     private JwksInfrastructureProperties jwks = new JwksInfrastructureProperties();
 
     /**
@@ -130,6 +133,7 @@ public class InfrastructureProperties {
      * service instances may be dynamically scaled or relocated.
      * </p>
      */
+    @NestedConfigurationProperty
     private ServiceDiscoveryProperties serviceDiscovery = new ServiceDiscoveryProperties();
 
     /**

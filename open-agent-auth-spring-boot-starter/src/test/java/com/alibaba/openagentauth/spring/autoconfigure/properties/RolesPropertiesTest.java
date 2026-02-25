@@ -114,7 +114,6 @@ class RolesPropertiesTest {
         RolesProperties.RoleProperties role = new RolesProperties.RoleProperties();
         
         assertFalse(role.isEnabled());
-        assertNull(role.getInstanceId());
         assertNull(role.getIssuer());
     }
 
@@ -124,9 +123,6 @@ class RolesPropertiesTest {
         
         role.setEnabled(true);
         assertTrue(role.isEnabled());
-        
-        role.setInstanceId("instance-001");
-        assertEquals("instance-001", role.getInstanceId());
         
         role.setIssuer("http://localhost:8080");
         assertEquals("http://localhost:8080", role.getIssuer());
@@ -144,10 +140,8 @@ class RolesPropertiesTest {
         
         RolesProperties.RoleProperties role = new RolesProperties.RoleProperties();
         role.setEnabled(true);
-        role.setInstanceId("");
         role.setIssuer("");
         properties.putRole("test", role);
-        assertEquals("", properties.getRole("test").getInstanceId());
         assertEquals("", properties.getRole("test").getIssuer());
     }
 

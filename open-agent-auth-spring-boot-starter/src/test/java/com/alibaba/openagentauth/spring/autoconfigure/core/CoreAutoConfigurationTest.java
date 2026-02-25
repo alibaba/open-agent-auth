@@ -25,13 +25,14 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesPro
 import com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksInfrastructureProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyManagementProperties;
+import com.alibaba.openagentauth.spring.web.controller.JwksController;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -49,7 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("CoreAutoConfiguration Tests")
 class CoreAutoConfigurationTest {
 
-    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+    private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(CoreAutoConfiguration.class))
         .withPropertyValues("open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain");
 
@@ -348,6 +349,60 @@ class CoreAutoConfigurationTest {
                         assertThat(services.get("agent-idp").getBaseUrl()).isEqualTo("http://localhost:8082");
                     });
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("JwksController Bean Tests")
+    class JwksControllerBeanTests {
+
+        private final WebApplicationContextRunner webContextRunner = new WebApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(CoreAutoConfiguration.class))
+            .withPropertyValues("open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain");
+
+        @Test
+        @DisplayName("jwksController when provider enabled should create bean")
+        void jwksController_whenProviderEnabled_shouldCreateBean() {
+            webContextRunner
+                .withPropertyValues("open-agent-auth.infrastructures.jwks.provider.enabled=true")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(JwksController.class);
+                    JwksController controller = context.getBean(JwksController.class);
+                    assertThat(controller).isNotNull();
+                });
+        }
+
+        @Test
+        @DisplayName("jwksController when provider disabled should not create a usable bean")
+        void jwksController_whenProviderDisabled_shouldNotCreateBean() {
+            webContextRunner
+                .withPropertyValues("open-agent-auth.infrastructures.jwks.provider.enabled=false")
+                .run(context -> {
+                    // The @Bean method returns null when JWKS provider is disabled.
+                    // This is intentional because @Conditional annotations cannot see
+                    // values inferred by afterPropertiesSet(), so the bean method
+                    // performs a runtime check and returns null instead.
+                    // getBeansOfType() excludes null beans, so the map should be empty.
+                    assertThat(context.getBeansOfType(JwksController.class)).isEmpty();
+                });
+        }
+
+        @Test
+        @DisplayName("jwksController should be created when role inference enables provider")
+        void jwksController_shouldBeCreatedWhenRoleInferenceEnablesProvider() {
+            webContextRunner
+                .withPropertyValues(
+                    "open-agent-auth.roles.agent-idp.enabled=true",
+                    "open-agent-auth.roles.agent-idp.issuer=http://localhost:8080"
+                )
+                .run(context -> {
+                    // The agent-idp role profile requires JWKS provider, so it should be auto-enabled
+                    OpenAgentAuthProperties properties = context.getBean(OpenAgentAuthProperties.class);
+                    assertThat(properties.getInfrastructures().getJwks().getProvider().isEnabled()).isTrue();
+                    
+                    // JwksController should be created
+                    assertThat(context).hasSingleBean(JwksController.class);
+                });
         }
     }
 

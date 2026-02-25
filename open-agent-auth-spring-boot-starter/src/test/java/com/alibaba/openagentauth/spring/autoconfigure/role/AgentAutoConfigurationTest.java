@@ -1275,4 +1275,68 @@ class AgentAutoConfigurationTest {
             super(agent, vcSigner, policyBuilder, promptProtectionChain, config);
         }
     }
+
+    @Nested
+    @DisplayName("JweEncryptionKeyId Strategy Tests")
+    class JweEncryptionKeyIdStrategyTests {
+
+        @Test
+        @DisplayName("jweEncryptionKeyId should use key definition name (Strategy 1)")
+        void jweEncryptionKeyId_shouldUseKeyDefinitionName() {
+            contextRunner
+                .withUserConfiguration(WitKeyTestConfiguration.class)
+                .withPropertyValues(
+                    "open-agent-auth.role=agent",
+                    "open-agent-auth.issuer=http://localhost:8080",
+                    "open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain",
+                    "open-agent-auth.capabilities.operation-authorization.enabled=true",
+                    "open-agent-auth.capabilities.oauth2-client.client-id=test-client-id",
+                    "open-agent-auth.capabilities.oauth2-client.client-secret=test-client-secret",
+                    "open-agent-auth.capabilities.oauth2-client.redirect-uri=http://localhost:8080/callback",
+                    "open-agent-auth.capabilities.operation-authorization.agent-context.default-channel=test-channel",
+                    "open-agent-auth.capabilities.operation-authorization.agent-context.default-language=en-US",
+                    "open-agent-auth.capabilities.operation-authorization.agent-context.default-platform=test-platform",
+                    "open-agent-auth.capabilities.operation-authorization.agent-context.default-client=test-agent-client",
+                    "open-agent-auth.capabilities.operation-authorization.prompt-encryption.enabled=true",
+                    "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-algorithm=RSA-OAEP-256",
+                    "open-agent-auth.capabilities.operation-authorization.prompt-encryption.content-encryption-algorithm=A256GCM",
+                    "open-agent-auth.infrastructures.key-management.keys.jwe-encryption.key-id=jwe-encryption-key-id",
+                    "open-agent-auth.infrastructures.key-management.keys.jwe-encryption.algorithm=RS256"
+                )
+                .run(context -> {
+                    assertThat(context).hasSingleBean(String.class);
+                    assertThat(context).hasNotFailed();
+                });
+        }
+
+        @Test
+        @DisplayName("jweEncryptionKeyId should fallback to explicit encryption-key-id (Strategy 2)")
+        void jweEncryptionKeyId_shouldFallbackToExplicitKeyId() {
+            contextRunner
+                .withUserConfiguration(WitKeyTestConfiguration.class)
+                .withPropertyValues(
+                    "open-agent-auth.role=agent",
+                    "open-agent-auth.issuer=http://localhost:8080",
+                    "open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain",
+                    "open-agent-auth.capabilities.operation-authorization.enabled=true",
+                    "open-agent-auth.capabilities.oauth2-client.client-id=test-client-id",
+                    "open-agent-auth.capabilities.oauth2-client.client-secret=test-client-secret",
+                    "open-agent-auth.capabilities.oauth2-client.redirect-uri=http://localhost:8080/callback",
+                    "open-agent-auth.capabilities.operation-authorization.agent-context.default-channel=test-channel",
+                    "open-agent-auth.capabilities.operation-authorization.agent-context.default-language=en-US",
+                    "open-agent-auth.capabilities.operation-authorization.agent-context.default-platform=test-platform",
+                    "open-agent-auth.capabilities.operation-authorization.agent-context.default-client=test-agent-client",
+                    "open-agent-auth.capabilities.operation-authorization.prompt-encryption.enabled=true",
+                    "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id=explicit-encryption-key-id",
+                    "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-algorithm=RSA-OAEP-256",
+                    "open-agent-auth.capabilities.operation-authorization.prompt-encryption.content-encryption-algorithm=A256GCM",
+                    "open-agent-auth.infrastructures.key-management.keys.jwe.key-id=explicit-encryption-key-id",
+                    "open-agent-auth.infrastructures.key-management.keys.jwe.algorithm=RS256"
+                )
+                .run(context -> {
+                    assertThat(context).hasSingleBean(String.class);
+                    assertThat(context).hasNotFailed();
+                });
+        }
+    }
 }

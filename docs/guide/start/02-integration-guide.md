@@ -949,7 +949,6 @@ open-agent-auth:
   roles:
     resource-server:
       enabled: true
-      instance-id: resource-server-1
       issuer: http://localhost:8086  # REQUIRED: Your Resource Server's URL
       capabilities:
         - resource-server
@@ -1138,7 +1137,6 @@ open-agent-auth:
   roles:
     as-user-idp:
       enabled: true
-      instance-id: as-user-idp-1
       issuer: http://localhost:8084  # REQUIRED: Your AS User IDP's URL
       capabilities:
         - oauth2-server

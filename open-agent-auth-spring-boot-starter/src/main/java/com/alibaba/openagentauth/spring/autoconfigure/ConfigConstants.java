@@ -131,6 +131,9 @@ public final class ConfigConstants {
     /** Standard OIDC JWKS endpoint path. */
     public static final String JWKS_WELL_KNOWN_PATH = "/.well-known/jwks.json";
 
+    /** OAA (Open Agent Auth) configuration metadata endpoint path. */
+    public static final String OAA_CONFIGURATION_PATH = "/.well-known/oaa-configuration";
+
     // ==================== Consent Page Templates ====================
 
     /** Thymeleaf template path for OIDC consent page. */
