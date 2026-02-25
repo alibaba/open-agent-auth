@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/alibaba/open-agent-auth/discussions
+    about: Ask questions and discuss ideas
+  - name: Documentation
+    url: https://github.com/alibaba/open-agent-auth/tree/main/docs
+    about: Read the documentation
