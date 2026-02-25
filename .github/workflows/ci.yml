@@ -7,7 +7,9 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
+  checks: write
+  pull-requests: write
 
 jobs:
   build:
@@ -29,8 +31,90 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven
-        run: mvn clean verify -B -ntp
+      - name: Build & Test with JaCoCo
+        run: mvn clean verify -Paggregate-report -B -ntp
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results (JDK ${{ matrix.java }})
+          path: '**/target/surefire-reports/TEST-*.xml'
+          reporter: java-junit
+
+      - name: Generate JaCoCo Coverage Report
+        uses: madrapps/jacoco-report@v1.7.1
+        if: always()
+        with:
+          paths: '**/target/site/jacoco/jacoco.xml,**/target/site/jacoco-aggregate/jacoco.xml'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: Code Coverage Report
+          update-comment: true
+          min-coverage-overall: 50
+          min-coverage-changed-files: 60
+
+      - name: Extract coverage percentage
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: coverage
+        run: |
+          # Find the aggregate report first, fall back to individual reports
+          REPORT=$(find . -path "*/jacoco-aggregate/jacoco.xml" -type f | head -1)
+          if [ -z "$REPORT" ]; then
+            REPORT=$(find . -path "*/site/jacoco/jacoco.xml" -type f | head -1)
+          fi
+
+          if [ -n "$REPORT" ]; then
+            # Parse JaCoCo XML to extract line coverage
+            MISSED=$(grep -o 'type="LINE"[^/]*' "$REPORT" | tail -1 | grep -o 'missed="[0-9]*"' | grep -o '[0-9]*')
+            COVERED=$(grep -o 'type="LINE"[^/]*' "$REPORT" | tail -1 | grep -o 'covered="[0-9]*"' | grep -o '[0-9]*')
+
+            if [ -n "$MISSED" ] && [ -n "$COVERED" ]; then
+              TOTAL=$((MISSED + COVERED))
+              PERCENTAGE=$((COVERED * 100 / TOTAL))
+              echo "coverage=$PERCENTAGE" >> $GITHUB_OUTPUT
+              echo "Coverage: $PERCENTAGE% ($COVERED/$TOTAL lines)"
+            else
+              echo "coverage=0" >> $GITHUB_OUTPUT
+              echo "Could not parse coverage from $REPORT"
+            fi
+          else
+            echo "coverage=0" >> $GITHUB_OUTPUT
+            echo "No JaCoCo report found"
+          fi
+
+      - name: Update coverage badge in README
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.coverage.outputs.coverage != '0'
+        run: |
+          COVERAGE=${{ steps.coverage.outputs.coverage }}
+
+          # Determine badge color based on coverage
+          if [ "$COVERAGE" -ge 80 ]; then
+            COLOR="brightgreen"
+          elif [ "$COVERAGE" -ge 60 ]; then
+            COLOR="green"
+          elif [ "$COVERAGE" -ge 40 ]; then
+            COLOR="yellow"
+          else
+            COLOR="red"
+          fi
+
+          # Update both README.md and README.zh-CN.md
+          for README_FILE in README.md README.zh-CN.md; do
+            if [ -f "$README_FILE" ]; then
+              sed -i "s|!\[Code Coverage\](https://img.shields.io/badge/coverage-[^)]*)|![Code Coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR})|g" "$README_FILE"
+            fi
+          done
+
+          # Check if there are changes to commit
+          if git diff --quiet; then
+            echo "No coverage badge changes to commit"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add README.md README.zh-CN.md
+            git commit -m "chore: update coverage badge to ${COVERAGE}% [skip ci]"
+            git push
+          fi
 
       - name: Upload Test Reports
         if: failure()
@@ -38,4 +122,12 @@ jobs:
         with:
           name: test-reports-jdk${{ matrix.java }}
           path: '**/target/surefire-reports/'
+          retention-days: 7
+
+      - name: Upload JaCoCo Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-reports-jdk${{ matrix.java }}
+          path: '**/target/site/jacoco*/'
           retention-days: 7
