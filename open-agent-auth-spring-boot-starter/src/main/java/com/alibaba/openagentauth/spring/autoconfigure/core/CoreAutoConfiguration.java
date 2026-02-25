@@ -34,6 +34,7 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthPr
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksConsumerProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksInfrastructureProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyDefinitionProperties;
+import com.alibaba.openagentauth.spring.web.controller.JwksController;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
@@ -269,6 +271,39 @@ public class CoreAutoConfiguration {
         }
 
         return endpoints;
+    }
+
+    /**
+     * Creates the JwksController bean if the JWKS provider is enabled.
+     * <p>
+     * The JWKS provider enabled flag may be set either explicitly in YAML or
+     * automatically by the role-aware inference logic (e.g., for roles like
+     * {@code authorization-server}, {@code agent-idp}, etc.). Since the inference
+     * runs during {@code @ConfigurationProperties} binding (via
+     * {@link OpenAgentAuthProperties#afterPropertiesSet()}), the Java object property
+     * is already up-to-date when this {@code @Bean} method is evaluated.
+     * </p>
+     * <p>
+     * This replaces the previous {@code @ConditionalOnExpression} approach on
+     * {@link JwksController}, which checked the Spring Environment property and
+     * could not see values set by the inference logic.
+     * </p>
+     *
+     * @param properties the configuration properties
+     * @param keyManager the key manager for retrieving active keys
+     * @return the JwksController bean, or {@code null} if JWKS provider is disabled
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public JwksController jwksController(OpenAgentAuthProperties properties, KeyManager keyManager) {
+        boolean jwksProviderEnabled = properties.getInfrastructures().getJwks().getProvider().isEnabled();
+        if (!jwksProviderEnabled) {
+            logger.info("JWKS provider is disabled, skipping JwksController registration");
+            return null;
+        }
+        logger.info("Creating JwksController bean (JWKS provider enabled)");
+        return new JwksController(properties, keyManager);
     }
 
     /**

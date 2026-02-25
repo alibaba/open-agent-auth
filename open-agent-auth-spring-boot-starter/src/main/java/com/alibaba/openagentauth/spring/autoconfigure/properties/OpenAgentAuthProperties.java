@@ -15,6 +15,10 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties;
 
+import com.alibaba.openagentauth.spring.autoconfigure.discovery.RoleAwareEnvironmentPostProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
@@ -48,7 +52,6 @@ import java.util.Map;
  *   roles:
  *     authorization-server:
  *       enabled: true
- *       instance-id: auth-server-1
  *       issuer: http://localhost:8085
  *   security:
  *     csrf:
@@ -69,7 +72,12 @@ import java.util.Map;
  * @since 1.0
  */
 @ConfigurationProperties(prefix = "open-agent-auth")
-public class OpenAgentAuthProperties {
+public class OpenAgentAuthProperties implements InitializingBean {
+
+    /**
+     * Logger for the Open Agent Auth properties.
+     */
+    private static final Logger logger = LoggerFactory.getLogger(OpenAgentAuthProperties.class);
 
     /**
      * Whether Open Agent Auth is enabled.
@@ -105,6 +113,31 @@ public class OpenAgentAuthProperties {
     private Map<String, RolesProperties.RoleProperties> roles = new HashMap<>();
 
     /**
+     * Peer service configurations.
+     * <p>
+     * Peers represent other services in the trust domain that this service
+     * needs to communicate with. Declaring a peer automatically configures:
+     * <ul>
+     *   <li>JWKS consumer for fetching the peer's public keys</li>
+     *   <li>Service discovery entry for the peer's base URL</li>
+     * </ul>
+     * This eliminates the need to separately configure {@code jwks.consumers}
+     * and {@code service-discovery.services} for the same service.
+     * </p>
+     * <p>
+     * <b>Configuration Example:</b></p>
+     * <pre>
+     * open-agent-auth:
+     *   peers:
+     *     agent-idp:
+     *       issuer: http://localhost:8082
+     *     authorization-server:
+     *       issuer: http://localhost:8085
+     * </pre>
+     */
+    private Map<String, PeerProperties> peers = new HashMap<>();
+
+    /**
      * Security configuration.
      */
     private SecurityProperties security = new SecurityProperties();
@@ -113,6 +146,29 @@ public class OpenAgentAuthProperties {
      * Monitoring configuration.
      */
     private MonitoringProperties monitoring = new MonitoringProperties();
+
+    /**
+     * Called by Spring after all properties have been bound.
+     * <p>
+     * Triggers role-aware configuration inference to fill in missing infrastructure
+     * configuration (keys, JWKS consumers, service-discovery entries) based on the
+     * enabled roles and declared peers. This ensures all inferred defaults are
+     * available before any beans that depend on the configuration are created.
+     * </p>
+     * <p>
+     * Since the YAML configuration has been refactored to use {@code peers} instead of
+     * directly configuring {@code infrastructures.key-management.keys} etc., the nested
+     * maps under {@code infrastructures} are expected to be empty at this point. The
+     * inference logic populates them from {@code peers} and {@code roles}.
+     * </p>
+     */
+    @Override
+    public void afterPropertiesSet() {
+        if (enabled) {
+            logger.info("OpenAgentAuthProperties initialized, triggering role-aware configuration inference");
+            new RoleAwareEnvironmentPostProcessor(this).processConfiguration();
+        }
+    }
 
     // ========== Getters and Setters ==========
 
@@ -211,6 +267,27 @@ public class OpenAgentAuthProperties {
         this.roles.clear();
         if (roles != null) {
             this.roles.putAll(roles);
+        }
+    }
+
+    /**
+     * Gets the peer service configurations.
+     *
+     * @return the map of peer name to peer properties
+     */
+    public Map<String, PeerProperties> getPeers() {
+        return peers;
+    }
+
+    /**
+     * Sets the peer service configurations.
+     *
+     * @param peers the map of peer name to peer properties to set
+     */
+    public void setPeers(Map<String, PeerProperties> peers) {
+        this.peers.clear();
+        if (peers != null) {
+            this.peers.putAll(peers);
         }
     }
 

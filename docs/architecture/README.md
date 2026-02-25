@@ -164,5 +164,155 @@ open-agent-auth:
 
 ---
 
+## Peers Configuration (Convention over Configuration)
+
+### Overview
+
+The **peers** configuration provides a simplified way to declare peer services in the trust domain. Instead of separately configuring JWKS consumers, service discovery entries, and key definitions, a single `peers` declaration automatically expands into all required infrastructure.
+
+### How It Works
+
+When you declare a peer:
+
+```yaml
+open-agent-auth:
+  peers:
+    agent-idp:
+      issuer: http://localhost:8082
+```
+
+The `RoleAwareConfigurationPostProcessor` automatically:
+
+1. **Creates a JWKS consumer** for the peer (equivalent to `infrastructures.jwks.consumers.agent-idp`)
+2. **Creates a service discovery entry** for the peer (equivalent to `infrastructures.service-discovery.services.agent-idp`)
+3. **Infers key definitions** based on the enabled role's profile (e.g., an `authorization-server` role automatically gets `aoat-signing`, `jwe-decryption`, and `wit-verification` keys)
+4. **Ensures a default key provider** exists (in-memory) if none is configured
+5. **Enables the JWKS provider** if the role profile requires it
+
+### Before vs After
+
+**Before (explicit configuration — 50+ lines):**
+
+```yaml
+open-agent-auth:
+  infrastructures:
+    trust-domain: wimse://default.trust.domain
+    key-management:
+      providers:
+        local:
+          type: in-memory
+      keys:
+        wit-verification:
+          key-id: wit-signing-key
+          algorithm: ES256
+          jwks-consumer: agent-idp
+        aoat-verification:
+          key-id: aoat-signing-key
+          algorithm: RS256
+          jwks-consumer: authorization-server
+    jwks:
+      provider:
+        enabled: true
+      consumers:
+        agent-idp:
+          enabled: true
+          issuer: http://localhost:8082
+        authorization-server:
+          enabled: true
+          issuer: http://localhost:8085
+    service-discovery:
+      services:
+        agent-idp:
+          base-url: http://localhost:8082
+        authorization-server:
+          base-url: http://localhost:8085
+  roles:
+    resource-server:
+      enabled: true
+      issuer: http://localhost:8086
+```
+
+**After (simplified with peers — 12 lines):**
+
+```yaml
+open-agent-auth:
+  roles:
+    resource-server:
+      enabled: true
+      issuer: http://localhost:8086
+  peers:
+    agent-idp:
+      issuer: http://localhost:8082
+    authorization-server:
+      issuer: http://localhost:8085
+```
+
+### Explicit Configuration Takes Precedence
+
+If you manually configure a key, JWKS consumer, or service discovery entry, the post-processor will **not** overwrite it. This ensures backward compatibility and allows fine-grained control when needed.
+
+### Role Profiles
+
+Each role has a built-in profile (`RoleProfileRegistry`) that defines its default requirements:
+
+| Role | Signing Keys | Verification Keys | Encryption Keys | Required Peers |
+|------|-------------|-------------------|-----------------|----------------|
+| `agent-idp` | wit-signing | id-token-verification | — | agent-user-idp |
+| `agent` | par-jwt-signing, vc-signing | wit-verification, id-token-verification | jwe-encryption | agent-idp, agent-user-idp, authorization-server |
+| `authorization-server` | aoat-signing | wit-verification | — (decryption: jwe-decryption) | as-user-idp, agent |
+| `resource-server` | — | wit-verification, aoat-verification | — | agent-idp, authorization-server |
+| `agent-user-idp` | id-token-signing | — | — | (none) |
+| `as-user-idp` | id-token-signing | — | — | (none) |
+
+---
+
+## OAA Configuration Discovery
+
+### Overview
+
+The `/.well-known/oaa-configuration` endpoint exposes metadata about a service instance, enabling automatic service discovery and capability negotiation between peers. This design is inspired by OIDC Discovery (`/.well-known/openid-configuration`) but tailored for multi-role agent authorization.
+
+### Endpoint
+
+```
+GET /.well-known/oaa-configuration
+```
+
+### Response Format
+
+```json
+{
+  "issuer": "http://localhost:8082",
+  "roles": ["agent-idp"],
+  "trust_domain": "wimse://default.trust.domain",
+  "protocol_version": "1.0",
+  "jwks_uri": "http://localhost:8082/.well-known/jwks.json",
+  "signing_algorithms_supported": ["ES256"],
+  "capabilities": {
+    "workload_identity": { "enabled": true }
+  },
+  "endpoints": {
+    "jwks": "http://localhost:8082/.well-known/jwks.json",
+    "authorization": "http://localhost:8082/oauth/authorize"
+  },
+  "peers_required": ["agent-user-idp"]
+}
+```
+
+### Protocol Versioning
+
+The `protocol_version` field uses semantic versioning (e.g., `"1.0"`) to ensure forward compatibility. Clients should check this field before processing the metadata.
+
+### Discovery Client
+
+The `PeerConfigurationDiscoveryClient` provides a robust mechanism for fetching peer metadata:
+
+- **Retry with exponential backoff**: Up to 3 retries with 500ms → 1s → 2s delays
+- **Fail-fast mode**: When enabled, throws `IllegalStateException` on discovery failure to prevent the application from starting with incomplete configuration
+- **Caching**: Successful discovery results are cached to avoid redundant requests
+- **Graceful degradation**: Returns `null` for 404 responses (peer doesn't expose OAA configuration), allowing fallback to explicit configuration
+
+---
+
 **Maintainer**: Open Agent Auth Team  
 **Last Updated**: 2026-02-25

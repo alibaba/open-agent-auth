@@ -8,67 +8,26 @@ spring:
 open-agent-auth:
   enabled: true
 
-  # Infrastructure configuration (shared across all roles)
+  # Infrastructure: only trust-domain is required; keys, JWKS consumers,
+  # service-discovery entries are all inferred from roles + peers.
   infrastructures:
     trust-domain: wimse://default.trust.domain
-    
-    # Key management
-    key-management:
-      providers:
-        local:
-          type: in-memory
-      keys:
-        # Signing keys (stored locally, contain private keys)
-        aoat-signing:
-          key-id: aoat-signing-key
-          algorithm: RS256
-          provider: local
-        jwe-decryption:
-          key-id: jwe-encryption-key-001
-          algorithm: RS256
-          provider: local
-        
-        # Verification keys (metadata only, actual key fetched from JWKS)
-        wit-verification:
-          key-id: wit-signing-key
-          algorithm: ES256
-          jwks-consumer: agent-idp  # Public key fetched from JWKS for verification
-    
-    # JWKS configuration
-    jwks:
-      provider:
-        enabled: true
-      consumers:
-        agent-idp:
-          enabled: true
-          issuer: http://localhost:8082
-        agent-user-idp:
-          enabled: true
-          issuer: http://localhost:8083
-        as-user-idp:
-          enabled: true
-          issuer: http://localhost:8084
-        agent:
-          enabled: true
-          issuer: http://localhost:8081
 
-    # Service discovery
-    service-discovery:
-      enabled: true
-      type: static
-      services:
-        agent-idp:
-          base-url: http://localhost:8082
-        agent-user-idp:
-          base-url: http://localhost:8083
-        as-user-idp:
-          base-url: http://localhost:8084
-        agent:
-          base-url: http://localhost:8081
-        resource-server:
-          base-url: http://localhost:8086
+  # Peers: declare the services this AS communicates with.
+  # Each peer automatically generates JWKS consumer + service-discovery entries.
+  peers:
+    agent-idp:
+      issuer: http://localhost:8082
+    agent-user-idp:
+      issuer: http://localhost:8083
+    as-user-idp:
+      issuer: http://localhost:8084
+    agent:
+      issuer: http://localhost:8081
+    resource-server:
+      issuer: http://localhost:8086
   
-  # Capabilities configuration (composable functional features)
+  # Capabilities configuration
   capabilities:
     oauth2-server:
       enabled: true
@@ -107,9 +66,6 @@ open-agent-auth:
       enabled: true
       prompt-encryption:
         enabled: true
-        encryption-key-id: jwe-encryption-key-001
-        encryption-algorithm: RSA-OAEP-256
-        content-encryption-algorithm: A256GCM
 
     audit:
       enabled: true
@@ -121,7 +77,7 @@ open-agent-auth:
       enabled: true
       instance-id: authorization-server-1
       issuer: http://localhost:8085
-
+  
 logging:
   level:
     com.alibaba.openagentauth: DEBUG

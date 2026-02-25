@@ -16,7 +16,6 @@
 package com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures;
 
 import com.alibaba.openagentauth.spring.autoconfigure.properties.DefaultEndpoints;
-import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -85,7 +84,6 @@ public class ServiceDiscoveryProperties {
      * Default value: Empty map (no services defined)
      * </p>
      */
-    @NestedConfigurationProperty
     private Map<String, ServiceDefinitionProperties> services = new HashMap<>();
 
     /**

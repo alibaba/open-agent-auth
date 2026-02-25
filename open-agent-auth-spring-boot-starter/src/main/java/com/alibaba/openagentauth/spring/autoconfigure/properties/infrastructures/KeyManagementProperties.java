@@ -15,8 +15,6 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures;
 
-import org.springframework.boot.context.properties.NestedConfigurationProperty;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -74,7 +72,6 @@ public class KeyManagementProperties {
      * Default value: empty map
      * </p>
      */
-    @NestedConfigurationProperty
     private Map<String, KeyProviderProperties> providers = new HashMap<>();
 
     /**
@@ -87,7 +84,6 @@ public class KeyManagementProperties {
      * Default value: empty map
      * </p>
      */
-    @NestedConfigurationProperty
     private Map<String, KeyDefinitionProperties> keys = new HashMap<>();
 
     /**

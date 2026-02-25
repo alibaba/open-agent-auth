@@ -12,24 +12,12 @@ spring:
 open-agent-auth:
   enabled: true
 
-  # Infrastructure configuration
-  infrastructures:
-    trust-domain: wimse://default.trust.domain
-    
-    key-management:
-      providers:
-        local:
-          type: in-memory
-      keys:
-        id-token-signing:
-          key-id: as-user-id-token-signing-key
-          algorithm: ES256
-          provider: local
-    
-    jwks:
-      provider:
-        enabled: true
-  
+  # Role configuration
+  roles:
+    as-user-idp:
+      enabled: true
+      issuer: http://localhost:8084
+
   # Capabilities configuration
   capabilities:
     oauth2-server:
@@ -86,14 +74,6 @@ open-agent-auth:
             subject: user_002
             email: user@example.com
             name: Regular User
-  
-  # Roles configuration
-  roles:
-    as-user-idp:
-      enabled: true
-      instance-id: as-user-idp-1
-      issuer: http://localhost:8084
-
 logging:
   level:
     com.alibaba.openagentauth: DEBUG

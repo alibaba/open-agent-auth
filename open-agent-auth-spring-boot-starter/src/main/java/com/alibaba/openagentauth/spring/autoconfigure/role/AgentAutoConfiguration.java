@@ -46,8 +46,6 @@ import com.alibaba.openagentauth.core.util.ValidationUtils;
 
 import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
 
-import com.alibaba.openagentauth.core.crypto.key.KeyManager;
-
 import com.alibaba.openagentauth.framework.actor.Agent;
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.executor.config.AgentAapExecutorConfig;
@@ -58,6 +56,7 @@ import com.alibaba.openagentauth.framework.orchestration.DefaultAgent;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
 import com.alibaba.openagentauth.framework.web.interceptor.AgentAuthenticationInterceptor;
 import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
+import com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants;
 import com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.ServiceProperties;
@@ -176,12 +175,11 @@ import java.util.Map;
 public class AgentAutoConfiguration {
 
     /**
-     * The logger for the AgentAutoConfiguration.
-     */
-    private static final Logger logger = LoggerFactory.getLogger(AgentAutoConfiguration.class);
-
-    /**
-     * Infrastructure Configuration - manages service discovery and session-related beans.
+     * Configuration for infrastructure-related beans.
+     * <p>
+     * This configuration provides beans for service discovery, session management,
+     * and binding instance storage.
+     * </p>
      */
     @Configuration(proxyBeanMethods = false)
     static class InfrastructureConfiguration {
@@ -470,20 +468,39 @@ public class AgentAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         public String jweEncryptionKeyId(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
-            String keyId = openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption().getEncryptionKeyId();
 
-            // Validate encryption key ID
-            if (keyId == null || keyId.isBlank()) {
-                throw new IllegalStateException("Encryption key ID must be configured via " +
-                        "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id");
+            Map<String, KeyDefinitionProperties> keyDefinitions = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys();
+
+            // Strategy 1: Look up by well-known key definition name "jwe-encryption" (peers-based inference)
+            KeyDefinitionProperties encryptionKeyDef = keyDefinitions.get(KEY_JWE_ENCRYPTION);
+            if (encryptionKeyDef != null && encryptionKeyDef.getKeyId() != null) {
+                String keyId = encryptionKeyDef.getKeyId();
+                logger.info("Found JWE encryption key definition '{}' with keyId: {}", KEY_JWE_ENCRYPTION, keyId);
+
+                // Remote keys (with jwks-consumer) are resolved at encryption time, no need to pre-generate
+                if (encryptionKeyDef.getJwksConsumer() == null || encryptionKeyDef.getJwksConsumer().isBlank()) {
+                    try {
+                        KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(encryptionKeyDef.getAlgorithm());
+                        keyManager.getOrGenerateKey(keyId, keyAlgorithm);
+                    } catch (KeyManagementException e) {
+                        throw new IllegalStateException("Failed to register JWE encryption key with KeyManager", e);
+                    }
+                }
+                return keyId;
             }
 
-            // Get key algorithm from key definition, not from encryption-algorithm
-            // encryption-algorithm is for JWE (e.g., RSA-OAEP-256), but key generation uses JWS algorithm (e.g., RS256)
-            // Need to find the key definition where key-id matches the encryptionKeyId
+            // Strategy 2: Fall back to explicit encryption-key-id from capabilities config
+            String keyId = openAgentAuthProperties.getCapabilities()
+                    .getOperationAuthorization().getPromptEncryption().getEncryptionKeyId();
+            if (keyId == null || keyId.isBlank()) {
+                throw new IllegalStateException("Encryption key ID must be configured via " +
+                        "open-agent-auth.capabilities.operation-authorization.prompt-encryption.encryption-key-id " +
+                        "or inferred from peers configuration");
+            }
+
+            // Find key algorithm from key definitions by matching keyId field
             KeyAlgorithm keyAlgorithm = null;
-            for (Map.Entry<String, KeyDefinitionProperties> entry :
-                    openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().entrySet()) {
+            for (Map.Entry<String, KeyDefinitionProperties> entry : keyDefinitions.entrySet()) {
                 if (keyId.equals(entry.getValue().getKeyId())) {
                     keyAlgorithm = KeyAlgorithm.fromValue(entry.getValue().getAlgorithm());
                     break;
@@ -497,7 +514,6 @@ public class AgentAutoConfiguration {
             try {
                 keyManager.getOrGenerateKey(keyId, keyAlgorithm);
                 return keyId;
-
             } catch (KeyManagementException e) {
                 throw new IllegalStateException("Failed to register JWE encryption key with KeyManager", e);
             }

@@ -25,8 +25,6 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,6 +52,13 @@ import java.util.concurrent.TimeUnit;
  *   <li>Supports multiple signing keys (RSA, ECDSA)</li>
  *   <li>Automatic key rotation support via KeyManager</li>
  * </ul>
+ * <p>
+ * <b>Note:</b> This controller is registered as a {@code @Bean} by
+ * {@link com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration CoreAutoConfiguration}
+ * rather than via component scanning, so that the JWKS provider enabled flag set by
+ * the role-aware inference logic (which runs after {@code @ConfigurationProperties} binding)
+ * is correctly evaluated at bean-creation time.
+ * </p>
  *
  * @see <a href="https://www.rfc-editor.org/rfc/rfc7517">RFC 7517 - JSON Web Key (JWK)</a>
  * @see <a href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata">OpenID Connect Discovery</a>
@@ -62,8 +67,6 @@ import java.util.concurrent.TimeUnit;
  * @since 1.0
  */
 @RestController
-@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnExpression("'${open-agent-auth.infrastructures.jwks.provider.enabled:false}' == 'true'")
 public class JwksController {
 
     /**

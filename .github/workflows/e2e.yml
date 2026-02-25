@@ -1,0 +1,70 @@
+name: E2E Integration Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-tests:
+    name: E2E Tests (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '17' ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+          chromium-browser --version
+
+      - name: Build project
+        run: mvn clean install -DskipTests -B -ntp
+
+      - name: Run E2E tests
+        run: |
+          chmod +x open-agent-auth-integration-tests/scripts/run-e2e-tests.sh
+          chmod +x open-agent-auth-samples/scripts/*.sh
+          cd open-agent-auth-integration-tests
+          ./scripts/run-e2e-tests.sh --skip-build
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-reports-jdk${{ matrix.java }}
+          path: open-agent-auth-integration-tests/target/surefire-reports/
+          retention-days: 7
+
+      - name: Upload service logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-service-logs-jdk${{ matrix.java }}
+          path: open-agent-auth-samples/logs/
+          retention-days: 7
+
+      - name: Stop services
+        if: always()
+        run: |
+          cd open-agent-auth-samples
+          ./scripts/sample-stop.sh --force || true
