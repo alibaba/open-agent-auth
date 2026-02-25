@@ -478,12 +478,12 @@ public class AuthorizationServerAutoConfiguration {
                     jwksProvider = new JwksProvider() {
                         @Override
                         public JWKSource<SecurityContext> getJwkSource() {
-                            return (jwkSelector, context) -> new java.util.ArrayList<>();
+                            return (jwkSelector, context) -> new ArrayList<>();
                         }
 
                         @Override
                         public JWKSet getJwkSet() {
-                            return new com.nimbusds.jose.jwk.JWKSet();
+                            return new JWKSet();
                         }
 
                         @Override
@@ -538,22 +538,14 @@ public class AuthorizationServerAutoConfiguration {
         ) {
             logger.info("Creating AuthorizationServer (Framework layer) bean");
             String verificationKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
-            String algorithm = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getAlgorithm();
-            
-            try {
-                keyManager.generateKeyPair(KeyAlgorithm.valueOf(algorithm), verificationKeyId);
-            } catch (Exception e) {
-            }
-            
-            PublicKey publicKey = keyManager.getVerificationKey(verificationKeyId);
-            JWK witVerificationKey = AuthorizationServerAutoConfiguration.convertToJWK(publicKey, verificationKeyId);
             
             return new DefaultAuthorizationServer(
                     parServer,
                     dcrClientStore,
                     userAuthenticationTokenClient,
                     oauth2TokenServer,
-                    witVerificationKey,
+                    keyManager,
+                    verificationKeyId,
                     openAgentAuthProperties.getInfrastructures().getTrustDomain()
             );
         }

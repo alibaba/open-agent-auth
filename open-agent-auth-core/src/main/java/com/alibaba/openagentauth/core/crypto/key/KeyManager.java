@@ -19,6 +19,7 @@ import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyInfo;
 import com.alibaba.openagentauth.core.crypto.key.store.KeyStore;
 import com.alibaba.openagentauth.core.exception.crypto.KeyManagementException;
+import com.nimbusds.jose.jwk.JWK;
 
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -254,5 +255,32 @@ public interface KeyManager {
      */
     default Object resolveKey(String keyId) throws KeyManagementException {
         return getSigningJWK(keyId);
+    }
+
+    /**
+     * Resolves a verification JWK for the specified key ID.
+     * <p>
+     * This method provides a unified way to obtain a verification key that supports
+     * dynamic key rotation. Each invocation resolves the key fresh from the underlying
+     * source (local key store or remote JWKS endpoint), ensuring that key rotations
+     * are picked up without requiring application restarts.
+     * </p>
+     * <p>
+     * This is the preferred method for obtaining verification keys in Validators,
+     * as it decouples callers from NimbusDS-specific types like {@code JWKSource}.
+     * </p>
+     *
+     * @param keyId the key identifier to resolve
+     * @return the resolved JWK for verification
+     * @throws KeyManagementException if the key cannot be resolved
+     * @since 1.0
+     */
+    default JWK resolveVerificationKey(String keyId) throws KeyManagementException {
+        Object resolved = resolveKey(keyId);
+        if (resolved instanceof JWK jwk) {
+            return jwk;
+        }
+        throw new KeyManagementException(
+                "Resolved key is not a JWK: " + (resolved != null ? resolved.getClass().getName() : "null"));
     }
 }

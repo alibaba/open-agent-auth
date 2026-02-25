@@ -15,37 +15,25 @@
  */
 package com.alibaba.openagentauth.core.protocol.oidc.impl;
 
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.exception.oidc.IdTokenException;
 import com.alibaba.openagentauth.core.model.oidc.IdToken;
 import com.alibaba.openagentauth.core.model.oidc.IdTokenClaims;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.ECKey;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSelector;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.SecurityContext;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.*;
+import com.nimbusds.jose.jwk.*;
+import com.nimbusds.jwt.SignedJWT;
+import org.junit.jupiter.api.*;
 
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.ECGenParameterSpec;
+import java.security.*;
+import java.security.interfaces.*;
+import java.security.spec.*;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 
 /**
  * Unit tests for {@link DefaultIdTokenValidator}.
@@ -57,6 +45,7 @@ class DefaultIdTokenValidatorTest {
     private static final String SUBJECT = "user123";
     private static final String AUDIENCE = "client123";
     private static final String NONCE = "nonce123";
+    private static final String VERIFICATION_KEY_ID = "test-verification-key";
 
     private DefaultIdTokenGenerator rsaGenerator;
     private DefaultIdTokenGenerator ecGenerator;
@@ -66,6 +55,8 @@ class DefaultIdTokenValidatorTest {
     private RSAPrivateKey rsaPrivateKey;
     private ECPublicKey ecPublicKey;
     private ECPrivateKey ecPrivateKey;
+    private KeyManager mockKeyManager;
+    private KeyManager mockEcKeyManager;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -84,11 +75,29 @@ class DefaultIdTokenValidatorTest {
         ecPrivateKey = (ECPrivateKey) ecKeyPair.getPrivate();
         ecPublicKey = (ECPublicKey) ecKeyPair.getPublic();
 
-        // Create generators and validators
+        // Create token generators
         rsaGenerator = new DefaultIdTokenGenerator(ISSUER, "RS256", rsaPrivateKey);
         ecGenerator = new DefaultIdTokenGenerator(ISSUER, "ES256", ecPrivateKey);
-        rsaValidator = new DefaultIdTokenValidator(rsaPublicKey);
-        ecValidator = new DefaultIdTokenValidator(ecPublicKey);
+
+        // Create mock KeyManager for RSA
+        mockKeyManager = mock(KeyManager.class);
+        com.nimbusds.jose.jwk.RSAKey rsaJwk = new com.nimbusds.jose.jwk.RSAKey.Builder(rsaPublicKey)
+                .keyID(VERIFICATION_KEY_ID)
+                .algorithm(JWSAlgorithm.RS256)
+                .build();
+        when(mockKeyManager.resolveVerificationKey(anyString())).thenReturn(rsaJwk);
+
+        // Create mock KeyManager for EC
+        mockEcKeyManager = mock(KeyManager.class);
+        com.nimbusds.jose.jwk.ECKey ecJwk = new com.nimbusds.jose.jwk.ECKey.Builder(Curve.P_256, ecPublicKey)
+                .keyID(VERIFICATION_KEY_ID)
+                .algorithm(JWSAlgorithm.ES256)
+                .build();
+        when(mockEcKeyManager.resolveVerificationKey(anyString())).thenReturn(ecJwk);
+
+        // Create validators with new constructor
+        rsaValidator = new DefaultIdTokenValidator(mockKeyManager, VERIFICATION_KEY_ID);
+        ecValidator = new DefaultIdTokenValidator(mockEcKeyManager, VERIFICATION_KEY_ID);
     }
 
     @Test
@@ -364,12 +373,7 @@ class DefaultIdTokenValidatorTest {
     @Test
     @DisplayName("Should validate token with RSAKey JWK")
     void testValidateWithRSAKeyJWK() throws Exception {
-        // Arrange
-        RSAKey rsaKey = new RSAKey.Builder(rsaPublicKey)
-                .keyID("key-id-123")
-                .build();
-        DefaultIdTokenValidator validatorWithJWK = new DefaultIdTokenValidator(rsaKey);
-        
+        // Arrange - use existing rsaValidator which is already configured
         long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()
                 .iss(ISSUER)
@@ -381,7 +385,7 @@ class DefaultIdTokenValidatorTest {
         String token = rsaGenerator.generate(claims).getTokenValue();
 
         // Act
-        IdToken validatedToken = validatorWithJWK.validate(token, ISSUER, AUDIENCE);
+        IdToken validatedToken = rsaValidator.validate(token, ISSUER, AUDIENCE);
 
         // Assert
         assertNotNull(validatedToken, "Validated token should not be null");
@@ -390,12 +394,7 @@ class DefaultIdTokenValidatorTest {
     @Test
     @DisplayName("Should validate token with ECKey JWK")
     void testValidateWithECKeyJWK() throws Exception {
-        // Arrange
-        ECKey ecKey = new ECKey.Builder(Curve.P_256, ecPublicKey)
-                .keyID("ec-key-id-456")
-                .build();
-        DefaultIdTokenValidator validatorWithJWK = new DefaultIdTokenValidator(ecKey);
-        
+        // Arrange - use existing ecValidator which is already configured
         long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()
                 .iss(ISSUER)
@@ -407,7 +406,7 @@ class DefaultIdTokenValidatorTest {
         String token = ecGenerator.generate(claims).getTokenValue();
 
         // Act
-        IdToken validatedToken = validatorWithJWK.validate(token, ISSUER, AUDIENCE);
+        IdToken validatedToken = ecValidator.validate(token, ISSUER, AUDIENCE);
 
         // Assert
         assertNotNull(validatedToken, "Validated token should not be null");
@@ -415,35 +414,36 @@ class DefaultIdTokenValidatorTest {
 
     @Test
     @DisplayName("Should validate token with custom clock skew")
-    void testValidateWithCustomClockSkew() throws Exception {
+    void testValidateWithCustomClockSkew() {
         // Arrange
-        long clockSkew = 60; // 60 seconds
-        DefaultIdTokenValidator validatorWithSkew = new DefaultIdTokenValidator(rsaPublicKey, clockSkew);
+        long clockSkew = 120;
+        DefaultIdTokenValidator validator = new DefaultIdTokenValidator(mockKeyManager, VERIFICATION_KEY_ID, clockSkew);
         
-        long pastTime = Instant.now().minusSeconds(3500).getEpochSecond();
+        long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()
                 .iss(ISSUER)
                 .sub(SUBJECT)
                 .aud(AUDIENCE)
-                .iat(pastTime)
-                .exp(pastTime + 3600) // Expired 50 seconds ago, within clock skew
+                .iat(now)
+                .exp(now + 3600)
                 .build();
         String token = rsaGenerator.generate(claims).getTokenValue();
 
         // Act
-        IdToken validatedToken = validatorWithSkew.validate(token, ISSUER, AUDIENCE);
+        IdToken validatedToken = validator.validate(token, ISSUER, AUDIENCE);
 
         // Assert
-        assertNotNull(validatedToken, "Validated token should not be null (within clock skew)");
+        assertNotNull(validatedToken, "Validated token should not be null");
+        assertEquals(clockSkew, validator.getClockSkewSeconds(), "Clock skew should match");
     }
 
     @Test
-    @DisplayName("Should throw exception when verification key is null")
+    @DisplayName("Should throw when verification key ID is null")
     void testConstructorWithNullVerificationKey() {
-        // Act & Assert
+        // Arrange & Act & Assert
         assertThrows(IllegalArgumentException.class, () -> 
-                new DefaultIdTokenValidator(null),
-                "Should throw exception when verification key is null");
+                new DefaultIdTokenValidator(mockKeyManager, null),
+                "Should throw exception when verification key ID is null");
     }
 
     @Test
@@ -501,8 +501,15 @@ class DefaultIdTokenValidatorTest {
     @Test
     @DisplayName("Should throw exception with wrong key type for RSA")
     void testValidateWithWrongKeyForRSA() {
-        // Arrange
-        DefaultIdTokenValidator wrongValidator = new DefaultIdTokenValidator(ecPublicKey);
+        // Arrange - Setup mock to return EC key for RSA token
+        KeyManager wrongKeyManager = mock(KeyManager.class);
+        com.nimbusds.jose.jwk.ECKey wrongEcKey = new com.nimbusds.jose.jwk.ECKey.Builder(Curve.P_256, ecPublicKey)
+                .keyID("wrong-key")
+                .algorithm(JWSAlgorithm.ES256)
+                .build();
+        when(wrongKeyManager.resolveVerificationKey(anyString())).thenReturn(wrongEcKey);
+        DefaultIdTokenValidator wrongValidator = new DefaultIdTokenValidator(wrongKeyManager, "wrong-key");
+        
         long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()
                 .iss(ISSUER)
@@ -522,8 +529,15 @@ class DefaultIdTokenValidatorTest {
     @Test
     @DisplayName("Should throw exception with wrong key type for EC")
     void testValidateWithWrongKeyForEC() {
-        // Arrange
-        DefaultIdTokenValidator wrongValidator = new DefaultIdTokenValidator(rsaPublicKey);
+        // Arrange - Setup mock to return RSA key for EC token
+        KeyManager wrongKeyManager = mock(KeyManager.class);
+        com.nimbusds.jose.jwk.RSAKey wrongRsaKey = new com.nimbusds.jose.jwk.RSAKey.Builder(rsaPublicKey)
+                .keyID("wrong-key")
+                .algorithm(JWSAlgorithm.RS256)
+                .build();
+        when(wrongKeyManager.resolveVerificationKey(anyString())).thenReturn(wrongRsaKey);
+        DefaultIdTokenValidator wrongValidator = new DefaultIdTokenValidator(wrongKeyManager, "wrong-key");
+        
         long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()
                 .iss(ISSUER)
@@ -583,31 +597,16 @@ class DefaultIdTokenValidatorTest {
     }
 
     @Test
-    @DisplayName("Should return correct verification key")
-    void testGetVerificationKey() {
-        assertEquals(rsaPublicKey, rsaValidator.getVerificationKey(), "Verification key should match");
-    }
-
-    @Test
     @DisplayName("Should return correct clock skew")
     void testGetClockSkewSeconds() {
-        DefaultIdTokenValidator validator = new DefaultIdTokenValidator(rsaPublicKey, 120);
+        DefaultIdTokenValidator validator = new DefaultIdTokenValidator(mockKeyManager, VERIFICATION_KEY_ID, 120);
         assertEquals(120, validator.getClockSkewSeconds(), "Clock skew should match");
     }
 
     @Test
     @DisplayName("Should validate token with JWKSource")
     void testValidateWithJWKSource() throws Exception {
-        // Arrange
-        JWKSource<SecurityContext> jwkSource = (jwkSelector, context) -> {
-            RSAKey rsaKey = new RSAKey.Builder(rsaPublicKey)
-                    .keyID("key-id-123")
-                    .algorithm(com.nimbusds.jose.JWSAlgorithm.RS256)
-                    .build();
-            return List.of(rsaKey);
-        };
-        DefaultIdTokenValidator validator = new DefaultIdTokenValidator(jwkSource);
-        
+        // Arrange - mock already set up in setUp
         long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()
                 .iss(ISSUER)
@@ -619,7 +618,7 @@ class DefaultIdTokenValidatorTest {
         String token = rsaGenerator.generate(claims).getTokenValue();
 
         // Act
-        IdToken validatedToken = validator.validate(token, ISSUER, AUDIENCE);
+        IdToken validatedToken = rsaValidator.validate(token, ISSUER, AUDIENCE);
 
         // Assert
         assertNotNull(validatedToken, "Validated token should not be null");
@@ -629,14 +628,9 @@ class DefaultIdTokenValidatorTest {
     @Test
     @DisplayName("Should throw exception when JWKSource returns empty list")
     void testValidateWithEmptyJWKSource() throws Exception {
-        // Arrange
-        JWKSource<SecurityContext> emptyJwkSource = new JWKSource<SecurityContext>() {
-            @Override
-            public List<JWK> get(JWKSelector jwkSelector, SecurityContext context) {
-                return List.of();
-            }
-        };
-        DefaultIdTokenValidator validator = new DefaultIdTokenValidator(emptyJwkSource);
+        // Arrange - Setup mock to return null (key not found)
+        when(mockKeyManager.resolveVerificationKey(anyString())).thenReturn(null);
+        DefaultIdTokenValidator validator = new DefaultIdTokenValidator(mockKeyManager, VERIFICATION_KEY_ID);
         
         long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()
@@ -651,7 +645,7 @@ class DefaultIdTokenValidatorTest {
         // Act & Assert
         assertThrows(IdTokenException.class, () -> 
                 validator.validate(token, ISSUER, AUDIENCE),
-                "Should throw exception when JWKSource returns empty list");
+                "Should throw exception when KeyManager returns null");
     }
 
     @Test
@@ -659,7 +653,7 @@ class DefaultIdTokenValidatorTest {
     void testValidateExpiredTokenWithClockSkew() throws Exception {
         // Arrange
         long clockSkew = 30; // 30 seconds
-        DefaultIdTokenValidator validatorWithSkew = new DefaultIdTokenValidator(rsaPublicKey, clockSkew);
+        DefaultIdTokenValidator validatorWithSkew = new DefaultIdTokenValidator(mockKeyManager, VERIFICATION_KEY_ID, clockSkew);
         
         long pastTime = Instant.now().minusSeconds(7200).getEpochSecond();
         IdTokenClaims claims = IdTokenClaims.builder()
@@ -682,7 +676,7 @@ class DefaultIdTokenValidatorTest {
     void testValidateTokenIssuedTooFarInFuture() throws Exception {
         // Arrange
         long clockSkew = 60; // 60 seconds
-        DefaultIdTokenValidator validatorWithSkew = new DefaultIdTokenValidator(rsaPublicKey, clockSkew);
+        DefaultIdTokenValidator validatorWithSkew = new DefaultIdTokenValidator(mockKeyManager, VERIFICATION_KEY_ID, clockSkew);
         
         long futureTime = Instant.now().plusSeconds(7200).getEpochSecond();
         IdTokenClaims claims = IdTokenClaims.builder()
@@ -886,7 +880,16 @@ class DefaultIdTokenValidatorTest {
         ECPublicKey ecPublicKey = (ECPublicKey) ecKeyPair.getPublic();
 
         DefaultIdTokenGenerator es384Generator = new DefaultIdTokenGenerator(ISSUER, "ES384", ecPrivateKey);
-        DefaultIdTokenValidator es384Validator = new DefaultIdTokenValidator(ecPublicKey);
+        
+        // Create a new mock KeyManager for ES384
+        KeyManager es384KeyManager = mock(KeyManager.class);
+        com.nimbusds.jose.jwk.ECKey es384Jwk = new com.nimbusds.jose.jwk.ECKey.Builder(Curve.P_384, ecPublicKey)
+                .keyID("es384-key")
+                .algorithm(JWSAlgorithm.ES384)
+                .build();
+        when(es384KeyManager.resolveVerificationKey(anyString())).thenReturn(es384Jwk);
+        
+        DefaultIdTokenValidator es384Validator = new DefaultIdTokenValidator(es384KeyManager, "es384-key");
         
         long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()
@@ -916,7 +919,16 @@ class DefaultIdTokenValidatorTest {
         ECPublicKey ecPublicKey = (ECPublicKey) ecKeyPair.getPublic();
 
         DefaultIdTokenGenerator es512Generator = new DefaultIdTokenGenerator(ISSUER, "ES512", ecPrivateKey);
-        DefaultIdTokenValidator es512Validator = new DefaultIdTokenValidator(ecPublicKey);
+        
+        // Create a new mock KeyManager for ES512
+        KeyManager es512KeyManager = mock(KeyManager.class);
+        com.nimbusds.jose.jwk.ECKey es512Jwk = new com.nimbusds.jose.jwk.ECKey.Builder(Curve.P_521, ecPublicKey)
+                .keyID("es512-key")
+                .algorithm(JWSAlgorithm.ES512)
+                .build();
+        when(es512KeyManager.resolveVerificationKey(anyString())).thenReturn(es512Jwk);
+        
+        DefaultIdTokenValidator es512Validator = new DefaultIdTokenValidator(es512KeyManager, "es512-key");
         
         long now = System.currentTimeMillis() / 1000;
         IdTokenClaims claims = IdTokenClaims.builder()

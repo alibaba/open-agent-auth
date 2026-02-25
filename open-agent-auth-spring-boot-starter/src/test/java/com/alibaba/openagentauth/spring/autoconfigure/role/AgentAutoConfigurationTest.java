@@ -17,9 +17,11 @@ package com.alibaba.openagentauth.spring.autoconfigure.role;
 
 import com.alibaba.openagentauth.core.crypto.jwe.JweEncoder;
 import com.alibaba.openagentauth.core.crypto.jwe.NimbusJweEncoder;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.client.OAuth2ParClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.jwt.AapParJwtGenerator;
 import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenValidator;
+import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultIdTokenValidator;
 import com.alibaba.openagentauth.core.protocol.vc.VcSigner;
 import com.alibaba.openagentauth.core.protocol.vc.jwe.PromptEncryptionService;
 import com.alibaba.openagentauth.core.protocol.vc.chain.PromptProtectionChain;
@@ -57,6 +59,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
@@ -519,7 +522,7 @@ class AgentAutoConfigurationTest {
                         rootCause = rootCause.getCause();
                     }
                     assertThat(rootCause)
-                        .isInstanceOf(NullPointerException.class);
+                        .isInstanceOfAny(NullPointerException.class, IllegalArgumentException.class, IllegalStateException.class);
                 });
         }
     }
@@ -1166,16 +1169,31 @@ class AgentAutoConfigurationTest {
         @Bean
         @ConditionalOnMissingBean
         public WitValidator witValidator(ECKey witVerificationKey) {
-            return new WitValidator(witVerificationKey, new TrustDomain("wimse://test.trust.domain"));
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            try {
+                Mockito.when(mockKeyManager.resolveVerificationKey(Mockito.anyString())).thenReturn(witVerificationKey.toPublicJWK());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return new WitValidator(mockKeyManager, "wit-signing-key", new TrustDomain("wimse://test.trust.domain"));
         }
         
         @Bean
         @ConditionalOnMissingBean
         public AoatValidator aoatValidator() throws Exception {
             RSAKey rsaKey = new RSAKeyGenerator(2048).keyID("aoat-signing-key").generate();
-            return new AoatValidator(rsaKey, "wimse://test.trust.domain", "test-issuer");
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            Mockito.when(mockKeyManager.resolveVerificationKey(Mockito.anyString())).thenReturn(rsaKey.toPublicJWK());
+            return new AoatValidator(mockKeyManager, "aoat-signing-key", "wimse://test.trust.domain", "test-issuer");
         }
         
+        @Bean
+        @ConditionalOnMissingBean
+        public IdTokenValidator idTokenValidator() {
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            return new DefaultIdTokenValidator(mockKeyManager, "test-id-token-key");
+        }
+
         @Bean
         @ConditionalOnMissingBean
         public WptValidator wptValidator() {

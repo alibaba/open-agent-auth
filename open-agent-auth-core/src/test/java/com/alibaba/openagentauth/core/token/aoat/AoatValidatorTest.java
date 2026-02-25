@@ -22,11 +22,12 @@ import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.token.common.TokenValidationResult;
 import com.alibaba.openagentauth.core.model.evidence.Evidence;
 import com.alibaba.openagentauth.core.model.identity.DelegationChain;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
+import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +40,7 @@ import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link AoatValidator}.
@@ -57,26 +59,33 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("AoatValidator Tests")
 class AoatValidatorTest {
 
+    private static final String VERIFICATION_KEY_ID = "test-verification-key";
+    
     private RSAKey verificationKey;
     private RSAKey signingKey;
     private String expectedIssuer;
     private String expectedAudience;
     private AoatValidator validator;
     private AoatGenerator generator;
+    private KeyManager keyManager;
 
     @BeforeEach
     void setUp() throws JOSEException {
         // Generate RSA key pair
         signingKey = new RSAKeyGenerator(2048)
-                .keyID("test-key-id")
+                .keyID(VERIFICATION_KEY_ID)
                 .generate();
         verificationKey = signingKey.toPublicJWK();
 
         expectedIssuer = "https://issuer.example.com";
         expectedAudience = "https://audience.example.com";
 
-        // Create validator
-        validator = new AoatValidator(verificationKey, expectedIssuer, expectedAudience);
+        // Create mock KeyManager
+        keyManager = mock(KeyManager.class);
+        when(keyManager.resolveVerificationKey(anyString())).thenReturn(verificationKey);
+
+        // Create validator with new constructor
+        validator = new AoatValidator(keyManager, VERIFICATION_KEY_ID, expectedIssuer, expectedAudience);
 
         // Create generator for test tokens
         generator = new AoatGenerator(signingKey, JWSAlgorithm.RS256, expectedIssuer, expectedAudience);
@@ -177,12 +186,17 @@ class AoatValidatorTest {
             AgentOperationAuthToken token = generator.generateAoat("user123", agentIdentity, authorization, 3600);
             String jwtString = token.getJwtString();
 
-            // Create validator with different key
+            // Create validator with different key via mock KeyManager
             RSAKey differentKey = new RSAKeyGenerator(2048)
                     .keyID("different-key-id")
                     .generate()
                     .toPublicJWK();
-            AoatValidator validatorWithDifferentKey = new AoatValidator(differentKey, expectedIssuer, expectedAudience);
+            
+            KeyManager differentKeyManager = mock(KeyManager.class);
+            when(differentKeyManager.resolveVerificationKey(anyString())).thenReturn(differentKey);
+            
+            AoatValidator validatorWithDifferentKey = new AoatValidator(
+                    differentKeyManager, VERIFICATION_KEY_ID, expectedIssuer, expectedAudience);
 
             TokenValidationResult<AgentOperationAuthToken> result = validatorWithDifferentKey.validate(jwtString);
 
@@ -227,7 +241,7 @@ class AoatValidatorTest {
                     .build();
 
             // Create a token manually with past expiration time
-            com.nimbusds.jwt.JWTClaimsSet.Builder claimsBuilder = new com.nimbusds.jwt.JWTClaimsSet.Builder()
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                     .issuer(expectedIssuer)
                     .subject("user123")
                     .audience(expectedAudience)
@@ -237,11 +251,11 @@ class AoatValidatorTest {
                     .claim("agent_identity", createAgentIdentityMap())
                     .claim("agent_operation_authorization", createAuthorizationMap());
 
-            com.nimbusds.jwt.JWTClaimsSet claimsSet = claimsBuilder.build();
+            JWTClaimsSet claimsSet = claimsBuilder.build();
 
-            com.nimbusds.jose.JWSHeader header = new com.nimbusds.jose.JWSHeader.Builder(JWSAlgorithm.RS256)
+            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                     .keyID(signingKey.getKeyID())
-                    .type(new com.nimbusds.jose.JOSEObjectType("JWT"))
+                    .type(new JOSEObjectType("JWT"))
                     .build();
 
             SignedJWT signedJwt = new SignedJWT(header, claimsSet);
@@ -375,7 +389,7 @@ class AoatValidatorTest {
         @DisplayName("Should reject token missing subject claim")
         void shouldRejectTokenMissingSubjectClaim() throws Exception {
             // Create a JWT manually without subject claim
-            com.nimbusds.jwt.JWTClaimsSet.Builder claimsBuilder = new com.nimbusds.jwt.JWTClaimsSet.Builder()
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                     .issuer(expectedIssuer)
                     .audience(expectedAudience)
                     .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
@@ -384,11 +398,11 @@ class AoatValidatorTest {
                     .claim("agent_identity", createAgentIdentityMap())
                     .claim("agent_operation_authorization", createAuthorizationMap());
 
-            com.nimbusds.jwt.JWTClaimsSet claimsSet = claimsBuilder.build();
+            JWTClaimsSet claimsSet = claimsBuilder.build();
 
-            com.nimbusds.jose.JWSHeader header = new com.nimbusds.jose.JWSHeader.Builder(JWSAlgorithm.RS256)
+            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                     .keyID(signingKey.getKeyID())
-                    .type(new com.nimbusds.jose.JOSEObjectType("JWT"))
+                    .type(new JOSEObjectType("JWT"))
                     .build();
 
             SignedJWT signedJwt = new SignedJWT(header, claimsSet);
@@ -406,7 +420,7 @@ class AoatValidatorTest {
         @DisplayName("Should reject token missing agent_identity claim")
         void shouldRejectTokenMissingAgentIdentityClaim() throws Exception {
             // Create a JWT manually without agent_identity claim
-            com.nimbusds.jwt.JWTClaimsSet.Builder claimsBuilder = new com.nimbusds.jwt.JWTClaimsSet.Builder()
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                     .issuer(expectedIssuer)
                     .subject("user123")
                     .audience(expectedAudience)
@@ -415,11 +429,11 @@ class AoatValidatorTest {
                     .jwtID("test-jti-001")
                     .claim("agent_operation_authorization", createAuthorizationMap());
 
-            com.nimbusds.jwt.JWTClaimsSet claimsSet = claimsBuilder.build();
+            JWTClaimsSet claimsSet = claimsBuilder.build();
 
-            com.nimbusds.jose.JWSHeader header = new com.nimbusds.jose.JWSHeader.Builder(JWSAlgorithm.RS256)
+            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                     .keyID(signingKey.getKeyID())
-                    .type(new com.nimbusds.jose.JOSEObjectType("JWT"))
+                    .type(new JOSEObjectType("JWT"))
                     .build();
 
             SignedJWT signedJwt = new SignedJWT(header, claimsSet);
@@ -437,7 +451,7 @@ class AoatValidatorTest {
         @DisplayName("Should reject token missing agent_operation_authorization claim")
         void shouldRejectTokenMissingAuthorizationClaim() throws Exception {
             // Create a JWT manually without agent_operation_authorization claim
-            com.nimbusds.jwt.JWTClaimsSet.Builder claimsBuilder = new com.nimbusds.jwt.JWTClaimsSet.Builder()
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                     .issuer(expectedIssuer)
                     .subject("user123")
                     .audience(expectedAudience)
@@ -446,11 +460,11 @@ class AoatValidatorTest {
                     .jwtID("test-jti-001")
                     .claim("agent_identity", createAgentIdentityMap());
 
-            com.nimbusds.jwt.JWTClaimsSet claimsSet = claimsBuilder.build();
+            JWTClaimsSet claimsSet = claimsBuilder.build();
 
-            com.nimbusds.jose.JWSHeader header = new com.nimbusds.jose.JWSHeader.Builder(JWSAlgorithm.RS256)
+            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                     .keyID(signingKey.getKeyID())
-                    .type(new com.nimbusds.jose.JOSEObjectType("JWT"))
+                    .type(new JOSEObjectType("JWT"))
                     .build();
 
             SignedJWT signedJwt = new SignedJWT(header, claimsSet);
@@ -504,15 +518,17 @@ class AoatValidatorTest {
         @Test
         @DisplayName("Should throw exception when verification key is null")
         void shouldThrowExceptionWhenVerificationKeyIsNull() {
-            assertThatThrownBy(() -> new AoatValidator(null, expectedIssuer, expectedAudience))
+            KeyManager nullKeyManager = null;
+            assertThatThrownBy(() -> new AoatValidator(nullKeyManager, VERIFICATION_KEY_ID, expectedIssuer, expectedAudience))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Verification key cannot be null");
+                    .hasMessage("Key manager cannot be null");
         }
 
         @Test
         @DisplayName("Should throw exception when expected issuer is null")
         void shouldThrowExceptionWhenExpectedIssuerIsNull() {
-            assertThatThrownBy(() -> new AoatValidator(verificationKey, null, expectedAudience))
+            KeyManager testKeyManager = mock(KeyManager.class);
+            assertThatThrownBy(() -> new AoatValidator(testKeyManager, VERIFICATION_KEY_ID, null, expectedAudience))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Expected issuer cannot be null or empty");
         }
@@ -520,7 +536,8 @@ class AoatValidatorTest {
         @Test
         @DisplayName("Should throw exception when expected issuer is empty")
         void shouldThrowExceptionWhenExpectedIssuerIsEmpty() {
-            assertThatThrownBy(() -> new AoatValidator(verificationKey, "", expectedAudience))
+            KeyManager testKeyManager = mock(KeyManager.class);
+            assertThatThrownBy(() -> new AoatValidator(testKeyManager, VERIFICATION_KEY_ID, "", expectedAudience))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Expected issuer cannot be null or empty");
         }
@@ -528,7 +545,8 @@ class AoatValidatorTest {
         @Test
         @DisplayName("Should throw exception when expected audience is null")
         void shouldThrowExceptionWhenExpectedAudienceIsNull() {
-            assertThatThrownBy(() -> new AoatValidator(verificationKey, expectedIssuer, null))
+            KeyManager testKeyManager = mock(KeyManager.class);
+            assertThatThrownBy(() -> new AoatValidator(testKeyManager, VERIFICATION_KEY_ID, expectedIssuer, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Expected audience cannot be null or empty");
         }
@@ -536,7 +554,8 @@ class AoatValidatorTest {
         @Test
         @DisplayName("Should throw exception when expected audience is empty")
         void shouldThrowExceptionWhenExpectedAudienceIsEmpty() {
-            assertThatThrownBy(() -> new AoatValidator(verificationKey, expectedIssuer, ""))
+            KeyManager testKeyManager = mock(KeyManager.class);
+            assertThatThrownBy(() -> new AoatValidator(testKeyManager, VERIFICATION_KEY_ID, expectedIssuer, ""))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Expected audience cannot be null or empty");
         }

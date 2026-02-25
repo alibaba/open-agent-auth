@@ -204,40 +204,13 @@ class AuthorizationServerAutoConfigurationTest {
         }
 
         @Bean
-        public WitValidator witValidator(
-            KeyManager keyManager,
-            TrustDomain trustDomain) {
-            try {
-                keyManager.getOrGenerateKey(
-                    "agent-idp-verification-key", 
-                    KeyAlgorithm.ES256
-                );
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to initialize Agent IDP verification key", e);
-            }
-            
-            PublicKey verificationKey;
-            try {
-                verificationKey = keyManager.getVerificationKey("agent-idp-verification-key");
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to get verification key", e);
-            }
-            
-            TrustAnchor trustAnchor = 
-                new TrustAnchor(
-                    verificationKey,
-                    "agent-idp-verification-key",
-                    KeyAlgorithm.ES256,
-                    trustDomain
-                );
-            
-            return new WitValidator(trustAnchor);
+        public WitValidator witValidator(KeyManager keyManager, TrustDomain trustDomain) {
+            return new WitValidator(keyManager, "agent-idp-verification-key", trustDomain);
         }
 
         @Bean
-        public IdTokenValidator idTokenValidator(
-            ServiceProperties serviceProperties) {
-            return new DefaultIdTokenValidator(serviceProperties);
+        public IdTokenValidator idTokenValidator(KeyManager keyManager) {
+            return new DefaultIdTokenValidator(keyManager, "id-token-signing-key");
         }
 
         @Bean

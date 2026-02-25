@@ -95,6 +95,7 @@ class DefaultAuthorizationServerTest {
                 mockOAuth2TokenClient,
                 mockOAuth2TokenServer,
                 null,
+                null,
                 null
         );
     }
@@ -108,7 +109,7 @@ class DefaultAuthorizationServerTest {
         void shouldCreateAuthorizationServerWithValidParameters() {
             // Act
             DefaultAuthorizationServer server = new DefaultAuthorizationServer(
-                    mockParServer, mockDcrClientStore, mockOAuth2TokenClient, mockOAuth2TokenServer, null, null);
+                    mockParServer, mockDcrClientStore, mockOAuth2TokenClient, mockOAuth2TokenServer, null, null, null);
 
             // Assert
             assertThat(server).isNotNull();
@@ -119,7 +120,7 @@ class DefaultAuthorizationServerTest {
         void shouldThrowExceptionWhenParServerIsNull() {
             // Act & Assert
             assertThatThrownBy(() -> new DefaultAuthorizationServer(
-                    null, mockDcrClientStore, mockOAuth2TokenClient, mockOAuth2TokenServer, null, null))
+                    null, mockDcrClientStore, mockOAuth2TokenClient, mockOAuth2TokenServer, null, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("PAR server cannot be null");
         }
@@ -129,7 +130,7 @@ class DefaultAuthorizationServerTest {
         void shouldThrowExceptionWhenOAuth2TokenClientIsNull() {
             // Act & Assert
             assertThatThrownBy(() -> new DefaultAuthorizationServer(
-                    mockParServer, mockDcrClientStore, null, mockOAuth2TokenServer, null, null))
+                    mockParServer, mockDcrClientStore, null, mockOAuth2TokenServer, null, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("OAuth2TokenClient cannot be null");
         }
@@ -307,6 +308,7 @@ class DefaultAuthorizationServerTest {
                     mockDcrClientStore,
                     mockOAuth2TokenClient,
                     mockOAuth2TokenServer,
+                    null,
                     null,
                     null
             );

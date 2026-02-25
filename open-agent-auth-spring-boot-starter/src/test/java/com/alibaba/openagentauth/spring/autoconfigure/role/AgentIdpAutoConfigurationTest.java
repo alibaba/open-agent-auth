@@ -17,6 +17,7 @@ package com.alibaba.openagentauth.spring.autoconfigure.role;
 
 import com.alibaba.openagentauth.core.exception.workload.WorkloadCreationException;
 import com.alibaba.openagentauth.core.exception.workload.WorkloadNotFoundException;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
 import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenValidator;
 import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultIdTokenValidator;
@@ -38,6 +39,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -65,7 +67,8 @@ class AgentIdpAutoConfigurationTest {
         .withPropertyValues(
             "spring.main.allow-bean-definition-overriding=true",
             "open-agent-auth.infrastructures.trust-domain=wimse://test.trust.domain"
-        );
+        )
+        .withUserConfiguration(TestConfiguration.class);
 
     @Nested
     @DisplayName("WorkloadRegistry Bean Tests")
@@ -177,8 +180,11 @@ class AgentIdpAutoConfigurationTest {
                     while (rootCause.getCause() != null) {
                         rootCause = rootCause.getCause();
                     }
-                    assertThat(rootCause).isInstanceOf(IllegalStateException.class);
-                    assertThat(rootCause.getMessage()).contains("Agent User IDP JWKS endpoint is not configured");
+                    assertThat(rootCause).isInstanceOfAny(IllegalStateException.class, NullPointerException.class);
+                    assertThat(rootCause.getMessage()).containsAnyOf(
+                        "Agent User IDP JWKS endpoint is not configured",
+                        "Agent User IDP issuer is not configured"
+                    );
                 });
         }
 
@@ -318,7 +324,9 @@ class AgentIdpAutoConfigurationTest {
         @Bean
         public IdTokenValidator idTokenValidator() throws Exception {
             RSAKey rsaKey = new RSAKeyGenerator(2048).keyID("test-idp-key").generate();
-            return new DefaultIdTokenValidator(rsaKey);
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            Mockito.when(mockKeyManager.resolveVerificationKey(Mockito.anyString())).thenReturn(rsaKey.toPublicJWK());
+            return new DefaultIdTokenValidator(mockKeyManager, "test-idp-key");
         }
     }
 

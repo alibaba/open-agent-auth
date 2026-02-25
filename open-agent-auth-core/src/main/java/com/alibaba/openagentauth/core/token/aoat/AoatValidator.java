@@ -15,20 +15,18 @@
  */
 package com.alibaba.openagentauth.core.token.aoat;
 
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
+import com.alibaba.openagentauth.core.crypto.verify.SignatureVerificationUtils;
 import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.token.common.TokenValidationResult;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
 import java.time.Instant;
+import java.util.Date;
 
 /**
  * Validator for Agent Operation Authorization Tokens (AOAT) following the draft-liu-agent-operation-authorization specification.
@@ -52,9 +50,15 @@ public class AoatValidator {
     private static final Logger logger = LoggerFactory.getLogger(AoatValidator.class);
 
     /**
-     * The RSA public key used for verifying AOAT signatures.
+     * The KeyManager used for managing cryptographic keys.
+     * Supports dynamic key rotation through KeyManager abstraction.
      */
-    private final RSAKey verificationKey;
+    private final KeyManager keyManager;
+
+    /**
+     * The verification key ID used for signature verification.
+     */
+    private final String verificationKeyId;
 
     /**
      * The expected issuer for validation.
@@ -74,20 +78,22 @@ public class AoatValidator {
     /**
      * Creates a new AOAT validator.
      *
-     * @param verificationKey the RSA public key used for verifying AOAT signatures
+     * @param keyManager the KeyManager for verifying AOAT signatures
+     * @param verificationKeyId the verification key ID
      * @param expectedIssuer the expected issuer identifier
      * @param expectedAudience the expected audience identifier
      */
-    public AoatValidator(RSAKey verificationKey, String expectedIssuer, String expectedAudience) {
+    public AoatValidator(KeyManager keyManager, String verificationKeyId, String expectedIssuer, String expectedAudience) {
 
         // Set instance variables
-        this.verificationKey = ValidationUtils.validateNotNull(verificationKey, "Verification key");
+        this.keyManager = ValidationUtils.validateNotNull(keyManager, "Key manager");
+        this.verificationKeyId = ValidationUtils.validateNotEmpty(verificationKeyId, "Verification key ID");
         this.expectedIssuer = ValidationUtils.validateNotEmpty(expectedIssuer, "Expected issuer");
         this.expectedAudience = ValidationUtils.validateNotEmpty(expectedAudience, "Expected audience");
         this.aoatParser = new AoatParser();
 
-        logger.info("AoatValidator initialized with expected issuer: {}, audience: {}",
-                   expectedIssuer, expectedAudience);
+        logger.info("AoatValidator initialized with verification key ID: {}, expected issuer: {}, audience: {}",
+                   verificationKeyId, expectedIssuer, expectedAudience);
     }
 
     /**
@@ -145,38 +151,7 @@ public class AoatValidator {
      * @return true if the signature is valid, false otherwise
      */
     private boolean verifySignature(SignedJWT signedJwt) {
-        try {
-            // Get AOAT key ID and algorithm
-            String aoatKeyId = signedJwt.getHeader().getKeyID();
-            String verificationKeyId = verificationKey.getKeyID();
-            var aoatAlgorithm = signedJwt.getHeader().getAlgorithm();
-            logger.info("Verifying AOAT signature - AOAT kid: {}, Verification key kid: {}, Algorithm: {}",
-                       aoatKeyId, verificationKeyId, aoatAlgorithm);
-
-            // Verify that the algorithm is RS256
-            if (!JWSAlgorithm.RS256.equals(aoatAlgorithm)) {
-                logger.warn("AOAT algorithm '{}' does not match expected RS256", aoatAlgorithm);
-                return false;
-            }
-
-            // Verify signature
-            JWSVerifier verifier = new RSASSAVerifier(verificationKey);
-            boolean isValid = signedJwt.verify(verifier);
-
-            // Log if signature is invalid
-            if (!isValid) {
-                logger.warn("AOAT signature verification failed - AOAT kid: {}, Verification key kid: {}",
-                           aoatKeyId, verificationKeyId);
-            }
-
-            // Log signature verification result
-            logger.debug("AOAT signature verification result: {}", isValid);
-            return isValid;
-
-        } catch (JOSEException e) {
-            logger.error("Error verifying AOAT signature", e);
-            return false;
-        }
+        return SignatureVerificationUtils.verifySignature(signedJwt, keyManager, verificationKeyId);
     }
 
     /**
@@ -195,7 +170,7 @@ public class AoatValidator {
             }
 
             // Verify that the token is not expired
-            boolean isValid = expirationTime.after(java.util.Date.from(Instant.now()));
+            boolean isValid = expirationTime.after(Date.from(Instant.now()));
             if (!isValid) {
                 logger.warn("AOAT has expired at: {}", expirationTime);
             }

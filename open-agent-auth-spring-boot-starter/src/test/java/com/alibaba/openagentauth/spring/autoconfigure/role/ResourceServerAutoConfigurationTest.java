@@ -16,6 +16,7 @@
 package com.alibaba.openagentauth.spring.autoconfigure.role;
 
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
 import com.alibaba.openagentauth.core.policy.api.PolicyEvaluator;
 import com.alibaba.openagentauth.core.policy.api.PolicyRegistry;
@@ -37,6 +38,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -509,16 +511,14 @@ class ResourceServerAutoConfigurationTest {
 
         @Bean
         public WitValidator witValidator() {
-            return new WitValidator(createTestTrustAnchor());
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            return new WitValidator(mockKeyManager, "wit-signing-key", new TrustDomain("wimse://test.trust.domain"));
         }
 
         @Bean
         public AoatValidator aoatValidator() {
-            return new AoatValidator(
-                createTestRsaKey(),
-                "http://authorization-server:8080",
-                "http://localhost:8080"
-            );
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            return new AoatValidator(mockKeyManager, "aoat-signing-key", "http://authorization-server:8080", "http://localhost:8080");
         }
 
         private static TrustAnchor createTestTrustAnchor() {
@@ -547,16 +547,14 @@ class ResourceServerAutoConfigurationTest {
 
         @Bean
         public WitValidator witValidator() {
-            return new WitValidator(createTestTrustAnchor());
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            return new WitValidator(mockKeyManager, "wit-signing-key", new TrustDomain("wimse://test.trust.domain"));
         }
 
         @Bean
         public AoatValidator aoatValidator() {
-            return new AoatValidator(
-                createTestRsaKey(),
-                "http://authorization-server:8080",
-                "http://localhost:8080"
-            );
+            KeyManager mockKeyManager = Mockito.mock(KeyManager.class);
+            return new AoatValidator(mockKeyManager, "aoat-signing-key", "http://authorization-server:8080", "http://localhost:8080");
         }
 
         private static TrustAnchor createTestTrustAnchor() {

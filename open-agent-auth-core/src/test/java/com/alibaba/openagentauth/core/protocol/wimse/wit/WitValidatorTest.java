@@ -19,6 +19,7 @@ import com.alibaba.openagentauth.core.model.identity.AgentIdentity;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
 import com.alibaba.openagentauth.core.token.common.TokenValidationResult;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -41,6 +42,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 
 /**
  * Unit tests for {@link WitValidator}.
@@ -50,18 +53,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("WIT Validator Tests - draft-ietf-wimse-workload-creds")
 class WitValidatorTest {
 
+    private static final String VERIFICATION_KEY_ID = "test-verification-key";
+    
     private WitValidator witValidator;
     private RSAKey signingKey;
     private RSAKey verificationKey;
     private ECKey wptPublicKey;
     private TrustDomain trustDomain;
     private WitGenerator witGenerator;
+    private KeyManager keyManager;
 
     @BeforeEach
     void setUp() throws JOSEException {
         // Generate RSA key pair for WIT signing
         RSAKeyGenerator rsaKeyGenerator = new RSAKeyGenerator(2048);
-        signingKey = rsaKeyGenerator.keyID("wit-signing-key").generate();
+        signingKey = rsaKeyGenerator.keyID(VERIFICATION_KEY_ID).generate();
         verificationKey = signingKey.toPublicJWK();
 
         // Generate EC key pair for WPT
@@ -69,7 +75,13 @@ class WitValidatorTest {
         wptPublicKey = ecKeyGenerator.keyID("wpt-key").generate().toPublicJWK();
 
         trustDomain = new TrustDomain("wimse://example.com");
-        witValidator = new WitValidator(verificationKey, trustDomain);
+        
+        // Create mock KeyManager
+        keyManager = mock(KeyManager.class);
+        when(keyManager.resolveVerificationKey(anyString())).thenReturn(verificationKey);
+        
+        // Create validator with new constructor
+        witValidator = new WitValidator(keyManager, VERIFICATION_KEY_ID, trustDomain);
         witGenerator = new WitGenerator(signingKey, trustDomain, JWSAlgorithm.RS256);
     }
 

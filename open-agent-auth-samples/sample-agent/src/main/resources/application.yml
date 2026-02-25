@@ -50,6 +50,10 @@ open-agent-auth:
           key-id: wit-signing-key
           algorithm: ES256
           jwks-consumer: agent-idp  # Public key fetched from JWKS for verification
+        id-token-verification:
+          key-id: agent-user-id-token-signing-key
+          algorithm: ES256
+          jwks-consumer: agent-user-idp  # Public key fetched from JWKS for verification
     
     jwks:
       provider:

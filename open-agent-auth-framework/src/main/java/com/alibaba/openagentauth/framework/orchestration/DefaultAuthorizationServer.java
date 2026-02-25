@@ -35,6 +35,7 @@ import com.alibaba.openagentauth.core.protocol.oauth2.token.client.OAuth2TokenCl
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.OAuth2TokenServer;
 import com.alibaba.openagentauth.core.token.aoat.AoatParser;
 import com.alibaba.openagentauth.core.token.common.TokenValidationResult;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.core.protocol.wimse.wit.WitValidator;
 import com.alibaba.openagentauth.framework.exception.auth.FrameworkAuthorizationException;
@@ -43,7 +44,6 @@ import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkParProcessi
 import com.alibaba.openagentauth.framework.exception.token.FrameworkTokenGenerationException;
 import com.alibaba.openagentauth.framework.model.request.AoatIssuanceRequest;
 import com.alibaba.openagentauth.framework.actor.AuthorizationServer;
-import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,14 +100,16 @@ public class DefaultAuthorizationServer implements AuthorizationServer {
      * @param dcrClientStore the DCR client store (optional, will use in-memory if null)
      * @param oAuth2TokenClient the OAuth 2.0 token client for code exchange
      * @param oAuth2TokenServer the OAuth 2.0 token server for AOAT generation
-     * @param witVerificationKey the JWK public key for WIT verification (optional, supports both RSA and EC)
+     * @param keyManager the key manager for WIT verification (optional, required if WIT validation is enabled)
+     * @param witVerificationKeyId the key ID for WIT verification (optional)
      * @param expectedTrustDomain the expected trust domain for WIT validation (optional)
      */
     public DefaultAuthorizationServer(OAuth2ParServer parServer,
                                       OAuth2DcrClientStore dcrClientStore,
                                       OAuth2TokenClient oAuth2TokenClient,
                                       OAuth2TokenServer oAuth2TokenServer,
-                                      JWK witVerificationKey,
+                                      KeyManager keyManager,
+                                      String witVerificationKeyId,
                                       String expectedTrustDomain) {
         // Validate arguments using concise null checks
         this.parServer = ValidationUtils.validateNotNull(parServer, "PAR server");
@@ -119,12 +121,13 @@ public class DefaultAuthorizationServer implements AuthorizationServer {
         OAuth2DcrClientStore clientStore = dcrClientStore != null ? dcrClientStore : new InMemoryOAuth2DcrClientStore();
         this.dcrServer = new DefaultOAuth2DcrServer(clientStore);
         
-        // Initialize WIT validator if verification key is provided
-        if (witVerificationKey != null && !ValidationUtils.isNullOrEmpty(expectedTrustDomain)) {
-            this.witValidator = new WitValidator(witVerificationKey, new TrustDomain(expectedTrustDomain));
+        // Initialize WIT validator if key manager and verification key ID are provided
+        if (keyManager != null && !ValidationUtils.isNullOrEmpty(witVerificationKeyId)
+                && !ValidationUtils.isNullOrEmpty(expectedTrustDomain)) {
+            this.witValidator = new WitValidator(keyManager, witVerificationKeyId, new TrustDomain(expectedTrustDomain));
         } else {
             this.witValidator = null;
-            logger.warn("WIT verification key or trust domain not provided, WIT validation will be disabled");
+            logger.warn("KeyManager, WIT verification key ID, or trust domain not provided, WIT validation will be disabled");
         }
         
         logger.info("AuthorizationServerOrchestrator initialized");
