@@ -164,7 +164,7 @@ public class CoreAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public TrustDomain trustDomain(OpenAgentAuthProperties properties) {
-        String trustDomain = properties.getInfrastructures().getTrustDomain();
+        String trustDomain = properties.getTrustDomain();
         if (ValidationUtils.isNullOrEmpty(trustDomain)) {
             throw new IllegalStateException(
                 "Trust domain is not configured. Please set 'open-agent-auth.infrastructure.trust-domain' in your configuration. " +
@@ -297,7 +297,8 @@ public class CoreAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public JwksController jwksController(OpenAgentAuthProperties properties, KeyManager keyManager) {
-        boolean jwksProviderEnabled = properties.getInfrastructures().getJwks().getProvider().isEnabled();
+        boolean jwksProviderEnabled = properties.getInfrastructures()
+                .getJwks().getProvider().isEnabled();
         if (!jwksProviderEnabled) {
             logger.info("JWKS provider is disabled, skipping JwksController registration");
             return null;

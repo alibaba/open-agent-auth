@@ -287,7 +287,7 @@ public class SharedCapabilityAutoConfiguration {
                 );
             }
 
-            var keyConfig = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_ID_TOKEN_SIGNING);
+            var keyConfig = openAgentAuthProperties.getKeyDefinition(KEY_ID_TOKEN_SIGNING);
             if (keyConfig == null) {
                 throw new IllegalStateException(
                     "ID token signing key '" + KEY_ID_TOKEN_SIGNING + "' is not configured. " +

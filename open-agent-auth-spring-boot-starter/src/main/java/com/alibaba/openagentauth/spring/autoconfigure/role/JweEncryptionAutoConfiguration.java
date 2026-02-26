@@ -96,9 +96,11 @@ public class JweEncryptionAutoConfiguration {
     @ConditionalOnMissingBean
     public JweEncoder jweEncoder(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
         try {
-            OperationAuthorizationProperties.PromptEncryptionProperties properties = 
-                openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption();
-            
+            OperationAuthorizationProperties.PromptEncryptionProperties properties =
+                    openAgentAuthProperties.getCapabilities()
+                            .getOperationAuthorization()
+                            .getPromptEncryption();
+
             // Resolve encryption key: first try by key definition name (supports peers-based config),
             // then try local decryption key (AS role), then fall back to explicit encryption-key-id
             JWK encryptionJwk = resolveEncryptionKey(keyManager, properties, openAgentAuthProperties);
@@ -146,8 +148,8 @@ public class JweEncryptionAutoConfiguration {
 
         // Strategy 2: Use local jwe-decryption key (Authorization Server role — local key pair)
         // The AS role stores the decryption key locally; its public key portion is used for encryption.
-        KeyDefinitionProperties decryptionKeyDef = openAgentAuthProperties.getInfrastructures()
-                .getKeyManagement().getKeys().get(ConfigConstants.KEY_JWE_DECRYPTION);
+        KeyDefinitionProperties decryptionKeyDef =
+                openAgentAuthProperties.getKeyDefinition(ConfigConstants.KEY_JWE_DECRYPTION);
         if (decryptionKeyDef != null && decryptionKeyDef.getKeyId() != null) {
             String decryptionKeyId = decryptionKeyDef.getKeyId();
             logger.info("Resolving encryption key from local decryption key: {}", decryptionKeyId);
@@ -181,8 +183,8 @@ public class JweEncryptionAutoConfiguration {
             OpenAgentAuthProperties openAgentAuthProperties
     ) {
         // Strategy 1: Look up jwe-decryption key definition from inferred config
-        KeyDefinitionProperties decryptionKeyDef = openAgentAuthProperties.getInfrastructures()
-                .getKeyManagement().getKeys().get(ConfigConstants.KEY_JWE_DECRYPTION);
+        KeyDefinitionProperties decryptionKeyDef =
+                openAgentAuthProperties.getKeyDefinition(ConfigConstants.KEY_JWE_DECRYPTION);
         if (decryptionKeyDef != null && decryptionKeyDef.getKeyId() != null) {
             logger.info("Found decryption key definition '{}' with keyId: {}",
                     ConfigConstants.KEY_JWE_DECRYPTION, decryptionKeyDef.getKeyId());
@@ -290,7 +292,9 @@ public class JweEncryptionAutoConfiguration {
     @Conditional(DecryptionKeyAvailableCondition.class)
     public JweDecoder jweDecoder(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
         OperationAuthorizationProperties.PromptEncryptionProperties properties =
-            openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption();
+                openAgentAuthProperties.getCapabilities()
+                        .getOperationAuthorization()
+                        .getPromptEncryption();
 
         String keyId = resolveDecryptionKeyId(properties, openAgentAuthProperties);
         if (keyId == null) {
@@ -320,10 +324,12 @@ public class JweEncryptionAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public PromptEncryptionService promptEncryptionService(JweEncoder jweEncoder, 
+    public PromptEncryptionService promptEncryptionService(JweEncoder jweEncoder,
                                                           OpenAgentAuthProperties openAgentAuthProperties) {
-        OperationAuthorizationProperties.PromptEncryptionProperties properties = 
-            openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption();
+        OperationAuthorizationProperties.PromptEncryptionProperties properties =
+                openAgentAuthProperties.getCapabilities()
+                        .getOperationAuthorization()
+                        .getPromptEncryption();
         return new PromptEncryptionService(jweEncoder, properties.isEnabled());
     }
 
@@ -341,10 +347,12 @@ public class JweEncryptionAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @Conditional(DecryptionKeyAvailableCondition.class)
-    public PromptDecryptionService promptDecryptionService(JweDecoder jweDecoder, 
+    public PromptDecryptionService promptDecryptionService(JweDecoder jweDecoder,
                                                           OpenAgentAuthProperties openAgentAuthProperties) {
-        OperationAuthorizationProperties.PromptEncryptionProperties properties = 
-            openAgentAuthProperties.getCapabilities().getOperationAuthorization().getPromptEncryption();
+        OperationAuthorizationProperties.PromptEncryptionProperties properties =
+                openAgentAuthProperties.getCapabilities()
+                        .getOperationAuthorization()
+                        .getPromptEncryption();
         return new PromptDecryptionService(jweDecoder, properties.isEnabled());
     }
 }

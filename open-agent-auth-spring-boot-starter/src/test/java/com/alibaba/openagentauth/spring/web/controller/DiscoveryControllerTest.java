@@ -63,12 +63,16 @@ class DiscoveryControllerTest {
         controller = new DiscoveryController(properties);
     }
 
+    private RolesProperties.RoleProperties createRoleWithIssuer(String issuer) {
+        RolesProperties.RoleProperties role = new RolesProperties.RoleProperties();
+        role.setIssuer(issuer);
+        return role;
+    }
+
     private void setupPropertiesWithAllEndpointsEnabled() {
-        // Update to use new architecture: roles.agent-user-idp.issuer
-        when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-        properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-        properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
-        
+        // Stub getRole() convenience method used by DiscoveryController
+        when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+
         // Update to use new architecture: capabilities.oauth2Server
         when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
         properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -105,11 +109,8 @@ class DiscoveryControllerTest {
         @DisplayName("Should return default issuer when issuer is null")
         void shouldReturnDefaultIssuerWhenIssuerIsNull() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(null);
-            
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(null));
+
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -147,11 +148,8 @@ class DiscoveryControllerTest {
         @DisplayName("Should include PAR endpoint when enabled")
         void shouldIncludeParEndpointOnlyWhenEnabled() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
-            
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -172,11 +170,8 @@ class DiscoveryControllerTest {
         @DisplayName("Should include token endpoint when enabled")
         void shouldIncludeTokenEndpointOnlyWhenEnabled() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
-            
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -197,11 +192,8 @@ class DiscoveryControllerTest {
         @DisplayName("Should include authorization endpoint when enabled")
         void shouldIncludeAuthorizationEndpointOnlyWhenEnabled() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
-            
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -227,10 +219,7 @@ class DiscoveryControllerTest {
         @DisplayName("Should include correct response types supported")
         void shouldIncludeCorrectResponseTypesSupported() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -248,10 +237,7 @@ class DiscoveryControllerTest {
         @DisplayName("Should include correct grant types supported")
         void shouldIncludeCorrectGrantTypesSupported() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -269,10 +255,7 @@ class DiscoveryControllerTest {
         @DisplayName("Should include correct subject types supported")
         void shouldIncludeCorrectSubjectTypesSupported() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -290,10 +273,7 @@ class DiscoveryControllerTest {
         @DisplayName("Should include correct ID token signing algorithms supported")
         void shouldIncludeCorrectIdTokenSigningAlgorithmsSupported() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -311,10 +291,7 @@ class DiscoveryControllerTest {
         @DisplayName("Should include correct scopes supported")
         void shouldIncludeCorrectScopesSupported() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -332,10 +309,7 @@ class DiscoveryControllerTest {
         @DisplayName("Should include correct token endpoint auth methods supported")
         void shouldIncludeCorrectTokenEndpointAuthMethodsSupported() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
@@ -353,10 +327,7 @@ class DiscoveryControllerTest {
         @DisplayName("Should include correct claims supported")
         void shouldIncludeCorrectClaimsSupported() {
             // Given
-            // Update to use new architecture: roles.agent-user-idp.issuer
-            when(properties.getRoles()).thenReturn(new java.util.HashMap<>());
-            properties.getRoles().put("agent-user-idp", new RolesProperties.RoleProperties());
-            properties.getRoles().get("agent-user-idp").setIssuer(ISSUER);
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
             // Update to use new architecture: capabilities.oauth2Server
             when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
             properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());

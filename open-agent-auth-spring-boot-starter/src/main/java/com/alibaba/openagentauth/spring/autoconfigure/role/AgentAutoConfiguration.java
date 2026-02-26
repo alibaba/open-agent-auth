@@ -533,17 +533,10 @@ public class AgentAutoConfiguration {
         public VcSigner vcSigner(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
 
             // Get params from properties
-            // Get issuer from roles configuration
-            String issuer = null;
-            if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT);
-                if (role != null) {
-                    issuer = role.getIssuer();
-                }
-            }
+            String issuer = openAgentAuthProperties.getRoleIssuer(ROLE_AGENT);
 
-            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_VC_SIGNING).getKeyId();
-            String keyAlgorithmName = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_VC_SIGNING).getAlgorithm();
+            String keyId = openAgentAuthProperties.getKeyDefinition(KEY_VC_SIGNING).getKeyId();
+            String keyAlgorithmName = openAgentAuthProperties.getKeyDefinition(KEY_VC_SIGNING).getAlgorithm();
             KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(keyAlgorithmName);
 
             // Get or generate VC signing key from KeyManager
@@ -567,18 +560,12 @@ public class AgentAutoConfiguration {
                 KeyManager keyManager
         ) {
             // Get params from properties
-            // Get issuer from roles configuration
-            String issuer = null;
-            if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT);
-                if (role != null) {
-                    issuer = role.getIssuer();
-                }
-            }
+            String issuer = openAgentAuthProperties.getRoleIssuer(ROLE_AGENT);
 
-            String authorizationServerUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AUTHORIZATION_SERVER).getBaseUrl();
-            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_PAR_JWT_SIGNING).getKeyId();
-            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_PAR_JWT_SIGNING).getAlgorithm());
+            String authorizationServerUrl = openAgentAuthProperties.getServiceUrl(SERVICE_AUTHORIZATION_SERVER);
+            String keyId = openAgentAuthProperties.getKeyDefinition(KEY_PAR_JWT_SIGNING).getKeyId();
+            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(
+                    openAgentAuthProperties.getKeyDefinition(KEY_PAR_JWT_SIGNING).getAlgorithm());
 
             // Get or generate PAR-JWT signing key from KeyManager
             RSAKey parJwtSigningKey;
@@ -604,9 +591,9 @@ public class AgentAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         public WitValidator witValidator(KeyManager keyManager, OpenAgentAuthProperties openAgentAuthProperties) {
-            
-            String keyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
-            String trustDomain = openAgentAuthProperties.getInfrastructures().getTrustDomain();
+
+            String keyId = openAgentAuthProperties.getKeyDefinition(KEY_WIT_VERIFICATION).getKeyId();
+            String trustDomain = openAgentAuthProperties.getTrustDomain();
             logger.info("Creating WitValidator bean. Key ID: {}, Trust Domain: {}", keyId, trustDomain);
 
             TrustDomain trustDomainObj = new TrustDomain(trustDomain);
@@ -692,19 +679,15 @@ public class AgentAutoConfiguration {
                 AapParJwtGenerator aapParJwtGenerator
         ) {
             // Get the properties
-            String authorizationServerUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AUTHORIZATION_SERVER).getBaseUrl();
-            String agentUserIdpUrl = openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().get(SERVICE_AGENT_USER_IDP).getBaseUrl();
-            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
+            String authorizationServerUrl = openAgentAuthProperties.getServiceUrl(SERVICE_AUTHORIZATION_SERVER);
+            String agentUserIdpUrl = openAgentAuthProperties.getServiceUrl(SERVICE_AGENT_USER_IDP);
+
+            var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
+            String clientId = oauth2ClientProps.getClientId();
 
             // Derive redirect URI from role issuer + callback endpoint
-            String callbackEndpoint = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getEndpoint();
-            String roleIssuer = null;
-            if (openAgentAuthProperties.getRoles() != null) {
-                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT);
-                if (role != null) {
-                    roleIssuer = role.getIssuer();
-                }
-            }
+            String callbackEndpoint = oauth2ClientProps.getCallback().getEndpoint();
+            String roleIssuer = openAgentAuthProperties.getRoleIssuer(ROLE_AGENT);
             String oAuthCallbacksRedirectUri = (roleIssuer != null ? roleIssuer : "") + (callbackEndpoint != null ? callbackEndpoint : "/callback");
 
             // Create the agent
@@ -789,13 +772,7 @@ public class AgentAutoConfiguration {
             var operationAuthProps = openAgentAuthProperties.getCapabilities().getOperationAuthorization();
 
             // Get issuer from roles configuration
-            String issuer = null;
-            if (openAgentAuthProperties.getRoles() != null && openAgentAuthProperties.getRoles().get(ROLE_AGENT) != null) {
-                var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT);
-                if (role.getIssuer() != null) {
-                    issuer = role.getIssuer();
-                }
-            }
+            String issuer = openAgentAuthProperties.getRoleIssuer(ROLE_AGENT);
 
             var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
 
@@ -918,7 +895,8 @@ public class AgentAutoConfiguration {
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
             logger.info("Creating AgentAuthenticationInterceptor bean");
-            List<String> excludedPaths = openAgentAuthProperties.getCapabilities().getOAuth2Client().getAuthentication().getExcludePaths();
+            var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
+            List<String> excludedPaths = oauth2ClientProps.getAuthentication().getExcludePaths();
             logger.info("Configured excluded paths: {}", excludedPaths);
             return new AgentAuthenticationInterceptor(agentAapExecutor, sessionMappingBizService, excludedPaths);
         }
