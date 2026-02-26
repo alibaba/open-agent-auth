@@ -134,8 +134,8 @@ public class ResourceServerAutoConfiguration {
     @ConditionalOnMissingBean
     public WitValidator witValidator(OpenAgentAuthProperties openAgentAuthProperties, KeyManager keyManager) {
 
-        String witKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_WIT_VERIFICATION).getKeyId();
-        String trustDomain = openAgentAuthProperties.getInfrastructures().getTrustDomain();
+        String witKeyId = openAgentAuthProperties.getKeyDefinition(KEY_WIT_VERIFICATION).getKeyId();
+        String trustDomain = openAgentAuthProperties.getTrustDomain();
         logger.info("Creating WitValidator bean for Resource Server. Key ID: {}, Trust Domain: {}", witKeyId, trustDomain);
 
         TrustDomain trustDomainObj = new TrustDomain(trustDomain);
@@ -155,18 +155,12 @@ public class ResourceServerAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public AoatValidator aoatValidator(OpenAgentAuthProperties openAgentAuthProperties, KeyManager keyManager) {
-        String aoatKeyId = openAgentAuthProperties.getInfrastructures().getKeyManagement().getKeys().get(KEY_AOAT_VERIFICATION).getKeyId();
+        String aoatKeyId = openAgentAuthProperties.getKeyDefinition(KEY_AOAT_VERIFICATION).getKeyId();
         logger.info("Creating AoatValidator bean for Resource Server. Key ID: {}", aoatKeyId);
 
-        String authorizationServerIssuer = openAgentAuthProperties.getInfrastructures().getJwks().getConsumers().get(SERVICE_AUTHORIZATION_SERVER).getIssuer();
+        String authorizationServerIssuer = openAgentAuthProperties.getJwksConsumer(SERVICE_AUTHORIZATION_SERVER).getIssuer();
 
-        String resourceServerIssuer = null;
-        if (openAgentAuthProperties.getRoles() != null) {
-            var role = openAgentAuthProperties.getRoles().get(ROLE_RESOURCE_SERVER);
-            if (role != null) {
-                resourceServerIssuer = role.getIssuer();
-            }
-        }
+        String resourceServerIssuer = openAgentAuthProperties.getRoleIssuer(ROLE_RESOURCE_SERVER);
 
         return new AoatValidator(keyManager, aoatKeyId, authorizationServerIssuer, resourceServerIssuer);
     }
@@ -201,9 +195,9 @@ public class ResourceServerAutoConfiguration {
         
         // Map service discovery services to consumer services
         Map<String, ServiceProperties.ConsumerServiceProperties> consumers = new HashMap<>();
-        if (openAgentAuthProperties.getInfrastructures().getServiceDiscovery() != null
-                && openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices() != null) {
-            openAgentAuthProperties.getInfrastructures().getServiceDiscovery().getServices().forEach((name, service) -> {
+        var serviceDiscovery = openAgentAuthProperties.getInfrastructures().getServiceDiscovery();
+        if (serviceDiscovery != null && serviceDiscovery.getServices() != null) {
+            serviceDiscovery.getServices().forEach((name, service) -> {
                 ServiceProperties.ConsumerServiceProperties consumer = new ServiceProperties.ConsumerServiceProperties();
                 consumer.setBaseUrl(service.getBaseUrl());
                 consumer.setEndpoints(service.getEndpoints());

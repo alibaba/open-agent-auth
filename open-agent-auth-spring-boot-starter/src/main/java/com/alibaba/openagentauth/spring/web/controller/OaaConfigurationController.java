@@ -109,7 +109,7 @@ public class OaaConfigurationController {
 
         metadata.setIssuer(issuer);
         metadata.setRoles(enabledRoles);
-        metadata.setTrustDomain(properties.getInfrastructures().getTrustDomain());
+        metadata.setTrustDomain(properties.getTrustDomain());
         metadata.setProtocolVersion(OaaConfigurationMetadata.CURRENT_PROTOCOL_VERSION);
 
         // JWKS URI

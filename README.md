@@ -9,8 +9,8 @@
   ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
   ![Java](https://img.shields.io/badge/Java-17+-orange.svg)
   ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3+-green.svg)
-  ![Code Coverage](https://img.shields.io/badge/coverage-82%25-brightgreen)
-  ![Build Status](https://github.com/idem/idem-agent-auth/actions/workflows/ci.yml/badge.svg)
+  ![Code Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)
+  ![Build Status](https://github.com/alibaba/open-agent-auth/actions/workflows/ci.yml/badge.svg)
   ![Version](https://img.shields.io/badge/version-v0.1.0--beta.1-blue)
 
   [Quick Start](#quick-start) · [Architecture](#architecture) · [Security](#security) · [Documentation](#documentation) · [Roadmap](#roadmap)

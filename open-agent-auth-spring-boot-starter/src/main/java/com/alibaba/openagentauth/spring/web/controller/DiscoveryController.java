@@ -15,6 +15,7 @@
  */
 package com.alibaba.openagentauth.spring.web.controller;
 
+import com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -67,14 +68,12 @@ public class DiscoveryController {
 
         // Get issuer from roles configuration
         String issuer = null;
-        if (properties.getRoles() != null) {
-            var agentUserIdpRole = properties.getRoles().get("agent-user-idp");
-            var asUserIdpRole = properties.getRoles().get("as-user-idp");
-            if (agentUserIdpRole != null && agentUserIdpRole.getIssuer() != null) {
-                issuer = agentUserIdpRole.getIssuer();
-            } else if (asUserIdpRole != null && asUserIdpRole.getIssuer() != null) {
-                issuer = asUserIdpRole.getIssuer();
-            }
+        var agentUserIdpRole = properties.getRole(ConfigConstants.ROLE_AGENT_USER_IDP);
+        var asUserIdpRole = properties.getRole(ConfigConstants.ROLE_AS_USER_IDP);
+        if (agentUserIdpRole != null && agentUserIdpRole.getIssuer() != null) {
+            issuer = agentUserIdpRole.getIssuer();
+        } else if (asUserIdpRole != null && asUserIdpRole.getIssuer() != null) {
+            issuer = asUserIdpRole.getIssuer();
         }
         
         if (issuer == null) {

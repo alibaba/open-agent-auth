@@ -46,6 +46,8 @@ jobs:
           name: Test Results (JDK ${{ matrix.java }})
           path: '**/target/surefire-reports/TEST-*.xml'
           reporter: java-junit
+          only-summary: 'true'
+          list-tests: 'failed'
 
       - name: Generate JaCoCo Coverage Report
         uses: madrapps/jacoco-report@v1.7.1
@@ -60,73 +62,6 @@ jobs:
           update-comment: true
           min-coverage-overall: 50
           min-coverage-changed-files: 60
-
-      - name: Extract coverage percentage
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        id: coverage
-        run: |
-          REPORT=$(find . -path "*/jacoco-aggregate/jacoco.xml" -type f | head -1)
-          if [ -z "$REPORT" ]; then
-            REPORT=$(find . -path "*/site/jacoco/jacoco.xml" -type f | head -1)
-          fi
-
-          if [ -n "$REPORT" ]; then
-            # Extract the last (root-level) LINE counter from the report
-            # Use awk to reliably parse missed/covered from the last LINE counter element
-            MISSED=$(awk -F'"' '/<counter type="LINE"/{missed=$4} END{print missed}' "$REPORT")
-            COVERED=$(awk -F'"' '/<counter type="LINE"/{covered=$6} END{print covered}' "$REPORT")
-
-            if [ -n "$MISSED" ] && [ -n "$COVERED" ] && [ "$MISSED" -ge 0 ] 2>/dev/null && [ "$COVERED" -ge 0 ] 2>/dev/null; then
-              TOTAL=$((MISSED + COVERED))
-              if [ "$TOTAL" -gt 0 ]; then
-                PERCENTAGE=$((COVERED * 100 / TOTAL))
-              else
-                PERCENTAGE=0
-              fi
-              echo "coverage=$PERCENTAGE" >> $GITHUB_OUTPUT
-              echo "Coverage: $PERCENTAGE% ($COVERED/$TOTAL lines)"
-            else
-              echo "coverage=0" >> $GITHUB_OUTPUT
-              echo "Could not parse coverage from $REPORT"
-            fi
-          else
-            echo "coverage=0" >> $GITHUB_OUTPUT
-            echo "No JaCoCo report found"
-          fi
-
-      - name: Update coverage badge in README
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.coverage.outputs.coverage != '0'
-        run: |
-          COVERAGE=${{ steps.coverage.outputs.coverage }}
-
-          # Determine badge color based on coverage
-          if [ "$COVERAGE" -ge 80 ]; then
-            COLOR="brightgreen"
-          elif [ "$COVERAGE" -ge 60 ]; then
-            COLOR="green"
-          elif [ "$COVERAGE" -ge 40 ]; then
-            COLOR="yellow"
-          else
-            COLOR="red"
-          fi
-
-          # Update both README.md and README.zh-CN.md
-          for README_FILE in README.md README.zh-CN.md; do
-            if [ -f "$README_FILE" ]; then
-              sed -i "s|!\[Code Coverage\](https://img.shields.io/badge/coverage-[^)]*)|![Code Coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR})|g" "$README_FILE"
-            fi
-          done
-
-          # Check if there are changes to commit
-          if git diff --quiet; then
-            echo "No coverage badge changes to commit"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add README.md README.zh-CN.md
-            git commit -m "chore: update coverage badge to ${COVERAGE}% [skip ci]"
-            git push
-          fi
 
       - name: Upload Test Reports
         if: failure()

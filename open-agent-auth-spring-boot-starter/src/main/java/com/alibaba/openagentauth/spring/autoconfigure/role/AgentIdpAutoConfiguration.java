@@ -25,7 +25,7 @@ import com.alibaba.openagentauth.framework.actor.AgentIdentityProvider;
 import com.alibaba.openagentauth.framework.orchestration.DefaultAgentIdentityProvider;
 import com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
-import com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties;
+import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksConsumerProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 
 import static com.alibaba.openagentauth.spring.autoconfigure.ConfigConstants.*;
@@ -155,16 +155,8 @@ public class AgentIdpAutoConfiguration {
             OpenAgentAuthProperties openAgentAuthProperties
     ) {
         // Get issuer from roles configuration
-        String issuer = null;
-        logger.debug("OpenAgentAuthProperties: {}", openAgentAuthProperties);
-        if (openAgentAuthProperties.getRoles() != null) {
-            var role = openAgentAuthProperties.getRoles().get(ROLE_AGENT_IDP);
-            logger.debug("Agent IDP role: {}", role);
-            if (role != null) {
-                issuer = role.getIssuer();
-                logger.debug("Issuer from role: {}", issuer);
-            }
-        }
+        String issuer = openAgentAuthProperties.getRoleIssuer(ROLE_AGENT_IDP);
+        logger.debug("Issuer from role: {}", issuer);
 
         if (ValidationUtils.isNullOrEmpty(issuer)) {
             throw new IllegalStateException(
@@ -174,11 +166,10 @@ public class AgentIdpAutoConfiguration {
         }
 
         // Agent User IDP issuer for ID Token validation
-        String agentUserIdpIssuer = null;
-        InfrastructureProperties infrastructures = openAgentAuthProperties.getInfrastructures();
-        if (infrastructures.getJwks().getConsumers().containsKey(SERVICE_AGENT_USER_IDP)) {
-            agentUserIdpIssuer = infrastructures.getJwks().getConsumers().get(SERVICE_AGENT_USER_IDP).getIssuer();
-        }
+        JwksConsumerProperties agentUserIdpConsumer =
+                openAgentAuthProperties.getJwksConsumer(SERVICE_AGENT_USER_IDP);
+        String agentUserIdpIssuer =
+                agentUserIdpConsumer != null ? agentUserIdpConsumer.getIssuer() : null;
 
         if (ValidationUtils.isNullOrEmpty(agentUserIdpIssuer)) {
             throw new IllegalStateException(
@@ -219,7 +210,7 @@ public class AgentIdpAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public IdTokenValidator idTokenValidator(KeyManager keyManager, OpenAgentAuthProperties properties) {
-        String keyId = properties.getInfrastructures().getKeyManagement().getKeys().get(KEY_ID_TOKEN_VERIFICATION).getKeyId();
+        String keyId = properties.getKeyDefinition(KEY_ID_TOKEN_VERIFICATION).getKeyId();
         logger.info("Creating IdTokenValidator bean. Key ID: {}", keyId);
         return new DefaultIdTokenValidator(keyManager, keyId);
     }

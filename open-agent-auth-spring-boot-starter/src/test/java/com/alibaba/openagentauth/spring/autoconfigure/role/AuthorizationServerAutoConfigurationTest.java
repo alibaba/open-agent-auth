@@ -595,7 +595,7 @@ class AuthorizationServerAutoConfigurationTest {
                 .run(context -> {
                     assertThat(context).hasFailed();
                     assertThat(context.getStartupFailure().getMessage())
-                        .contains("AS User IDP configuration not found");
+                        .contains("AS User IDP issuer configuration not found");
                 });
         }
     }
