@@ -46,6 +46,8 @@ jobs:
           name: Test Results (JDK ${{ matrix.java }})
           path: '**/target/surefire-reports/TEST-*.xml'
           reporter: java-junit
+          only-summary: 'true'
+          list-tests: 'failed'
 
       - name: Generate JaCoCo Coverage Report
         uses: madrapps/jacoco-report@v1.7.1
