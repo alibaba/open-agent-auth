@@ -42,7 +42,7 @@ import java.util.List;
  * public AsUserIdpUserAuthInterceptor asUserIdpInterceptor(
  *         SessionMappingBizService sessionMappingBizService,
  *         OpenAgentAuthProperties properties) {
- *     List&lt;String&gt; excludedPaths = List.of("/callback", "/public/**");
+ *     List<String> excludedPaths = List.of("/callback", "/public/**");
  *     String issuer = properties.getJwks().getConsumers().get("as-user-idp").getIssuer();
  *     String clientId = "your-client-id";
  *     String callbackUrl = "https://example.com/callback";

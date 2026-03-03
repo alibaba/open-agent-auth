@@ -42,7 +42,7 @@ import java.util.List;
  * public AgentUserIdpUserAuthInterceptor agentUserIdpInterceptor(
  *         SessionMappingBizService sessionMappingBizService,
  *         AgentAapExecutor agentAapExecutor) {
- *     List&lt;String&gt; excludedPaths = List.of("/callback", "/public/**");
+ *     List<String> excludedPaths = List.of("/callback", "/public/**");
  *     return new AgentUserIdpUserAuthInterceptor(
  *         sessionMappingBizService, excludedPaths, agentAapExecutor);
  * }

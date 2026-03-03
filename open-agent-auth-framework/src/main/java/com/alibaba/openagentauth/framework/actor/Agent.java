@@ -60,7 +60,7 @@ import com.alibaba.openagentauth.framework.role.ApplicationRole;
  *   <li><b>Phase 3 - OAuth Client Registration:</b> DCR using WIT as client_assertion</li>
  *   <li><b>Phase 4 - Authorization Request:</b> PAR flow to submit operation proposal</li>
  *   <li><b>Phase 5 - User Authorization:</b> OAuth 2.0 user consent flow</li>
- *   <li><b>Phase 6 - Token Exchange &amp; Tool Execution:</b> Exchange code for AOAT, prepare context</li>
+ *   <li><b>Phase 6 - Token Exchange & Tool Execution:</b> Exchange code for AOAT, prepare context</li>
  * </ol>
  * <p>
  * For detailed sequence diagrams and system interactions for each phase, see
