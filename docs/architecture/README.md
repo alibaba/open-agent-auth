@@ -20,22 +20,21 @@ graph LR
 
 ### Core Architecture
 
-| Module | Description | Entry Point |
-|--------|-------------|-------------|
-| **[Token](token/README.md)** | Token types, structures, lifecycle, and relationships | `token/README.md` |
-| **[Identity](identity/README.md)** | Dual-layer identity model, workload isolation, IDP architecture | `identity/README.md` |
-| **[Authorization](authorization/README.md)** | OAuth 2.0 + PAR flow, five-layer verification, policy evaluation | `authorization/README.md` |
-| **[Security](security/README.md)** | Cryptographic protection, threat mitigation, audit & compliance | `security/README.md` |
+| Module | Description |
+|--------|-------------|
+| **[Token Reference](01-token.md)** | Token types (ID Token, WIT, WPT, PAR-JWT, VC, AOAT), structures, lifecycle, and relationships |
+| **[Identity & Workload](02-identity.md)** | Dual-layer identity model, workload isolation, IDP architecture, identity binding |
+| **[Authorization Flow](03-authorization.md)** | OAuth 2.0 + PAR flow, five-layer verification, policy evaluation |
+| **[Security](04-security.md)** | Cryptographic protection, key management, threat mitigation, audit & compliance |
 
 ### Protocol & Integration
 
-| Module | Description | Entry Point |
-|--------|-------------|-------------|
-| **[MCP Protocol Adapter](protocol/mcp/README.md)** | Model Context Protocol integration with five-layer verification | `protocol/mcp/README.md` |
-| **[Spring Boot Integration](integration/spring-boot-integration.md)** | Autoconfiguration, role detection, configuration properties | `integration/spring-boot-integration.md` |
-| **[Key Resolution SPI](integration/key-resolution-spi.md)** | Pluggable key resolution mechanism | `integration/key-resolution-spi.md` |
-| **[Peers Configuration](integration/peers-configuration.md)** | Convention-over-configuration for peer services | `integration/peers-configuration.md` |
-| **[OAA Discovery](integration/oaa-configuration-discovery.md)** | Service discovery via `/.well-known/oaa-configuration` | `integration/oaa-configuration-discovery.md` |
+| Module | Description |
+|--------|-------------|
+| **[Agent Authorization Flow](05-agent-authorization-flow.md)** | Complete six-phase AOA protocol flow from user authentication to tool execution |
+| **[MCP Protocol Adapter](06-protocol-mcp.md)** | Model Context Protocol integration with five-layer verification |
+| **[Spring Boot Integration](07-spring-boot-integration.md)** | Autoconfiguration, role detection, bean lifecycle, configuration properties |
+| **[Integration Infrastructure](08-integration-infrastructure.md)** | Key Resolution SPI, Peers Configuration, OAA Configuration Discovery |
 
 ## Recommended Reading Order
 
