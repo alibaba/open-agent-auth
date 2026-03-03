@@ -371,28 +371,6 @@ class AgentIdpAutoConfigurationTest {
         }
 
         @Override
-        public WorkloadIdentityToken issueWit(String agentWorkloadId)
-                throws FrameworkTokenGenerationException, WorkloadNotFoundException {
-            WorkloadIdentityToken.Header header = WorkloadIdentityToken.Header.builder()
-                .type("JWT")
-                .algorithm("RS256")
-                .build();
-            
-            WorkloadIdentityToken.Claims claims = WorkloadIdentityToken.Claims.builder()
-                .issuer("http://localhost:8080")
-                .subject("test-workload-id")
-                .expirationTime(new java.util.Date(java.time.Instant.now().plusSeconds(3600).toEpochMilli()))
-                .jwtId("test-jti")
-                .build();
-            
-            return WorkloadIdentityToken.builder()
-                .header(header)
-                .claims(claims)
-                .signature("test-signature")
-                .build();
-        }
-
-        @Override
         public WorkloadIdentityToken issueWit(IssueWitRequest request)
                 throws FrameworkTokenGenerationException, WorkloadCreationException {
             WorkloadIdentityToken.Header header = WorkloadIdentityToken.Header.builder()

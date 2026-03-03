@@ -570,4 +570,5 @@ public interface Agent extends FrameworkOAuth2TokenClient {
      * @param workloadContext the workload context to clear
      */
     void clearAuthorizationContext(WorkloadContext workloadContext);
+
 }

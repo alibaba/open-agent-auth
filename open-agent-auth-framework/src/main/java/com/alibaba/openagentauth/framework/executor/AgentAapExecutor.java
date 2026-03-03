@@ -97,14 +97,10 @@ import com.alibaba.openagentauth.framework.role.ApplicationRole;
  *
  * <h3>Role-Specific Executors:</h3>
  * <p>
- * This interface is specifically for the Agent role. Other roles may have their
- * own executor implementations:
+ * This interface is specifically for the Agent role. The Agent role executor
+ * orchestrates the complete AOA protocol flow by coordinating multiple Actor
+ * interfaces (Agent, AgentIdentityProvider, AuthorizationServer).
  * </p>
- * <ul>
- *   <li>{@link AgentAapExecutor} - Agent role executor (this interface)</li>
- *   <li>AgentIdpAapExecutor - Agent IDP role executor</li>
- *   <li>ResourceServerAapExecutor - Resource Server role executor</li>
- * </ul>
  *
  * @see Agent
  * @see ApplicationRole#AGENT

@@ -19,6 +19,7 @@ import com.alibaba.openagentauth.framework.exception.auth.FrameworkAuthorization
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkParProcessingException;
 import com.alibaba.openagentauth.framework.exception.token.FrameworkTokenGenerationException;
 import com.alibaba.openagentauth.framework.model.request.AoatIssuanceRequest;
+import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenServer;
 import com.alibaba.openagentauth.framework.role.ApplicationRole;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
@@ -304,13 +305,14 @@ import java.util.List;
  * </ul>
  * 
  * @see ApplicationRole#AUTHORIZATION_SERVER
+ * @see FrameworkOAuth2TokenClient
  * @see FrameworkOAuth2TokenServer
  * @see AgentOperationAuthToken
  * @see DcrResponse
  * @see WorkloadIdentityToken
  * @since 1.0
  */
-public interface AuthorizationServer extends FrameworkOAuth2TokenServer {
+public interface AuthorizationServer extends FrameworkOAuth2TokenServer, FrameworkOAuth2TokenClient {
     
     /**
      * Processes a Pushed Authorization Request (PAR).

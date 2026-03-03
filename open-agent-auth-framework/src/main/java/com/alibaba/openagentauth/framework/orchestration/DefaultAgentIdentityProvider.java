@@ -169,45 +169,6 @@ public class DefaultAgentIdentityProvider implements AgentIdentityProvider {
     }
 
     /**
-     * Issues a Workload Identity Token (WIT).
-     *
-     * @param agentWorkloadId the agent workload ID to issue WIT for
-     * @return the issued WIT
-     * @throws FrameworkTokenGenerationException if WIT generation fails
-     * @throws WorkloadNotFoundException if the workload is not found
-     */
-    @Override
-    public WorkloadIdentityToken issueWit(String agentWorkloadId) throws FrameworkTokenGenerationException, WorkloadNotFoundException {
-        
-        // Validate input parameters
-        if (ValidationUtils.isNullOrEmpty(agentWorkloadId)) {
-            throw new IllegalArgumentException("Agent workload ID cannot be null or empty");
-        }
-
-        logger.debug("Issuing WIT for agent workload: {}", agentWorkloadId);
-
-        // Get workload
-        WorkloadInfo workload = workloadRegistry.findById(agentWorkloadId)
-                .orElseThrow(() -> new WorkloadNotFoundException("Agent workload not found: " + agentWorkloadId));
-
-        try {
-            // Generate WIT with independent expiration time
-            WorkloadIdentityToken wit = tokenService.generateWit(
-                    workload.getWorkloadId(),
-                    workload.getPublicKey(),
-                    DEFAULT_EXPIRATION_SECONDS
-            );
-
-            logger.info("WIT issued for agent workload: {}", agentWorkloadId);
-            return wit;
-            
-        } catch (JOSEException e) {
-            logger.error("Failed to generate WIT for agent workload: {}", agentWorkloadId, e);
-            throw new FrameworkTokenGenerationException("Failed to generate WIT", e);
-        }
-    }
-
-    /**
      * Issues a Workload Identity Token (WIT) using standard request model.
      * <p>
      * This is the standard-compliant implementation that accepts
