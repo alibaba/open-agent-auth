@@ -4,50 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Open Agent Auth Chat</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         /* ============================================
            Design System - Design Tokens
            ============================================ */
         :root {
-            /* Color Palette - Primary (Cyberpunk/Neon Theme) */
-            --color-primary-50: #0A0E27;
-            --color-primary-100: #151932;
-            --color-primary-200: #1F2440;
-            --color-primary-300: #2D3456;
-            --color-primary-400: #3D4A6D;
-            --color-primary-500: #00F0FF;
-            --color-primary-600: #00C8D6;
-            --color-primary-700: #00A0AD;
-            --color-primary-800: #007884;
-            --color-primary-900: #00505A;
+            /* Color Palette - Primary (Warm Amber) */
+            --color-primary-50: #FFF8F0;
+            --color-primary-100: #FFEFD6;
+            --color-primary-200: #FFE0B2;
+            --color-primary-300: #FFD08A;
+            --color-primary-400: #D4A574;
+            --color-primary-500: #B8860B;
+            --color-primary-600: #8B6914;
+            --color-primary-700: #6B5010;
+            --color-primary-800: #4A370B;
+            --color-primary-900: #2A1F06;
             
-            /* Color Palette - Semantic (Neon Accents) */
-            --color-success: #00FFA3;
-            --color-success-light: rgba(0, 255, 163, 0.15);
-            --color-warning: #FFD700;
-            --color-warning-light: rgba(255, 215, 0, 0.15);
-            --color-error: #FF0055;
-            --color-error-light: rgba(255, 0, 85, 0.15);
-            --color-info: #00F0FF;
-            --color-info-light: rgba(0, 240, 255, 0.15);
+            /* Color Palette - Semantic */
+            --color-success: #5B8C5A;
+            --color-success-light: rgba(91, 140, 90, 0.1);
+            --color-warning: #D4A574;
+            --color-warning-light: rgba(212, 165, 116, 0.1);
+            --color-error: #C75050;
+            --color-error-light: rgba(199, 80, 80, 0.08);
+            --color-info: #B8860B;
+            --color-info-light: rgba(184, 134, 11, 0.08);
             
-            /* Color Palette - Neutral (Dark Theme) */
-            --color-gray-50: #0D1117;
-            --color-gray-100: #161B22;
-            --color-gray-200: #21262D;
-            --color-gray-300: #30363D;
-            --color-gray-400: #484F58;
-            --color-gray-500: #6E7681;
-            --color-gray-600: #8B949E;
-            --color-gray-700: #B1BAC4;
-            --color-gray-800: #C9D1D9;
-            --color-gray-900: #E6EDF3;
+            /* Color Palette - Neutral (Light Theme) */
+            --color-gray-50: #FAFAF8;
+            --color-gray-100: #F5F3EF;
+            --color-gray-200: #E8E4DF;
+            --color-gray-300: #D4CFC8;
+            --color-gray-400: #B0ABA5;
+            --color-gray-500: #8A8A8A;
+            --color-gray-600: #6B6B6B;
+            --color-gray-700: #4A4A4A;
+            --color-gray-800: #2D2D2D;
+            --color-gray-900: #1A1A1A;
             
             /* Typography */
-            --font-family-base: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            --font-family-mono: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+            --font-family-base: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-family-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Monaco', monospace;
             
             --font-size-xs: 0.75rem;
             --font-size-sm: 0.875rem;
@@ -84,13 +83,11 @@
             --radius-2xl: 1.5rem;
             --radius-full: 9999px;
             
-            /* Shadows (Neon Glow Effect) */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 240, 255, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 240, 255, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
-            --shadow-neon: 0 0 20px rgba(0, 240, 255, 0.3), 0 0 40px rgba(0, 240, 255, 0.1);
-            --shadow-neon-purple: 0 0 20px rgba(138, 43, 226, 0.3), 0 0 40px rgba(138, 43, 226, 0.1);
+            /* Shadows (Warm, subtle) */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+            --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.1);
             
             /* Transitions */
             --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -109,7 +106,7 @@
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #0A0E27 0%, #151932 50%, #0D1117 100%);
+            background: var(--color-gray-50);
             font-family: var(--font-family-base);
             font-size: var(--font-size-base);
             line-height: var(--line-height-normal);
@@ -117,22 +114,6 @@
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
-        }
-        
-        /* Animated background particles effect */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(138, 43, 226, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 40% 80%, rgba(0, 255, 163, 0.02) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
         }
         
         /* ============================================
@@ -159,32 +140,14 @@
         /* Left Sidebar - Session History */
         .sidebar-left {
             width: 280px;
-            background: var(--color-gray-100);
-            border-right: 1px solid var(--color-gray-300);
+            background: #FFFFFF;
+            border-right: 1px solid var(--color-gray-200);
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
             transition: all var(--transition-base);
             z-index: 20;
             position: relative;
-        }
-        
-        /* Left sidebar glowing border effect */
-        .sidebar-left::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            right: 0;
-            width: 1px;
-            background: linear-gradient(180deg, 
-                transparent 0%, 
-                rgba(0, 240, 255, 0.3) 20%, 
-                rgba(0, 240, 255, 0.5) 50%, 
-                rgba(0, 240, 255, 0.3) 80%, 
-                transparent 100%);
-            pointer-events: none;
-            opacity: 0.6;
         }
         
         .sidebar-left.collapsed {
@@ -195,7 +158,7 @@
         /* Center - Chat Container */
         .chat-container {
             flex: 1;
-            background: var(--color-gray-100);
+            background: var(--color-gray-50);
             border: none;
             border-radius: 0;
             box-shadow: none;
@@ -213,32 +176,14 @@
         /* Right Sidebar - Tool Call History */
         .sidebar-right {
             width: 320px;
-            background: var(--color-gray-100);
-            border-left: 1px solid var(--color-gray-300);
+            background: #FFFFFF;
+            border-left: 1px solid var(--color-gray-200);
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
             transition: all var(--transition-base);
             z-index: 20;
             position: relative;
-        }
-        
-        /* Right sidebar glowing border effect */
-        .sidebar-right::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            width: 1px;
-            background: linear-gradient(180deg, 
-                transparent 0%, 
-                rgba(0, 255, 163, 0.3) 20%, 
-                rgba(0, 255, 163, 0.5) 50%, 
-                rgba(0, 255, 163, 0.3) 80%, 
-                transparent 100%);
-            pointer-events: none;
-            opacity: 0.6;
         }
         
         .sidebar-right.collapsed {
@@ -290,8 +235,8 @@
            ============================================ */
         .sidebar-header {
             padding: var(--space-4);
-            border-bottom: 1px solid var(--color-gray-300);
-            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--color-gray-200);
+            background: #FFFFFF;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -357,8 +302,8 @@
         }
         
         .session-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--color-gray-300);
+            background: transparent;
+            border: 1px solid transparent;
             border-radius: var(--radius-lg);
             padding: var(--space-3) var(--space-4);
             cursor: pointer;
@@ -367,15 +312,14 @@
         }
         
         .session-item:hover {
-            background: rgba(0, 240, 255, 0.05);
-            border-color: rgba(0, 240, 255, 0.2);
-            transform: translateX(2px);
+            background: rgba(184, 134, 11, 0.06);
+            border-color: transparent;
         }
         
         .session-item.active {
-            background: rgba(0, 240, 255, 0.08);
-            border-color: var(--color-primary-400);
-            box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.15);
+            background: rgba(184, 134, 11, 0.1);
+            border-color: transparent;
+            border-left: 3px solid var(--color-primary-500);
         }
         
         .session-item-title {
@@ -436,11 +380,11 @@
         /* New Session Button */
         .new-session-btn {
             width: 100%;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-            border: 1px solid rgba(102, 126, 234, 0.3);
+            background: var(--color-gray-900);
+            border: 1px solid var(--color-gray-900);
             border-radius: var(--radius-lg);
             padding: var(--space-3) var(--space-4);
-            color: var(--color-gray-800);
+            color: #FFFFFF;
             font-weight: var(--font-weight-semibold);
             transition: all var(--transition-base);
             cursor: pointer;
@@ -453,8 +397,8 @@
         
         .new-session-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+            box-shadow: var(--shadow-md);
+            background: var(--color-gray-800);
         }
         
         .empty-sessions {
@@ -480,22 +424,21 @@
         }
         
         .tool-call-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--color-gray-300);
+            background: transparent;
+            border: 1px solid var(--color-gray-200);
             border-radius: var(--radius-lg);
             overflow: hidden;
             transition: all var(--transition-fast);
         }
         
         .tool-call-item:hover {
-            background: rgba(0, 240, 255, 0.05);
-            border-color: rgba(0, 240, 255, 0.2);
-            transform: translateX(-2px);
+            background: var(--color-gray-50);
+            border-color: var(--color-gray-300);
         }
         
         .tool-call-item-header {
             padding: var(--space-3) var(--space-4);
-            background: rgba(255, 255, 255, 0.02);
+            background: transparent;
             border-bottom: 1px solid var(--color-gray-200);
             display: flex;
             align-items: center;
@@ -505,7 +448,7 @@
         }
         
         .tool-call-item-header:hover {
-            background: rgba(0, 0, 0, 0.02);
+            background: var(--color-gray-50);
         }
         
         .tool-call-item-title {
@@ -542,17 +485,17 @@
         }
         
         .tool-call-item-status.success {
-            background: rgba(0, 255, 163, 0.15);
+            background: var(--color-success-light);
             color: var(--color-success);
         }
         
         .tool-call-item-status.error {
-            background: rgba(255, 0, 85, 0.15);
+            background: var(--color-error-light);
             color: var(--color-error);
         }
         
         .tool-call-item-status.pending {
-            background: rgba(255, 215, 0, 0.15);
+            background: var(--color-warning-light);
             color: var(--color-warning);
         }
         
@@ -643,7 +586,7 @@
            Header
            ============================================ */
         .chat-header {
-            background: rgba(22, 27, 34, 0.95);
+            background: #FFFFFF;
             color: var(--color-gray-800);
             padding: var(--space-4) var(--space-5);
             display: flex;
@@ -652,8 +595,7 @@
             flex-shrink: 0;
             position: relative;
             z-index: 10;
-            border-bottom: 1px solid var(--color-gray-300);
-            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--color-gray-200);
         }
         
         .chat-header .header-actions {
@@ -662,9 +604,9 @@
         }
         
         .chat-header .header-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: none;
-            color: white;
+            background: var(--color-gray-100);
+            border: 1px solid var(--color-gray-200);
+            color: var(--color-gray-700);
             width: 32px;
             height: 32px;
             border-radius: var(--radius-md);
@@ -676,17 +618,6 @@
             font-size: var(--font-size-base);
         }
         
-        .chat-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, rgba(0, 240, 255, 0.03) 0%, transparent 50%, rgba(0, 255, 163, 0.02) 100%);
-            pointer-events: none;
-        }
-        
         .chat-header .header-content {
             display: flex;
             align-items: center;
@@ -696,26 +627,27 @@
         .chat-header .header-icon {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+            background: var(--color-primary-500);
             border-radius: var(--radius-lg);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: var(--font-size-xl);
             color: white;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
         }
         
         .chat-header .header-title {
             font-size: var(--font-size-lg);
             font-weight: var(--font-weight-semibold);
             margin: 0;
+            color: var(--color-gray-900);
         }
         
         .chat-header .header-subtitle {
             font-size: var(--font-size-sm);
-            opacity: 0.9;
+            opacity: 0.7;
             margin: 0;
+            color: var(--color-gray-500);
         }
         
         .chat-header .header-actions {
@@ -724,8 +656,8 @@
         }
         
         .chat-header .header-btn {
-            background: var(--color-gray-200);
-            border: 1px solid var(--color-gray-300);
+            background: var(--color-gray-100);
+            border: 1px solid var(--color-gray-200);
             color: var(--color-gray-700);
             width: 32px;
             height: 32px;
@@ -739,9 +671,9 @@
         }
         
         .chat-header .header-btn:hover {
-            background: rgba(0, 240, 255, 0.1);
-            border-color: var(--color-primary-500);
-            color: var(--color-primary-600);
+            background: var(--color-gray-200);
+            border-color: var(--color-gray-300);
+            color: var(--color-gray-800);
             transform: translateY(-1px);
         }
         
@@ -766,7 +698,7 @@
             flex: 1;
             overflow-y: auto;
             padding: var(--space-6);
-            background: var(--color-gray-100);
+            background: var(--color-gray-50);
             scroll-behavior: smooth;
         }
         
@@ -804,11 +736,11 @@
         @keyframes messageSlideIn {
             from {
                 opacity: 0;
-                transform: translateY(16px) scale(0.98);
+                transform: translateY(16px);
             }
             to {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                transform: translateY(0);
             }
         }
         
@@ -855,12 +787,12 @@
         }
         
         .message-user .message-avatar {
-            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+            background: var(--color-primary-500);
             color: white;
         }
         
         .message-assistant .message-avatar {
-            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-light) 100%);
+            background: var(--color-success);
             color: white;
         }
         
@@ -878,11 +810,11 @@
         }
         
         .message-user .message-bubble {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-            color: var(--color-gray-800);
-            border: 1px solid rgba(102, 126, 234, 0.3);
+            background: var(--color-gray-900);
+            color: #FFFFFF;
+            border: none;
             border-bottom-right-radius: var(--radius-md);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+            box-shadow: var(--shadow-sm);
         }
         
         .message-user .message-bubble a {
@@ -891,11 +823,11 @@
         }
         
         .message-assistant .message-bubble {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--color-gray-800);
-            border: 1px solid var(--color-gray-300);
+            background: #FFFFFF;
+            color: var(--color-gray-700);
+            border: 1px solid var(--color-gray-200);
             border-bottom-left-radius: var(--radius-md);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-sm);
         }
         
         .message-assistant .message-bubble a {
@@ -946,20 +878,24 @@
             font-size: var(--font-size-2xl);
             border-bottom: 2px solid var(--color-gray-200);
             padding-bottom: var(--space-2);
+            color: var(--color-gray-900);
         }
         
         .message-assistant .message-bubble h2 {
             font-size: var(--font-size-xl);
             border-bottom: 1px solid var(--color-gray-200);
             padding-bottom: var(--space-2);
+            color: var(--color-gray-900);
         }
         
         .message-assistant .message-bubble h3 {
             font-size: var(--font-size-lg);
+            color: var(--color-gray-900);
         }
         
         .message-assistant .message-bubble h4 {
             font-size: var(--font-size-base);
+            color: var(--color-gray-900);
         }
         
         .message-assistant .message-bubble p {
@@ -1004,18 +940,18 @@
             border-radius: var(--radius-sm);
             font-family: var(--font-family-mono);
             font-size: 0.9em;
-            color: var(--color-primary-700);
+            color: var(--color-primary-500);
             border: 1px solid var(--color-gray-200);
         }
         
         .message-assistant .message-bubble pre {
-            background: var(--color-gray-900);
-            color: var(--color-gray-100);
+            background: var(--color-gray-100);
+            color: var(--color-gray-800);
             padding: var(--space-4);
             border-radius: var(--radius-lg);
             overflow-x: auto;
             margin: var(--space-4) 0;
-            border: 1px solid var(--color-gray-800);
+            border: 1px solid var(--color-gray-200);
         }
         
         .message-assistant .message-bubble pre code {
@@ -1056,7 +992,7 @@
         .message-assistant .message-bubble th {
             background: var(--color-gray-100);
             font-weight: var(--font-weight-semibold);
-            color: var(--color-gray-700);
+            color: var(--color-gray-800);
         }
         
         .message-assistant .message-bubble tr:hover {
@@ -1075,120 +1011,24 @@
             border-radius: var(--radius-md);
             margin: var(--space-4) 0;
         }
-            /* ============================================
-           Unified Action Card Styles (Tool Call + Authorization)
-           ============================================ */
+            /* Unified Action Card Styles (Tool Call + Authorization) */
         .action-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--color-gray-300);
+            background: #FFFFFF;
+            border: 1px solid var(--color-gray-200);
             border-radius: var(--radius-lg);
             padding: 0;
             max-width: 90%;
             text-align: left;
-            box-shadow: 0 2px 8px rgba(0, 240, 255, 0.1);
+            box-shadow: var(--shadow-sm);
             transition: all var(--transition-base);
             margin: var(--space-3) 0;
             position: relative;
             overflow: hidden;
         }
         
-        /* Dynamic gradient border effect */
-        .action-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: var(--radius-lg);
-            padding: 1px;
-            background: linear-gradient(135deg, var(--color-info) 0%, var(--color-primary-500) 50%, var(--color-info) 100%);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            opacity: 0.6;
-            pointer-events: none;
-        }
-        
-        /* Status-based glow effects */
-        .action-card.required::before {
-            background: linear-gradient(135deg, var(--color-warning) 0%, #FFA500 50%, var(--color-warning) 100%);
-            opacity: 0.7;
-        }
-        
-        .action-card.initiated::before {
-            background: linear-gradient(135deg, var(--color-info) 0%, var(--color-primary-500) 50%, var(--color-info) 100%);
-            opacity: 0.7;
-        }
-        
-        .action-card.authorized::before {
-            background: linear-gradient(135deg, var(--color-success) 0%, #00FF7F 50%, var(--color-success) 100%);
-            opacity: 0.7;
-        }
-        
-        .action-card.denied::before,
-        .action-card.failed::before {
-            background: linear-gradient(135deg, var(--color-error) 0%, #FF3399 50%, var(--color-error) 100%);
-            opacity: 0.7;
-        }
-        
         .action-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.15);
+            box-shadow: var(--shadow-md);
             transform: translateY(-2px);
-        }
-        
-        .action-card:hover::before {
-            opacity: 1;
-        }
-        
-        /* Status indicator dot in corner */
-        .action-card::after {
-            content: '';
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--color-info);
-            box-shadow: 0 0 10px var(--color-info), 0 0 20px var(--color-info);
-            animation: pulse 2s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 1;
-        }
-        
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.5;
-                transform: scale(1.2);
-            }
-        }
-        
-        .action-card.required::after {
-            background: var(--color-warning);
-            box-shadow: 0 0 10px var(--color-warning), 0 0 20px var(--color-warning);
-        }
-        
-        .action-card.initiated::after {
-            background: var(--color-info);
-            box-shadow: 0 0 10px var(--color-info), 0 0 20px var(--color-info);
-        }
-        
-        .action-card.authorized::after {
-            background: var(--color-success);
-            box-shadow: 0 0 10px var(--color-success), 0 0 20px var(--color-success);
-            animation: none;
-        }
-        
-        .action-card.denied::after,
-        .action-card.failed::after {
-            background: var(--color-error);
-            box-shadow: 0 0 10px var(--color-error), 0 0 20px var(--color-error);
-            animation: none;
         }
         
         .action-card-header {
@@ -1200,11 +1040,11 @@
             gap: var(--space-3);
             cursor: pointer;
             transition: background var(--transition-base);
-            background: rgba(255, 255, 255, 0.02);
+            background: transparent;
         }
         
         .action-card-header:hover {
-            background: rgba(0, 0, 0, 0.02);
+            background: var(--color-gray-50);
         }
         
         .action-card-title {
@@ -1238,23 +1078,23 @@
         }
         
         .auth-badge.required {
-            background: rgba(255, 215, 0, 0.2);
+            background: var(--color-warning-light);
             color: var(--color-warning);
         }
         
         .auth-badge.initiated {
-            background: rgba(0, 240, 255, 0.2);
+            background: var(--color-info-light);
             color: var(--color-info);
         }
         
         .auth-badge.authorized {
-            background: rgba(0, 255, 163, 0.2);
+            background: var(--color-success-light);
             color: var(--color-success);
         }
         
         .auth-badge.denied,
         .auth-badge.failed {
-            background: rgba(255, 0, 85, 0.2);
+            background: var(--color-error-light);
             color: var(--color-error);
         }
         
@@ -1306,10 +1146,10 @@
         
         /* Authorization section specific styles */
         .action-card-section.auth-section {
-            background: rgba(0, 240, 255, 0.03);
+            background: var(--color-gray-100);
             border-radius: var(--radius-md);
             padding: var(--space-3);
-            border: 1px solid rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--color-gray-200);
         }
         
         .auth-status-content {
@@ -1328,28 +1168,28 @@
         }
         
         .auth-status-badge.required {
-            background: rgba(255, 215, 0, 0.15);
+            background: var(--color-warning-light);
             color: var(--color-warning);
-            border: 1px solid rgba(255, 215, 0, 0.3);
+            border: 1px solid var(--color-warning);
         }
         
         .auth-status-badge.initiated {
-            background: rgba(0, 240, 255, 0.15);
+            background: var(--color-info-light);
             color: var(--color-info);
-            border: 1px solid rgba(0, 240, 255, 0.3);
+            border: 1px solid var(--color-info);
         }
         
         .auth-status-badge.authorized {
-            background: rgba(0, 255, 163, 0.15);
+            background: var(--color-success-light);
             color: var(--color-success);
-            border: 1px solid rgba(0, 255, 163, 0.3);
+            border: 1px solid var(--color-success);
         }
         
         .auth-status-badge.denied,
         .auth-status-badge.failed {
-            background: rgba(255, 0, 85, 0.15);
+            background: var(--color-error-light);
             color: var(--color-error);
-            border: 1px solid rgba(255, 0, 85, 0.3);
+            border: 1px solid var(--color-error);
         }
         
         .action-card-section-content {
@@ -1366,8 +1206,8 @@
         }
         
         .action-card-section-content.result-content {
-            background: rgba(0, 255, 163, 0.05);
-            border-color: rgba(0, 255, 163, 0.2);
+            background: var(--color-success-light);
+            border-color: var(--color-success);
         }
         
         .action-card-section-content::-webkit-scrollbar {
@@ -1381,8 +1221,8 @@
         
         .action-card-auth-external {
             padding: var(--space-3) var(--space-4);
-            background: rgba(0, 240, 255, 0.03);
-            border-top: 1px solid rgba(0, 240, 255, 0.1);
+            background: var(--color-gray-100);
+            border-top: 1px solid var(--color-gray-200);
             border-bottom: 1px solid var(--color-gray-200);
         }
         
@@ -1391,22 +1231,23 @@
             align-items: center;
             gap: var(--space-2);
             padding: var(--space-3) var(--space-5);
-            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 200, 214, 0.2) 100%);
-            color: var(--color-primary-700);
-            border: 1px solid rgba(0, 240, 255, 0.3);
+            background: transparent;
+            color: var(--color-primary-500);
+            border: 1px solid var(--color-primary-500);
             border-radius: var(--radius-full);
             text-decoration: none;
             font-size: var(--font-size-sm);
             font-weight: var(--font-weight-semibold);
             transition: all var(--transition-base);
-            box-shadow: 0 2px 8px rgba(0, 240, 255, 0.1);
+            box-shadow: var(--shadow-sm);
             width: 100%;
             justify-content: center;
         }
         
         .action-card-auth-link:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.15);
+            box-shadow: var(--shadow-md);
+            background: var(--color-primary-50);
         }
         
         .authorization-status .status-header {
@@ -1429,20 +1270,21 @@
             align-items: center;
             gap: var(--space-2);
             padding: var(--space-2) var(--space-4);
-            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 200, 214, 0.2) 100%);
-            color: var(--color-primary-700);
-            border: 1px solid rgba(0, 240, 255, 0.3);
+            background: transparent;
+            color: var(--color-primary-500);
+            border: 1px solid var(--color-primary-500);
             border-radius: var(--radius-full);
             text-decoration: none;
             font-size: var(--font-size-sm);
             font-weight: var(--font-weight-semibold);
             transition: all var(--transition-base);
-            box-shadow: 0 2px 8px rgba(0, 240, 255, 0.1);
+            box-shadow: var(--shadow-sm);
         }
         
         .authorization-status .auth-link:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.15);
+            box-shadow: var(--shadow-md);
+            background: var(--color-primary-50);
         }
         
         .authorization-status .auth-link:active {
@@ -1546,8 +1388,8 @@
            ============================================ */
         .chat-input {
             padding: var(--space-5) var(--space-6);
-            border-top: 1px solid var(--color-gray-300);
-            background: var(--color-gray-100);
+            border-top: 1px solid var(--color-gray-200);
+            background: #FFFFFF;
             flex-shrink: 0;
         }
         
@@ -1561,35 +1403,34 @@
             flex: 1;
             border-radius: var(--radius-full);
             padding: var(--space-4) var(--space-5);
-            border: 1px solid var(--color-gray-300);
+            border: 1px solid var(--color-gray-200);
             font-size: var(--font-size-base);
             transition: all var(--transition-fast);
-            background: rgba(28, 33, 40, 0.9);
-            color: #ffffff !important;
-            backdrop-filter: blur(10px);
+            background: var(--color-gray-100);
+            color: var(--color-gray-900);
         }
         
         .form-control:focus {
             outline: none !important;
-            border-color: var(--color-primary-600) !important;
-            background: rgba(28, 33, 40, 0.9);
-            color: #ffffff !important;
+            border-color: var(--color-primary-500) !important;
+            background: var(--color-gray-100);
+            color: var(--color-gray-900);
             box-shadow: none !important;
         }
         
         .form-control::placeholder {
-            color: #8b949e;
+            color: var(--color-gray-400);
         }
         
         .btn-send {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-            border: 1px solid rgba(102, 126, 234, 0.3);
+            background: var(--color-gray-900);
+            border: 1px solid var(--color-gray-900);
             border-radius: var(--radius-full);
             padding: var(--space-4) var(--space-8);
-            color: var(--color-gray-800);
+            color: #FFFFFF;
             font-weight: var(--font-weight-semibold);
             transition: all var(--transition-base);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+            box-shadow: var(--shadow-sm);
             display: flex;
             align-items: center;
             gap: var(--space-2);
@@ -1598,8 +1439,8 @@
         
         .btn-send:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+            box-shadow: var(--shadow-md);
+            background: var(--color-gray-800);
         }
         
         .btn-send:active {
@@ -1610,15 +1451,15 @@
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.05);
+            box-shadow: var(--shadow-sm);
         }
         
         .btn-clear,
         .btn-new-session {
-            border: 1px solid var(--color-gray-300);
+            border: 1px solid var(--color-gray-200);
             border-radius: var(--radius-full);
             padding: var(--space-4) var(--space-5);
-            background: var(--color-gray-200);
+            background: transparent;
             color: var(--color-gray-700);
             font-weight: var(--font-weight-medium);
             transition: all var(--transition-base);
@@ -1630,16 +1471,16 @@
         
         .btn-clear:hover,
         .btn-new-session:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: var(--color-primary-500);
+            background: var(--color-gray-50);
+            border-color: var(--color-gray-300);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 240, 255, 0.1);
+            box-shadow: var(--shadow-sm);
         }
         
         .btn-clear:active,
         .btn-new-session:active {
             transform: translateY(0);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow-sm);
         }
         
         @media (max-width: 768px) {
@@ -1701,7 +1542,7 @@
         .loading-spinner {
             width: 16px;
             height: 16px;
-            border: 2px solid var(--color-gray-300);
+            border: 2px solid var(--color-gray-200);
             border-top-color: var(--color-primary-500);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
