@@ -285,6 +285,9 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
         String scope = jsonNode.has("scope") ? jsonNode.path("scope").asText() : null;
         String refreshToken = jsonNode.has("refresh_token") ? jsonNode.path("refresh_token").asText() : null;
 
+        // Parse id_token if present (OIDC Core 1.0 Section 3.1.3.3)
+        String idToken = jsonNode.has("id_token") ? jsonNode.path("id_token").asText() : null;
+
         // Build token response
         TokenResponse tokenResponse = TokenResponse.builder()
                 .accessToken(accessToken)
@@ -292,9 +295,10 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
                 .expiresIn(expiresIn)
                 .scope(scope)
                 .refreshToken(refreshToken)
+                .idToken(idToken)
                 .build();
         
-        logger.info("Access token received successfully");
+        logger.info("Access token received successfully, id_token present: {}", idToken != null);
         return tokenResponse;
     }
 

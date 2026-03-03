@@ -526,6 +526,7 @@ class DefaultAgentTest {
                     .accessToken(ID_TOKEN)
                     .tokenType("Bearer")
                     .expiresIn(3600L)
+                    .idToken(ID_TOKEN)
                     .build();
 
             when(mockUserAuthenticationTokenClient.exchangeCodeForToken(any(TokenRequest.class)))

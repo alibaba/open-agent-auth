@@ -38,6 +38,11 @@ import java.util.Objects;
  *   <li><b>scope:</b> OPTIONAL - The scope of the access token</li>
  * </ul>
  * <p>
+ * <b>OpenID Connect Extension (OIDC Core 1.0 Section 3.1.3.3):</b></p>
+ * <ul>
+ *   <li><b>id_token:</b> REQUIRED when scope includes "openid" - The ID Token</li>
+ * </ul>
+ * <p>
  * <b>Agent Operation Authorization Extension:</b></p>
  * <p>
  * For the Agent Operation Authorization framework, the access_token is an
@@ -103,12 +108,27 @@ public class TokenResponse {
     @JsonProperty("scope")
     private final String scope;
 
+    /**
+     * The ID Token.
+     * <p>
+     * REQUIRED when the authorization request scope includes "openid".
+     * The ID Token is a JSON Web Token (JWT) that contains claims about the
+     * authentication event and the authenticated subject, as defined in
+     * OpenID Connect Core 1.0 Section 3.1.3.3.
+     * </p>
+     *
+     * @see <a href="https://openid.net/specs/openid-connect-core-1_0.html#TokenResponse">OIDC Core 1.0 - Token Response</a>
+     */
+    @JsonProperty("id_token")
+    private final String idToken;
+
     private TokenResponse(Builder builder) {
         this.accessToken = builder.accessToken;
         this.tokenType = builder.tokenType;
         this.expiresIn = builder.expiresIn;
         this.refreshToken = builder.refreshToken;
         this.scope = builder.scope;
+        this.idToken = builder.idToken;
     }
 
     public String getAccessToken() {
@@ -131,6 +151,15 @@ public class TokenResponse {
         return scope;
     }
 
+    /**
+     * Gets the ID Token.
+     *
+     * @return the ID Token, or null if scope does not include "openid"
+     */
+    public String getIdToken() {
+        return idToken;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -140,12 +169,13 @@ public class TokenResponse {
                 Objects.equals(tokenType, that.tokenType) &&
                 Objects.equals(expiresIn, that.expiresIn) &&
                 Objects.equals(refreshToken, that.refreshToken) &&
-                Objects.equals(scope, that.scope);
+                Objects.equals(scope, that.scope) &&
+                Objects.equals(idToken, that.idToken);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(accessToken, tokenType, expiresIn, refreshToken, scope);
+        return Objects.hash(accessToken, tokenType, expiresIn, refreshToken, scope, idToken);
     }
 
     @Override
@@ -156,6 +186,7 @@ public class TokenResponse {
                 ", expiresIn=" + expiresIn +
                 ", refreshToken='" + refreshToken + '\'' +
                 ", scope='" + scope + '\'' +
+                ", idToken='" + (idToken != null ? "[PRESENT]" : "null") + '\'' +
                 '}';
     }
 
@@ -177,6 +208,7 @@ public class TokenResponse {
         private Long expiresIn;
         private String refreshToken;
         private String scope;
+        private String idToken;
 
         /**
          * Sets the access token.
@@ -233,6 +265,21 @@ public class TokenResponse {
          */
         public Builder scope(String scope) {
             this.scope = scope;
+            return this;
+        }
+
+        /**
+         * Sets the ID Token.
+         * <p>
+         * Required when the authorization request scope includes "openid"
+         * (OIDC Core 1.0 Section 3.1.3.3).
+         * </p>
+         *
+         * @param idToken the ID Token
+         * @return this builder instance
+         */
+        public Builder idToken(String idToken) {
+            this.idToken = idToken;
             return this;
         }
 

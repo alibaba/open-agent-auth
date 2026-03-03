@@ -331,16 +331,18 @@ public class AgentAutoConfiguration {
         @ConditionalOnMissingBean
         public OAuth2CallbackService callbackService(
                 FrameworkOAuth2TokenClient oauth2TokenClient,
+                Agent agentProvider,
                 SessionMappingBizService sessionMappingBizService,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
-            logger.info("Creating OAuth2CallbackService bean");
+            logger.info("Creating OAuth2CallbackService bean with Agent support");
             String callbackEndpoint = openAgentAuthProperties.getCapabilities().getOAuth2Client().getCallback().getEndpoint();
             if (callbackEndpoint == null || callbackEndpoint.isBlank()) {
                 callbackEndpoint = DEFAULT_CALLBACK_ENDPOINT;
             }
             return new OAuth2CallbackService(
                     oauth2TokenClient,
+                    agentProvider,
                     sessionMappingBizService,
                     callbackEndpoint
             );

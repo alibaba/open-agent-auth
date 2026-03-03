@@ -552,6 +552,7 @@ public class DefaultKeyManager implements KeyManager {
      * @return the matching key definition, or {@code null} if not found
      */
     private KeyDefinition findKeyDefinitionByKeyId(String keyId) {
+
         // First try direct lookup by map key
         KeyDefinition definition = keyDefinitions.get(keyId);
         if (definition != null) {

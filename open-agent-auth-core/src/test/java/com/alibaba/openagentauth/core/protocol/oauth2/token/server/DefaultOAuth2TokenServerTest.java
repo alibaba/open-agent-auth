@@ -98,11 +98,35 @@ class DefaultOAuth2TokenServerTest {
             assertThat(response.getTokenType()).isEqualTo("Bearer");
             assertThat(response.getExpiresIn()).isEqualTo(DEFAULT_EXPIRATION_SECONDS);
             assertThat(response.getScope()).isEqualTo(TEST_SCOPE);
+            assertThat(response.getIdToken()).isNull();
 
             // Verify interactions
             verify(codeStorage).retrieve(TEST_CODE);
             verify(tokenGenerator).generateToken(authCode, request);
             verify(codeStorage).consume(TEST_CODE);
+        }
+
+        @Test
+        @DisplayName("Should include id_token in response when scope contains openid")
+        void shouldIncludeIdTokenInResponseWhenScopeContainsOpenid() {
+            // Arrange
+            TokenRequest request = TokenRequest.builder()
+                    .code(TEST_CODE)
+                    .redirectUri(TEST_REDIRECT_URI)
+                    .build();
+
+            AuthorizationCode authCode = createValidAuthorizationCodeWithOpenIdScope();
+            when(codeStorage.retrieve(TEST_CODE)).thenReturn(authCode);
+            when(tokenGenerator.generateToken(authCode, request)).thenReturn(TEST_ACCESS_TOKEN);
+
+            // Act
+            TokenResponse response = tokenServer.issueToken(request, TEST_CLIENT_ID);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getAccessToken()).isEqualTo(TEST_ACCESS_TOKEN);
+            assertThat(response.getIdToken()).isEqualTo(TEST_ACCESS_TOKEN);
+            assertThat(response.getScope()).isEqualTo("openid profile");
         }
 
         @Test
@@ -410,6 +434,41 @@ class DefaultOAuth2TokenServerTest {
         }
 
         @Test
+        @DisplayName("Should build token response with id_token when scope contains openid")
+        void shouldBuildTokenResponseWithIdTokenWhenScopeContainsOpenid() {
+            // Act
+            TokenResponse response = tokenServer.buildTokenResponse(
+                    TEST_ACCESS_TOKEN,
+                    DEFAULT_EXPIRATION_SECONDS,
+                    "openid profile",
+                    TEST_ACCESS_TOKEN
+            );
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getAccessToken()).isEqualTo(TEST_ACCESS_TOKEN);
+            assertThat(response.getIdToken()).isEqualTo(TEST_ACCESS_TOKEN);
+            assertThat(response.getScope()).isEqualTo("openid profile");
+        }
+
+        @Test
+        @DisplayName("Should build token response without id_token when idToken parameter is null")
+        void shouldBuildTokenResponseWithoutIdTokenWhenIdTokenParameterIsNull() {
+            // Act
+            TokenResponse response = tokenServer.buildTokenResponse(
+                    TEST_ACCESS_TOKEN,
+                    DEFAULT_EXPIRATION_SECONDS,
+                    TEST_SCOPE,
+                    null
+            );
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getAccessToken()).isEqualTo(TEST_ACCESS_TOKEN);
+            assertThat(response.getIdToken()).isNull();
+        }
+
+        @Test
         @DisplayName("Should build token response with null scope")
         void shouldBuildTokenResponseWithNullScope() {
             // Act
@@ -461,6 +520,20 @@ class DefaultOAuth2TokenServerTest {
                 .redirectUri(TEST_REDIRECT_URI)
                 .subject(TEST_SUBJECT)
                 .scope(TEST_SCOPE)
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(DEFAULT_EXPIRATION_SECONDS))
+                .used(false)
+                .build();
+    }
+
+    private AuthorizationCode createValidAuthorizationCodeWithOpenIdScope() {
+        Instant now = Instant.now();
+        return AuthorizationCode.builder()
+                .code(TEST_CODE)
+                .clientId(TEST_CLIENT_ID)
+                .redirectUri(TEST_REDIRECT_URI)
+                .subject(TEST_SUBJECT)
+                .scope("openid profile")
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(DEFAULT_EXPIRATION_SECONDS))
                 .used(false)
