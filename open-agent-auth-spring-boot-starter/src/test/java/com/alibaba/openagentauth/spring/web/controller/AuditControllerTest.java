@@ -20,6 +20,7 @@ import com.alibaba.openagentauth.core.exception.audit.AuditStorageException;
 import com.alibaba.openagentauth.core.model.audit.AuditEvent;
 import com.alibaba.openagentauth.core.model.audit.AuditEventType;
 import com.alibaba.openagentauth.core.model.audit.AuditSeverity;
+import com.alibaba.openagentauth.core.model.page.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -31,6 +32,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -42,17 +44,17 @@ import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link AuditController}.
- * <p>
+ * &lt;p&gt;
  * This test class verifies the Audit API functionality, including:
- * <ul>
- *   <li>Retrieving audit events by ID</li>
- *   <li>Retrieving audit events by time range</li>
- *   <li>Retrieving audit events by user, agent, session</li>
- *   <li>Retrieving audit events by type and severity</li>
- *   <li>Getting audit event count</li>
- *   <li>Error handling and exception scenarios</li>
- * </ul>
- * </p>
+ * &lt;ul&gt;
+ *   &lt;li&gt;Retrieving audit events by ID&lt;/li&gt;
+ *   &lt;li&gt;Retrieving audit events by time range&lt;/li&gt;
+ *   &lt;li&gt;Retrieving audit events by user, agent, session&lt;/li&gt;
+ *   &lt;li&gt;Retrieving audit events by type and severity&lt;/li&gt;
+ *   &lt;li&gt;Getting audit event count&lt;/li&gt;
+ *   &lt;li&gt;Error handling and exception scenarios&lt;/li&gt;
+ * &lt;/ul&gt;
+ * &lt;/p&gt;
  *
  * @since 1.0
  */
@@ -161,13 +163,13 @@ class AuditControllerTest {
             AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
             request.setStartTime(startTime);
             request.setEndTime(endTime);
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
+            ResponseEntity<PageResponse<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody()).hasSize(1);
-            assertThat(response.getBody().get(0).getEventId()).isEqualTo(EVENT_ID);
+            assertThat(response.getBody().getItems()).hasSize(1);
+            assertThat(response.getBody().getItems().get(0).getEventId()).isEqualTo(EVENT_ID);
         }
 
         @Test
@@ -183,12 +185,12 @@ class AuditControllerTest {
             AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
             request.setStartTime(startTime);
             request.setEndTime(endTime);
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
+            ResponseEntity<PageResponse<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody()).isEmpty();
+            assertThat(response.getBody().getItems()).isEmpty();
         }
 
         @Test
@@ -196,7 +198,7 @@ class AuditControllerTest {
         void shouldReturn400WhenBothTimeParametersAreNull() {
             // Act
             AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
+            ResponseEntity<PageResponse<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -217,7 +219,7 @@ class AuditControllerTest {
             AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
             request.setStartTime(startTime);
             request.setEndTime(endTime);
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
+            ResponseEntity<PageResponse<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -236,11 +238,11 @@ class AuditControllerTest {
             // Act
             AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
             request.setStartTime(startTime);
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
+            ResponseEntity<PageResponse<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).hasSize(1);
+            assertThat(response.getBody().getItems()).hasSize(1);
         }
 
         @Test
@@ -255,11 +257,87 @@ class AuditControllerTest {
             // Act
             AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
             request.setEndTime(endTime);
-            ResponseEntity<List<AuditEvent>> response = controller.getEventsByTimeRange(request);
+            ResponseEntity<PageResponse<AuditEvent>> response = controller.getEventsByTimeRange(request);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).hasSize(1);
+            assertThat(response.getBody().getItems()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Should return paginated events")
+        void shouldReturnPaginatedEvents() throws AuditStorageException {
+            // Arrange
+            Instant startTime = Instant.now().minusSeconds(3600);
+            Instant endTime = Instant.now();
+            
+            List<AuditEvent> events = new ArrayList<>();
+            events.add(AuditEvent.builder()
+                    .eventId("event-1")
+                    .timestamp(Instant.now().toString())
+                    .eventType(AuditEventType.AUTHORIZATION_GRANTED)
+                    .severity(AuditSeverity.INFO)
+                    .message("Test event 1")
+                    .build());
+            events.add(AuditEvent.builder()
+                    .eventId("event-2")
+                    .timestamp(Instant.now().toString())
+                    .eventType(AuditEventType.AUTHORIZATION_GRANTED)
+                    .severity(AuditSeverity.INFO)
+                    .message("Test event 2")
+                    .build());
+            events.add(AuditEvent.builder()
+                    .eventId("event-3")
+                    .timestamp(Instant.now().toString())
+                    .eventType(AuditEventType.AUTHORIZATION_GRANTED)
+                    .severity(AuditSeverity.INFO)
+                    .message("Test event 3")
+                    .build());
+
+            when(auditService.getEventsByTimeRange(any(Instant.class), any(Instant.class))).thenReturn(events);
+
+            AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
+            request.setStartTime(startTime);
+            request.setEndTime(endTime);
+            request.setPage(1);
+            request.setSize(2);
+
+            // Act
+            ResponseEntity<PageResponse<AuditEvent>> response = controller.getEventsByTimeRange(request);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getItems()).hasSize(2);
+            assertThat(response.getBody().getTotalItems()).isEqualTo(3);
+            assertThat(response.getBody().getTotalPages()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("Should return default pagination when page and size are null")
+        void shouldReturnDefaultPaginationWhenPageAndSizeAreNull() throws AuditStorageException {
+            // Arrange
+            Instant startTime = Instant.now().minusSeconds(3600);
+            Instant endTime = Instant.now();
+            List<AuditEvent> events = List.of(mockAuditEvent);
+
+            when(auditService.getEventsByTimeRange(startTime, endTime)).thenReturn(events);
+
+            AuditController.TimeRangeRequest request = new AuditController.TimeRangeRequest();
+            request.setStartTime(startTime);
+            request.setEndTime(endTime);
+            // page and size are not set, should use defaults
+
+            // Act
+            ResponseEntity<PageResponse<AuditEvent>> response = controller.getEventsByTimeRange(request);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getItems()).hasSize(1);
+            // Verify default pagination parameters are used
+            assertThat(response.getBody().getPage()).isEqualTo(1);
+            assertThat(response.getBody().getSize()).isEqualTo(20);
         }
     }
 }

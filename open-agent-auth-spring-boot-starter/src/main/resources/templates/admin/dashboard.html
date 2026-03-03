@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --font-sans: 'DM Sans', sans-serif;
+            --color-bg: #FAFAF8;
+            --color-primary: #B8860B;
+            --color-primary-light: rgba(184, 134, 11, 0.08);
+            --color-text-title: #1A1A1A;
+            --color-text-body: #4A4A4A;
+            --color-text-muted: #8A8A8A;
+            --color-surface: #FFFFFF;
+            --color-border: #E8E4DF;
+            --color-sidebar-bg: #FFFFFF;
+            --color-sidebar-hover: #F5F3EF;
+            --color-sidebar-active: rgba(184, 134, 11, 0.06);
+            --shadow-sidebar: 1px 0 0 var(--color-border);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            color: var(--color-text-body);
+            display: flex;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--color-sidebar-bg);
+            box-shadow: var(--shadow-sidebar);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            animation: slideInLeft 0.4s ease-out;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .sidebar-header {
+            padding: 28px 24px 20px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-logo {
+            width: 36px;
+            height: 36px;
+            background: var(--color-text-title);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-surface);
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--color-text-title);
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+        }
+
+        .sidebar-subtitle {
+            font-size: 11px;
+            color: var(--color-text-muted);
+            font-weight: 400;
+            margin-top: 2px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            overflow-y: auto;
+        }
+
+        .nav-section-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 8px 12px 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: var(--color-text-body);
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            margin-bottom: 2px;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--color-sidebar-hover);
+            color: var(--color-text-title);
+        }
+
+        .nav-item.active {
+            background: var(--color-sidebar-active);
+            color: var(--color-primary);
+            border-color: rgba(184, 134, 11, 0.12);
+        }
+
+        .nav-item.active .nav-icon {
+            color: var(--color-primary);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
+            color: var(--color-text-muted);
+            transition: color 0.15s ease;
+        }
+
+        .nav-item:hover .nav-icon {
+            color: var(--color-text-body);
+        }
+
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .sidebar-footer-text {
+            font-size: 11px;
+            color: var(--color-text-muted);
+            line-height: 1.5;
+        }
+
+        .sidebar-footer-link {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .sidebar-footer-link:hover {
+            text-decoration: underline;
+        }
+
+        .main-content {
+            flex: 1;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            background: var(--color-bg);
+        }
+
+        .content-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: var(--color-bg);
+        }
+
+        .empty-dashboard {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--color-text-muted);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .empty-dashboard i {
+            font-size: 56px;
+            margin-bottom: 20px;
+            opacity: 0.4;
+        }
+
+        .empty-dashboard h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--color-text-body);
+            margin-bottom: 8px;
+        }
+
+        .empty-dashboard p {
+            font-size: 14px;
+            max-width: 360px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 20;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--color-text-body);
+        }
+
+        @media (max-width: 768px) {
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.3);
+                z-index: 5;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="mobile-toggle" onclick="toggleSidebar()">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <div class="sidebar-logo">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+                <div>
+                    <div class="sidebar-title">OAA Admin</div>
+                    <div class="sidebar-subtitle">Management Console</div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Capabilities</div>
+            <a th:each="item : ${navItems}"
+               th:id="'nav-' + ${item.id}"
+               th:data-url="${item.url} + '?embedded=true'"
+               class="nav-item"
+               onclick="navigateTo(this); return false;"
+               href="#">
+                <i class="nav-icon bi" th:classappend="${item.icon}"></i>
+                <span th:text="${item.label}">Nav Item</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-text">
+                Open Agent Auth Framework
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div th:if="${#lists.isEmpty(navItems)}" class="empty-dashboard">
+            <i class="bi bi-grid-1x2"></i>
+            <h2>No Capabilities Available</h2>
+            <p>No admin capabilities are enabled for this service. Configure your role to enable management features.</p>
+        </div>
+        <iframe th:unless="${#lists.isEmpty(navItems)}"
+                id="contentFrame"
+                class="content-frame"
+                th:src="${defaultPage} + '?embedded=true'">
+        </iframe>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var navItems = document.querySelectorAll('.nav-item');
+            if (navItems.length > 0) {
+                navItems[0].classList.add('active');
+            }
+        });
+
+        function navigateTo(element) {
+            var url = element.getAttribute('data-url');
+            var frame = document.getElementById('contentFrame');
+            if (frame) {
+                frame.src = url;
+            }
+
+            document.querySelectorAll('.nav-item').forEach(function(item) {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        }
+
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

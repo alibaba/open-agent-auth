@@ -16,6 +16,8 @@
 package com.alibaba.openagentauth.spring.web.controller;
 
 import com.alibaba.openagentauth.core.exception.policy.PolicyNotFoundException;
+import com.alibaba.openagentauth.core.model.page.PageRequest;
+import com.alibaba.openagentauth.core.model.page.PageResponse;
 import com.alibaba.openagentauth.core.model.policy.Policy;
 import com.alibaba.openagentauth.core.model.policy.PolicyRegistration;
 import com.alibaba.openagentauth.core.policy.api.PolicyRegistry;
@@ -26,6 +28,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * REST API controller for Policy Registry operations.
@@ -104,6 +108,29 @@ public class PolicyRegistryController {
             return ResponseEntity.status(HttpStatus.CREATED).body(registration);
         } catch (Exception e) {
             logger.error("Failed to register policy", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Lists policies with pagination support.
+     *
+     * @param pageRequest the pagination parameters (page, size)
+     * @return a paginated response of policies
+     */
+    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.policy.list:/api/v1/policies/list}")
+    public ResponseEntity<PageResponse<Policy>> listPolicies(@RequestBody PageRequest pageRequest) {
+        logger.debug("Listing policies, page: {}, size: {}",
+                pageRequest.getEffectivePage(), pageRequest.getEffectiveSize());
+
+        try {
+            List<Policy> allPolicies = policyRegistry.listAll();
+            PageResponse<Policy> pageResponse = PageResponse.of(allPolicies, pageRequest);
+            logger.debug("Retrieved {} policies (page {}/{})",
+                    pageResponse.getItems().size(), pageResponse.getPage(), pageResponse.getTotalPages());
+            return ResponseEntity.ok(pageResponse);
+        } catch (Exception e) {
+            logger.error("Failed to list policies", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

@@ -26,18 +26,12 @@ open-agent-auth:
   # service-discovery entries are all inferred from roles + peers.
   infrastructures:
     trust-domain: wimse://default.trust.domain
-    # Key management: declare keys and JWKS consumers
-    key-management:
-      keys:
-        id-token-verification:
-          key-id: keystore-CHANGE-ME
-          jwks-consumer: agent-user-idp
 
   # Peers: declare the services this agent communicates with.
   # Each peer automatically generates JWKS consumer + service-discovery entries.
   peers:
     agent-user-idp:
-      issuer: http://localhost:3000
+      issuer: http://localhost:8083
     agent-idp:
       issuer: http://localhost:8082
     authorization-server:

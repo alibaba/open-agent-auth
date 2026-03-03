@@ -17,11 +17,10 @@ package com.alibaba.openagentauth.spring.web.controller;
 
 import com.alibaba.openagentauth.core.exception.workload.WorkloadCreationException;
 import com.alibaba.openagentauth.core.exception.workload.WorkloadNotFoundException;
+import com.alibaba.openagentauth.core.model.page.PageRequest;
+import com.alibaba.openagentauth.core.model.page.PageResponse;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
-import com.alibaba.openagentauth.core.protocol.wimse.workload.model.CreateWorkloadRequest;
-import com.alibaba.openagentauth.core.protocol.wimse.workload.model.CreateWorkloadResponse;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.GetWorkloadRequest;
-import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWorkloadTokenRequest;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitResponse;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitRequest;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.RevokeWorkloadRequest;
@@ -29,6 +28,7 @@ import com.alibaba.openagentauth.core.protocol.wimse.workload.model.WorkloadInfo
 import com.alibaba.openagentauth.framework.actor.AgentIdentityProvider;
 import com.alibaba.openagentauth.framework.exception.token.FrameworkTokenGenerationException;
 import com.alibaba.openagentauth.framework.model.response.WorkloadResponse;
+import com.alibaba.openagentauth.core.protocol.wimse.workload.store.WorkloadRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +39,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * REST Controller for Workload Identity (WIP).
@@ -79,21 +83,24 @@ public class WorkloadController {
     private static final Logger logger = LoggerFactory.getLogger(WorkloadController.class);
 
     private final AgentIdentityProvider agentIdentityProvider;
+    private final WorkloadRegistry workloadRegistry;
 
     /**
      * Constructor for dependency injection.
      * <p>
-     * Initializes the controller with the required AgentIdentityProvider service.
-     * The provider handles the core WIMSE protocol operations including workload
-     * creation, WIT issuance, and lifecycle management.
+     * Initializes the controller with the required AgentIdentityProvider service
+     * and optional WorkloadRegistry for listing workloads.
      * </p>
      *
      * @param agentIdentityProvider the workload identity provider service implementing WIMSE operations
+     * @param workloadRegistry      the workload registry for listing workloads (optional)
      */
     public WorkloadController(
-            AgentIdentityProvider agentIdentityProvider
+            AgentIdentityProvider agentIdentityProvider,
+            Optional<WorkloadRegistry> workloadRegistry
     ) {
         this.agentIdentityProvider = agentIdentityProvider;
+        this.workloadRegistry = workloadRegistry.orElse(null);
     }
 
 
@@ -217,6 +224,44 @@ public class WorkloadController {
         } catch (WorkloadNotFoundException e) {
             logger.error("Workload not found: {}", request.getWorkloadId());
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Lists active workloads with pagination support.
+     *
+     * @param pageRequest the pagination parameters (page, size)
+     * @return a paginated response of active workloads
+     */
+    @PostMapping("${open-agent-auth.capabilities.workload-identity.endpoints.workload.list:/api/v1/workloads/list}")
+    public ResponseEntity<PageResponse<WorkloadResponse>> listWorkloads(@RequestBody PageRequest pageRequest) {
+        logger.debug("Listing active workloads, page: {}, size: {}",
+                pageRequest.getEffectivePage(), pageRequest.getEffectiveSize());
+
+        if (workloadRegistry == null) {
+            logger.warn("WorkloadRegistry is not available, cannot list workloads");
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
+        try {
+            List<WorkloadInfo> workloads = workloadRegistry.listAll();
+            List<WorkloadResponse> allResponses = workloads.stream()
+                    .map(workloadInfo -> WorkloadResponse.builder()
+                            .workloadId(workloadInfo.getWorkloadId())
+                            .userId(workloadInfo.getUserId())
+                            .publicKey(workloadInfo.getPublicKey())
+                            .createdAt(workloadInfo.getCreatedAt())
+                            .expiresAt(workloadInfo.getExpiresAt())
+                            .status(workloadInfo.getStatus())
+                            .build())
+                    .collect(Collectors.toList());
+            PageResponse<WorkloadResponse> pageResponse = PageResponse.of(allResponses, pageRequest);
+            logger.debug("Retrieved {} active workloads (page {}/{})",
+                    pageResponse.getItems().size(), pageResponse.getPage(), pageResponse.getTotalPages());
+            return ResponseEntity.ok(pageResponse);
+        } catch (Exception e) {
+            logger.error("Failed to list workloads", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

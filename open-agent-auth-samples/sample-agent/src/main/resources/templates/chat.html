@@ -234,13 +234,15 @@
            Left Sidebar - Session History Styles
            ============================================ */
         .sidebar-header {
-            padding: var(--space-4);
+            padding: 0 var(--space-4);
+            height: 64px;
             border-bottom: 1px solid var(--color-gray-200);
             background: #FFFFFF;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: var(--space-3);
+            flex-shrink: 0;
         }
         
         .sidebar-header h2 {
@@ -588,7 +590,8 @@
         .chat-header {
             background: #FFFFFF;
             color: var(--color-gray-800);
-            padding: var(--space-4) var(--space-5);
+            padding: 0 var(--space-5);
+            height: 64px;
             display: flex;
             align-items: center;
             justify-content: space-between;
