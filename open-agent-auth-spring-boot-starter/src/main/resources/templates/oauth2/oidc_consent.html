@@ -5,99 +5,168 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${displayName ?: 'User Identity Provider'} + ' - Consent'">User Identity Provider - Consent</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #FAFAF8;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            animation: fadeIn 0.6s ease-out;
         }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .consent-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
             padding: 40px;
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
+            animation: slideUp 0.5s ease-out 0.1s both;
         }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .consent-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 32px;
         }
+
         .consent-header h1 {
-            color: #333;
-            font-size: 28px;
-            margin-bottom: 10px;
+            color: #1A1A1A;
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
         }
+
         .consent-header p {
-            color: #666;
-            font-size: 14px;
+            color: #8A8A8A;
+            font-size: 15px;
+            font-weight: 400;
         }
+
         .consent-info {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
+            background: #F5F3EF;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 32px;
+            border-left: 4px solid #B8860B;
         }
+
         .consent-info h2 {
-            color: #333;
-            font-size: 18px;
-            margin-bottom: 15px;
+            color: #1A1A1A;
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            letter-spacing: -0.3px;
         }
+
         .consent-info p {
-            color: #666;
+            color: #4A4A4A;
             font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: 10px;
+            line-height: 1.7;
+            margin-bottom: 12px;
         }
+
+        .consent-info .scopes-container {
+            margin: 16px 0;
+        }
+
         .consent-info .scope {
             display: inline-block;
-            background: #11998e;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            margin-right: 5px;
-            margin-bottom: 5px;
+            background: rgba(184, 134, 11, 0.1);
+            color: #B8860B;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(184, 134, 11, 0.2);
+            transition: all 0.2s ease;
         }
+
+        .consent-info .scope:hover {
+            background: rgba(184, 134, 11, 0.15);
+            transform: translateY(-1px);
+        }
+
         .button-group {
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
+
         .btn {
             flex: 1;
-            padding: 12px;
+            padding: 14px 20px;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s ease;
+            font-family: 'DM Sans', sans-serif;
         }
+
         .btn-approve {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: white;
+            background: #1A1A1A;
+            color: #FFFFFF;
         }
+
         .btn-approve:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(17, 153, 142, 0.4);
+            background: #333333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(26, 26, 26, 0.15);
         }
-        .btn-deny {
-            background: #f5f5f5;
-            color: #333;
-        }
-        .btn-deny:hover {
-            background: #e0e0e0;
-        }
-        .btn:active {
+
+        .btn-approve:active {
             transform: translateY(0);
+        }
+
+        .btn-deny {
+            background: transparent;
+            color: #4A4A4A;
+            border: 1px solid #D4CFC8;
+        }
+
+        .btn-deny:hover {
+            background: #F5F3EF;
+            border-color: #C8C3BC;
+            color: #1A1A1A;
+        }
+
+        .btn-deny:active {
+            background: #EBE7E1;
         }
     </style>
 </head>

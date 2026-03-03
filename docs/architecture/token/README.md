@@ -44,13 +44,4 @@ graph TD
     style H fill:#e8eaf6
 ```
 
-## Quick Links
 
-- Learn about the [Authorization Flow](../../authorization/README.md) to understand how tokens are used
-- Read about [Identity and Workload Management](../../identity/README.md) to understand token creation
-
----
-
-**Document Version**: 2.0.0  
-**Last Updated**: 2026-02-09  
-**Maintainer**: Open Agent Auth Team

@@ -193,6 +193,75 @@ public interface ResourceServer {
     ValidationResult validateRequest(ResourceRequest request) throws FrameworkValidationException;
 
     /**
+     * Validates the Workload Identity Token (WIT) independently (Layer 1).
+     * <p>
+     * This method performs only Layer 1 validation: verifying the WIT signature,
+     * claims (iss, sub, exp, aud, cnf), and trust domain. Use this when you need
+     * to validate workload identity without running the full five-layer pipeline.
+     * </p>
+     *
+     * @param request the incoming request containing the WIT to validate
+     * @return the layer result with validation status and details
+     * @throws FrameworkValidationException if token parsing or validation fails
+     */
+    ValidationResult.LayerResult validateWit(ResourceRequest request) throws FrameworkValidationException;
+
+    /**
+     * Validates the Workload Proof Token (WPT) independently (Layer 2).
+     * <p>
+     * This method performs only Layer 2 validation: verifying the WPT signature
+     * and request integrity. The WIT must also be present in the request since
+     * WPT verification depends on the public key from the WIT's cnf claim.
+     * </p>
+     *
+     * @param request the incoming request containing the WPT (and WIT) to validate
+     * @return the layer result with validation status and details
+     * @throws FrameworkValidationException if token parsing or validation fails
+     */
+    ValidationResult.LayerResult validateWpt(ResourceRequest request) throws FrameworkValidationException;
+
+    /**
+     * Validates the Agent Operation Authorization Token (AOAT) independently (Layer 3).
+     * <p>
+     * This method performs only Layer 3 validation: verifying the AOAT signature,
+     * claims, and extracting user ID and policy ID.
+     * </p>
+     *
+     * @param request the incoming request containing the AOAT to validate
+     * @return the layer result with validation status and details
+     * @throws FrameworkValidationException if token parsing or validation fails
+     */
+    ValidationResult.LayerResult validateAoat(ResourceRequest request) throws FrameworkValidationException;
+
+    /**
+     * Verifies identity consistency between user and workload independently (Layer 4).
+     * <p>
+     * This method performs only Layer 4 validation: verifying that the user identity
+     * in the AOAT matches the workload identity in the WIT (AOAT.sub == WIT.agent_identity.issuedTo).
+     * All three tokens (WIT, WPT, AOAT) must be present in the request.
+     * </p>
+     *
+     * @param request the incoming request containing all tokens for identity verification
+     * @return the layer result with validation status and details
+     * @throws FrameworkValidationException if token parsing or validation fails
+     */
+    ValidationResult.LayerResult verifyIdentityConsistency(ResourceRequest request) throws FrameworkValidationException;
+
+    /**
+     * Evaluates the authorization policy independently (Layer 5).
+     * <p>
+     * This method performs only Layer 5 validation: evaluating OPA policies
+     * with the request context (user, workload, operation, resource) to make
+     * an authorization decision.
+     * </p>
+     *
+     * @param request the incoming request containing all tokens and context for policy evaluation
+     * @return the layer result with validation status and details
+     * @throws FrameworkValidationException if token parsing or policy evaluation fails
+     */
+    ValidationResult.LayerResult evaluatePolicy(ResourceRequest request) throws FrameworkValidationException;
+
+    /**
      * Logs access attempt for audit purposes.
      * <p>
      * This method records the access attempt, including request details,

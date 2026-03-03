@@ -1,36 +1,4 @@
-# Token Reference
-
-This document provides a comprehensive overview of all tokens used in the Open Agent Auth framework, their purposes, structures, and relationships in the authorization flow.
-
-## Overview
-
-The Open Agent Auth framework orchestrates multiple token types to establish secure, verifiable delegation chains from human principals to autonomous AI agents. Each token plays a distinct role in this cryptographic choreography, ensuring that AI agents operate within user-approved boundaries while maintaining complete auditability.
-
-```mermaid
-graph TD
-    A[ID Token] -->|Authenticates User| B[Agent IDP]
-    B -->|Issues| C[WIT]
-    C -->|Binds to User| D[PAR-JWT]
-    D -->|Contains| E[VC Credential]
-    D -->|Requests| F[Agent Operation Token]
-    F -->|Authorizes| G[WPT]
-    G -->|Signs Requests| H[Resource Server]
-    
-    style A fill:#e1f5ff
-    style B fill:#fff4e1
-    style C fill:#e8f5e9
-    style D fill:#fce4ec
-    style E fill:#f3e5f5
-    style F fill:#e0f2f1
-    style G fill:#fff3e0
-    style H fill:#e8eaf6
-```
-
-The framework employs six primary token types, each serving a specific security function in the authorization pipeline. The **ID Token** establishes user identity through OpenID Connect authentication. The **Workload Identity Token (WIT)** authenticates virtual workloads created for specific user requests, implementing the WIMSE protocol for workload-level isolation. The **Workload Proof Token (WPT)** provides cryptographic proof of request authenticity using HTTP Message Signatures. The **PAR-JWT** carries authorization proposals with embedded evidence of user intent. The **Verifiable Credential (VC)** cryptographically captures the user's original natural language input, enabling semantic audit trails. Finally, the **Agent Operation Authorization Token** grants operational permission after user consent, containing all necessary claims for enforcement.
-
----
-
-## ID Token
+# ID Token
 
 ### Purpose and Role
 

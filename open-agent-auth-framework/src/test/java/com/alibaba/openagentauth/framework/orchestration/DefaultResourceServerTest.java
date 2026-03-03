@@ -425,6 +425,238 @@ class DefaultResourceServerTest {
     }
 
     @Nested
+    @DisplayName("validateWit()")
+    class ValidateWit {
+
+        @Test
+        @DisplayName("Should throw exception when request is null")
+        void shouldThrowExceptionWhenRequestIsNull() {
+            assertThatThrownBy(() -> resourceServer.validateWit(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Resource request cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when WIT is null")
+        void shouldThrowExceptionWhenWitIsNull() {
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit(null)
+                    .wpt("valid.wpt.token")
+                    .aoat("valid.aoat.token")
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            assertThatThrownBy(() -> resourceServer.validateWit(request))
+                    .isInstanceOf(FrameworkValidationException.class)
+                    .hasMessageContaining("WIT is required");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when WIT is invalid JWT")
+        void shouldThrowExceptionWhenWitIsInvalidJwt() {
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit("invalid.jwt.token")
+                    .wpt("valid.wpt.token")
+                    .aoat("valid.aoat.token")
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            assertThatThrownBy(() -> resourceServer.validateWit(request))
+                    .isInstanceOf(FrameworkValidationException.class)
+                    .hasMessageContaining("Failed to parse WIT");
+        }
+
+        @Test
+        @DisplayName("Should return layer result with valid tokens")
+        void shouldReturnLayerResultWithValidTokens() throws Exception {
+            String wit = JwtTestHelper.generateValidWit();
+            String wpt = JwtTestHelper.generateValidWpt();
+            String aoat = JwtTestHelper.generateValidAoat();
+
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit(wit)
+                    .wpt(wpt)
+                    .aoat(aoat)
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            ValidationResult.LayerResult result = resourceServer.validateWit(request);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getLayer()).isEqualTo(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("validateWpt()")
+    class ValidateWpt {
+
+        @Test
+        @DisplayName("Should throw exception when request is null")
+        void shouldThrowExceptionWhenRequestIsNull() {
+            assertThatThrownBy(() -> resourceServer.validateWpt(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Resource request cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when WPT is null")
+        void shouldThrowExceptionWhenWptIsNull() {
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit("valid.wit.token")
+                    .wpt(null)
+                    .aoat("valid.aoat.token")
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            assertThatThrownBy(() -> resourceServer.validateWpt(request))
+                    .isInstanceOf(FrameworkValidationException.class);
+        }
+
+        @Test
+        @DisplayName("Should return layer result with valid tokens")
+        void shouldReturnLayerResultWithValidTokens() throws Exception {
+            String wit = JwtTestHelper.generateValidWit();
+            String wpt = JwtTestHelper.generateValidWpt();
+            String aoat = JwtTestHelper.generateValidAoat();
+
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit(wit)
+                    .wpt(wpt)
+                    .aoat(aoat)
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            ValidationResult.LayerResult result = resourceServer.validateWpt(request);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getLayer()).isEqualTo(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("validateAoat()")
+    class ValidateAoat {
+
+        @Test
+        @DisplayName("Should throw exception when request is null")
+        void shouldThrowExceptionWhenRequestIsNull() {
+            assertThatThrownBy(() -> resourceServer.validateAoat(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Resource request cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when AOAT is null")
+        void shouldThrowExceptionWhenAoatIsNull() {
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit("valid.wit.token")
+                    .wpt("valid.wpt.token")
+                    .aoat(null)
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            assertThatThrownBy(() -> resourceServer.validateAoat(request))
+                    .isInstanceOf(FrameworkValidationException.class);
+        }
+
+        @Test
+        @DisplayName("Should return layer result with valid tokens")
+        void shouldReturnLayerResultWithValidTokens() throws Exception {
+            String wit = JwtTestHelper.generateValidWit();
+            String wpt = JwtTestHelper.generateValidWpt();
+            String aoat = JwtTestHelper.generateValidAoat();
+
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit(wit)
+                    .wpt(wpt)
+                    .aoat(aoat)
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            ValidationResult.LayerResult result = resourceServer.validateAoat(request);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getLayer()).isEqualTo(3);
+        }
+    }
+
+    @Nested
+    @DisplayName("verifyIdentityConsistency()")
+    class VerifyIdentityConsistency {
+
+        @Test
+        @DisplayName("Should throw exception when request is null")
+        void shouldThrowExceptionWhenRequestIsNull() {
+            assertThatThrownBy(() -> resourceServer.verifyIdentityConsistency(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Resource request cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should return layer result with valid tokens")
+        void shouldReturnLayerResultWithValidTokens() throws Exception {
+            String wit = JwtTestHelper.generateValidWit();
+            String wpt = JwtTestHelper.generateValidWpt();
+            String aoat = JwtTestHelper.generateValidAoat();
+
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit(wit)
+                    .wpt(wpt)
+                    .aoat(aoat)
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            ValidationResult.LayerResult result = resourceServer.verifyIdentityConsistency(request);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getLayer()).isEqualTo(4);
+        }
+    }
+
+    @Nested
+    @DisplayName("evaluatePolicy()")
+    class EvaluatePolicy {
+
+        @Test
+        @DisplayName("Should throw exception when request is null")
+        void shouldThrowExceptionWhenRequestIsNull() {
+            assertThatThrownBy(() -> resourceServer.evaluatePolicy(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Resource request cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should return layer result with valid tokens")
+        void shouldReturnLayerResultWithValidTokens() throws Exception {
+            String wit = JwtTestHelper.generateValidWit();
+            String wpt = JwtTestHelper.generateValidWpt();
+            String aoat = JwtTestHelper.generateValidAoat();
+
+            ResourceRequest request = ResourceRequest.builder()
+                    .wit(wit)
+                    .wpt(wpt)
+                    .aoat(aoat)
+                    .httpMethod("GET")
+                    .httpUri("/api/resource")
+                    .build();
+
+            ValidationResult.LayerResult result = resourceServer.evaluatePolicy(request);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getLayer()).isEqualTo(5);
+        }
+    }
+
+    @Nested
     @DisplayName("logAccess()")
     class LogAccess {
 

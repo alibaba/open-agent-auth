@@ -28,6 +28,7 @@ import com.alibaba.openagentauth.core.token.aoat.AoatParser;
 import com.alibaba.openagentauth.core.token.aoat.AoatValidator;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.core.validation.api.FiveLayerVerifier;
+import com.alibaba.openagentauth.core.validation.api.LayerValidator;
 import com.alibaba.openagentauth.core.validation.impl.FiveLayerVerifierFactory;
 import com.alibaba.openagentauth.core.validation.model.LayerValidationResult;
 import com.alibaba.openagentauth.core.validation.model.ValidationContext;
@@ -118,41 +119,48 @@ public class DefaultResourceServer implements ResourceServer {
     @Override
     public ValidationResult validateRequest(ResourceRequest request) throws FrameworkValidationException {
 
-        // Validate request
         ValidationUtils.validateNotNull(request, "Resource request");
 
         logger.debug("Validating request with five-layer verification");
 
         try {
-            // Parse tokens from request
-            WorkloadIdentityToken wit = parseWit(request.getWit());
-            WorkloadProofToken wpt = parseWpt(request.getWpt());
-            AgentOperationAuthToken aoat = parseAoat(request.getAoat());
+            ValidationContext context = buildValidationContext(request);
 
-            // Build validation context
-            ValidationContext context = ValidationContext.builder()
-                    .wit(wit)
-                    .wpt(wpt)
-                    .agentOaToken(aoat)
-                    .httpMethod(request.getHttpMethod())
-                    .httpUri(request.getHttpUri())
-                    .httpHeaders(request.getHttpHeaders())
-                    .httpBody(request.getHttpBody())
-                    .addAttribute("operationType", request.getOperationType())
-                    .addAttribute("resourceId", request.getResourceId())
-                    .addAttribute("context", request.getParameters())
-                    .build();
-
-            // Execute five-layer verification
             VerificationResult verificationResult = fiveLayerVerifier.verify(context);
 
-            // Convert verification result to framework ValidationResult
             return convertToValidationResult(verificationResult);
 
+        } catch (FrameworkValidationException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("Request validation failed", e);
             throw new FrameworkValidationException("Request validation failed: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    public ValidationResult.LayerResult validateWit(ResourceRequest request) throws FrameworkValidationException {
+        return executeLayerValidation(request, 1);
+    }
+
+    @Override
+    public ValidationResult.LayerResult validateWpt(ResourceRequest request) throws FrameworkValidationException {
+        return executeLayerValidation(request, 2);
+    }
+
+    @Override
+    public ValidationResult.LayerResult validateAoat(ResourceRequest request) throws FrameworkValidationException {
+        return executeLayerValidation(request, 3);
+    }
+
+    @Override
+    public ValidationResult.LayerResult verifyIdentityConsistency(ResourceRequest request) throws FrameworkValidationException {
+        return executeLayerValidation(request, 4);
+    }
+
+    @Override
+    public ValidationResult.LayerResult evaluatePolicy(ResourceRequest request) throws FrameworkValidationException {
+        return executeLayerValidation(request, 5);
     }
 
     @Override
@@ -164,6 +172,96 @@ public class DefaultResourceServer implements ResourceServer {
                 auditLog.getWorkloadId(),
                 auditLog.getResourceId(),
                 auditLog.getDecision());
+    }
+
+    /**
+     * Executes a single layer validation by layer number.
+     *
+     * @param request the resource request
+     * @param layerNumber the layer number (1-5)
+     * @return the layer validation result
+     * @throws FrameworkValidationException if validation fails
+     */
+    private ValidationResult.LayerResult executeLayerValidation(ResourceRequest request, int layerNumber)
+            throws FrameworkValidationException {
+
+        ValidationUtils.validateNotNull(request, "Resource request");
+
+        try {
+            ValidationContext context = buildValidationContext(request);
+            LayerValidator validator = findValidatorByLayer(layerNumber);
+
+            LayerValidationResult coreResult = validator.validate(context);
+
+            return convertToLayerResult(validator, coreResult);
+        } catch (FrameworkValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new FrameworkValidationException(
+                    "Layer " + layerNumber + " validation failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Builds a ValidationContext from a ResourceRequest.
+     *
+     * @param request the resource request
+     * @return the validation context
+     * @throws FrameworkValidationException if token parsing fails
+     */
+    private ValidationContext buildValidationContext(ResourceRequest request) throws FrameworkValidationException {
+        WorkloadIdentityToken wit = parseWit(request.getWit());
+        WorkloadProofToken wpt = parseWpt(request.getWpt());
+        AgentOperationAuthToken aoat = parseAoat(request.getAoat());
+
+        return ValidationContext.builder()
+                .wit(wit)
+                .wpt(wpt)
+                .agentOaToken(aoat)
+                .httpMethod(request.getHttpMethod())
+                .httpUri(request.getHttpUri())
+                .httpHeaders(request.getHttpHeaders())
+                .httpBody(request.getHttpBody())
+                .addAttribute("operationType", request.getOperationType())
+                .addAttribute("resourceId", request.getResourceId())
+                .addAttribute("context", request.getParameters())
+                .build();
+    }
+
+    /**
+     * Finds a layer validator by its layer number.
+     *
+     * @param layerNumber the layer number (1-5)
+     * @return the matching layer validator
+     * @throws FrameworkValidationException if no validator is found for the specified layer
+     */
+    private LayerValidator findValidatorByLayer(int layerNumber) throws FrameworkValidationException {
+        List<LayerValidator> validators = fiveLayerVerifier.getValidators();
+        for (LayerValidator validator : validators) {
+            if ((int) validator.getOrder() == layerNumber) {
+                return validator;
+            }
+        }
+        throw new FrameworkValidationException("No validator found for layer " + layerNumber);
+    }
+
+    /**
+     * Converts a core LayerValidationResult to a framework LayerResult.
+     *
+     * @param validator the layer validator
+     * @param coreResult the core validation result
+     * @return the framework layer result
+     */
+    private ValidationResult.LayerResult convertToLayerResult(LayerValidator validator,
+                                                               LayerValidationResult coreResult) {
+        return ValidationResult.LayerResult.builder()
+                .layer((int) validator.getOrder())
+                .layerName(validator.getName())
+                .valid(coreResult.isSuccess())
+                .message(coreResult.isSuccess()
+                        ? "Validation passed"
+                        : String.join(", ", coreResult.getErrors()))
+                .build();
     }
 
     /**
