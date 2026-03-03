@@ -430,4 +430,80 @@ class DefaultIdTokenGeneratorTest {
     void testGetSigningKey() {
         assertEquals(rsaPrivateKey, rsaGenerator.getSigningKey(), "Signing key should match");
     }
+
+    @Test
+    @DisplayName("Should compute correct at_hash for RS256")
+    void testComputeAtHashForRS256() {
+        String accessToken = "ya29.a0AfH6SMBx";
+        String atHash = DefaultIdTokenGenerator.computeAtHash(accessToken, "RS256");
+        
+        assertNotNull(atHash, "at_hash should not be null");
+        assertFalse(atHash.isEmpty(), "at_hash should not be empty");
+        // Verify deterministic: same input produces same output
+        String atHash2 = DefaultIdTokenGenerator.computeAtHash(accessToken, "RS256");
+        assertEquals(atHash, atHash2, "at_hash should be deterministic");
+    }
+
+    @Test
+    @DisplayName("Should compute correct at_hash for ES256")
+    void testComputeAtHashForES256() {
+        String accessToken = "ya29.a0AfH6SMBx";
+        String atHash = DefaultIdTokenGenerator.computeAtHash(accessToken, "ES256");
+        
+        assertNotNull(atHash, "at_hash should not be null");
+        // RS256 and ES256 both use SHA-256, so at_hash should be the same
+        String atHashRS256 = DefaultIdTokenGenerator.computeAtHash(accessToken, "RS256");
+        assertEquals(atHashRS256, atHash, "RS256 and ES256 should produce same at_hash (both use SHA-256)");
+    }
+
+    @Test
+    @DisplayName("Should compute different at_hash for different algorithms")
+    void testComputeAtHashDifferentAlgorithms() {
+        String accessToken = "ya29.a0AfH6SMBx";
+        String atHash256 = DefaultIdTokenGenerator.computeAtHash(accessToken, "RS256");
+        String atHash384 = DefaultIdTokenGenerator.computeAtHash(accessToken, "RS384");
+        String atHash512 = DefaultIdTokenGenerator.computeAtHash(accessToken, "RS512");
+        
+        // Different hash algorithms should produce different at_hash values
+        assertNotEquals(atHash256, atHash384, "RS256 and RS384 should produce different at_hash");
+        assertNotEquals(atHash256, atHash512, "RS256 and RS512 should produce different at_hash");
+        assertNotEquals(atHash384, atHash512, "RS384 and RS512 should produce different at_hash");
+    }
+
+    @Test
+    @DisplayName("Should throw exception for unsupported algorithm in computeAtHash")
+    void testComputeAtHashUnsupportedAlgorithm() {
+        assertThrows(IllegalArgumentException.class,
+                () -> DefaultIdTokenGenerator.computeAtHash("token", "HS256"),
+                "Should throw for unsupported algorithm");
+    }
+
+    @Test
+    @DisplayName("Should throw exception for null algorithm in computeAtHash")
+    void testComputeAtHashNullAlgorithm() {
+        assertThrows(IllegalArgumentException.class,
+                () -> DefaultIdTokenGenerator.computeAtHash("token", null),
+                "Should throw for null algorithm");
+    }
+
+    @Test
+    @DisplayName("Should include at_hash in generated token when provided")
+    void testGenerateTokenWithAtHash() {
+        long now = System.currentTimeMillis() / 1000;
+        String atHash = DefaultIdTokenGenerator.computeAtHash("test-access-token", "RS256");
+        
+        IdTokenClaims claims = IdTokenClaims.builder()
+                .iss(ISSUER)
+                .sub(SUBJECT)
+                .aud(AUDIENCE)
+                .iat(now)
+                .exp(now + 3600)
+                .atHash(atHash)
+                .build();
+
+        IdToken idToken = rsaGenerator.generate(claims);
+
+        assertNotNull(idToken, "ID token should not be null");
+        assertEquals(atHash, idToken.getClaims().getAtHash(), "at_hash should be preserved in generated token");
+    }
 }

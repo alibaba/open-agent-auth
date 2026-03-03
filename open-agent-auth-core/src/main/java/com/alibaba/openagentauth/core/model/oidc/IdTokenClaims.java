@@ -153,6 +153,18 @@ public class IdTokenClaims {
      */
     private final Map<String, Object> additionalClaims;
 
+    /**
+     * Access Token hash.
+     * <p>
+     * OPTIONAL. Access Token hash value. Its value is the base64url-encoded
+     * SHA-256 hash of the left half of the access token, when the "alg" JWT
+     * Algorithm is a MAC-based algorithm or the "none" algorithm. Otherwise,
+     * it is the base64url-encoded hash of the left half of the access token
+     * using the hash algorithm specified in the "alg" header parameter.
+     * </p>
+     */
+    private final String atHash;
+
     private IdTokenClaims(Builder builder) {
         this.iss = builder.iss;
         this.sub = builder.sub;
@@ -165,6 +177,7 @@ public class IdTokenClaims {
         this.amr = builder.amr;
         this.azp = builder.azp;
         this.additionalClaims = builder.additionalClaims;
+        this.atHash = builder.atHash;
     }
 
     public String getIss() {
@@ -211,6 +224,10 @@ public class IdTokenClaims {
         return additionalClaims;
     }
 
+    public String getAtHash() {
+        return atHash;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -224,12 +241,13 @@ public class IdTokenClaims {
                Objects.equals(authTime, that.authTime) &&
                Objects.equals(nonce, that.nonce) &&
                Objects.equals(acr, that.acr) &&
-               Objects.equals(azp, that.azp);
+               Objects.equals(azp, that.azp) &&
+               Objects.equals(atHash, that.atHash);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(iss, sub, aud, exp, iat, authTime, nonce, acr, azp);
+        return Objects.hash(iss, sub, aud, exp, iat, authTime, nonce, acr, azp, atHash);
     }
 
     @Override
@@ -244,6 +262,7 @@ public class IdTokenClaims {
                 ", nonce='" + nonce + '\'' +
                 ", acr='" + acr + '\'' +
                 ", azp='" + azp + '\'' +
+                ", atHash='" + atHash + '\'' +
                 '}';
     }
 
@@ -271,6 +290,7 @@ public class IdTokenClaims {
         private String[] amr;
         private String azp;
         private Map<String, Object> additionalClaims;
+        private String atHash;
 
         /**
          * Sets the issuer identifier.
@@ -423,6 +443,17 @@ public class IdTokenClaims {
          */
         public Builder additionalClaims(Map<String, Object> additionalClaims) {
             this.additionalClaims = additionalClaims;
+            return this;
+        }
+
+        /**
+         * Sets the access token hash.
+         *
+         * @param atHash the access token hash value
+         * @return this builder instance
+         */
+        public Builder atHash(String atHash) {
+            this.atHash = atHash;
             return this;
         }
 
