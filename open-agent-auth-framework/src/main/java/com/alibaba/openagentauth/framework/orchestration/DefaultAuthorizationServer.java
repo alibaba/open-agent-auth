@@ -44,6 +44,7 @@ import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkParProcessi
 import com.alibaba.openagentauth.framework.exception.token.FrameworkTokenGenerationException;
 import com.alibaba.openagentauth.framework.model.request.AoatIssuanceRequest;
 import com.alibaba.openagentauth.framework.actor.AuthorizationServer;
+import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +76,7 @@ import java.util.Map;
  * @see AuthorizationServer
  * @since 1.0
  */
-public class DefaultAuthorizationServer implements AuthorizationServer {
+public class DefaultAuthorizationServer implements AuthorizationServer, FrameworkOAuth2TokenClient {
 
     // Logger
     private static final Logger logger = LoggerFactory.getLogger(DefaultAuthorizationServer.class);

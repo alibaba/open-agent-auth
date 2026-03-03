@@ -59,6 +59,7 @@ import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.core.token.aoat.AoatGenerator;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.actor.AuthorizationServer;
+import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
 import com.alibaba.openagentauth.framework.orchestration.DefaultAuthorizationServer;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
 import com.alibaba.openagentauth.framework.web.interceptor.AsUserIdpUserAuthInterceptor;
@@ -333,7 +334,7 @@ public class AuthorizationServerAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         public OAuth2CallbackService callbackService(
-                AuthorizationServer authorizationServerProvider,
+                FrameworkOAuth2TokenClient frameworkOAuth2TokenClient,
                 SessionMappingBizService sessionMappingBizService,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
@@ -344,7 +345,7 @@ public class AuthorizationServerAutoConfiguration {
                 callbackEndpoint = DEFAULT_CALLBACK_ENDPOINT;
             }
             return new OAuth2CallbackService(
-                    authorizationServerProvider,
+                    frameworkOAuth2TokenClient,
                     sessionMappingBizService,
                     callbackEndpoint
             );
