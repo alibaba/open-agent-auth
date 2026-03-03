@@ -360,12 +360,12 @@ class DefaultAgentAapExecutorTest {
     }
 
     @Nested
-    @DisplayName("initiateUserAuth()")
-    class InitiateUserAuthTests {
+    @DisplayName("initiateUserAuthentication()")
+    class InitiateUserAuthenticationTests {
 
         @Test
-        @DisplayName("Should successfully initiate user authorization")
-        void shouldSuccessfullyInitiateUserAuthorization() {
+        @DisplayName("Should successfully initiate user authentication")
+        void shouldSuccessfullyInitiateUserAuthentication() {
             // Arrange
             InitiateAuthorizationRequest request = InitiateAuthorizationRequest.builder()
                     .redirectUri(REDIRECT_URI)
@@ -375,7 +375,7 @@ class DefaultAgentAapExecutorTest {
             when(mockAgent.initiateAuthorization(request)).thenReturn(expectedAuthUrl);
 
             // Act
-            String result = executor.initiateUserAuth(request);
+            String result = executor.initiateUserAuthentication(request);
 
             // Assert
             assertThat(result).isEqualTo(expectedAuthUrl);
@@ -384,12 +384,12 @@ class DefaultAgentAapExecutorTest {
     }
 
     @Nested
-    @DisplayName("exchangeUserIdToken()")
-    class ExchangeUserIdTokenTests {
+    @DisplayName("exchangeAuthorizationCodeForIdToken()")
+    class ExchangeAuthorizationCodeForIdTokenTests {
 
         @Test
-        @DisplayName("Should successfully exchange user ID token")
-        void shouldSuccessfullyExchangeUserIdToken() {
+        @DisplayName("Should successfully exchange authorization code for ID token")
+        void shouldSuccessfullyExchangeAuthorizationCodeForIdToken() {
             // Arrange
             ExchangeCodeForTokenRequest request = ExchangeCodeForTokenRequest.builder()
                     .code("auth-code-123")
@@ -398,7 +398,7 @@ class DefaultAgentAapExecutorTest {
                     .build();
 
             // Act
-            DefaultAgentAapExecutor result = (DefaultAgentAapExecutor) executor.exchangeUserIdToken(request);
+            DefaultAgentAapExecutor result = (DefaultAgentAapExecutor) executor.exchangeAuthorizationCodeForIdToken(request);
 
             // Assert
             assertThat(result).isNotNull();
@@ -408,12 +408,12 @@ class DefaultAgentAapExecutorTest {
     }
 
     @Nested
-    @DisplayName("exchangeAgentAuthToken()")
-    class ExchangeAgentAuthTokenTests {
+    @DisplayName("exchangeAuthorizationCodeForAoat()")
+    class ExchangeAuthorizationCodeForAoatTests {
 
         @Test
-        @DisplayName("Should successfully exchange agent authorization token")
-        void shouldSuccessfullyExchangeAgentAuthToken() {
+        @DisplayName("Should successfully exchange authorization code for AOAT")
+        void shouldSuccessfullyExchangeAuthorizationCodeForAoat() {
             // Arrange
             AuthorizationResponse response = AuthorizationResponse.builder()
                     .authorizationCode("auth-code-123")
@@ -439,7 +439,7 @@ class DefaultAgentAapExecutorTest {
             when(mockAgent.handleAuthorizationCallback(response)).thenReturn(expectedToken);
 
             // Act
-            AgentOperationAuthToken result = executor.exchangeAgentAuthToken(response);
+            AgentOperationAuthToken result = executor.exchangeAuthorizationCodeForAoat(response);
 
             // Assert
             assertThat(result).isNotNull();
@@ -449,8 +449,8 @@ class DefaultAgentAapExecutorTest {
     }
 
     @Nested
-    @DisplayName("buildAuthContext()")
-    class BuildAuthContextTests {
+    @DisplayName("buildAuthorizationContext()")
+    class BuildAuthorizationContextTests {
 
         @Test
         @DisplayName("Should successfully build authorization context")
@@ -485,7 +485,7 @@ class DefaultAgentAapExecutorTest {
             when(mockAgent.prepareAuthorizationContext(request)).thenReturn(expectedContext);
 
             // Act
-            AgentAuthorizationContext result = executor.buildAuthContext(request);
+            AgentAuthorizationContext result = executor.buildAuthorizationContext(request);
 
             // Assert
             assertThat(result).isNotNull();
@@ -517,19 +517,19 @@ class DefaultAgentAapExecutorTest {
     }
 
     @Nested
-    @DisplayName("cleanup()")
-    class CleanupTests {
+    @DisplayName("revokeWorkloadAndCleanup()")
+    class RevokeWorkloadAndCleanupTests {
 
         @Test
-        @DisplayName("Should successfully cleanup authorization context")
-        void shouldSuccessfullyCleanupAuthorizationContext() throws FrameworkAuthorizationException {
+        @DisplayName("Should successfully revoke workload and cleanup authorization context")
+        void shouldSuccessfullyRevokeWorkloadAndCleanup() throws FrameworkAuthorizationException {
             // Arrange
             RequestAuthUrlRequest request = createValidRequest();
             executor.requestAuthUrl(request);
             WorkloadContext workloadContext = executor.getWorkloadContext();
 
             // Act
-            executor.cleanup(workloadContext);
+            executor.revokeWorkloadAndCleanup(workloadContext);
 
             // Assert
             verify(mockAgent, times(1)).clearAuthorizationContext(workloadContext);

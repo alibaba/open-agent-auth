@@ -26,7 +26,6 @@ import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
 import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
-// AuthorizationResponse is no longer needed as processAuthorization is removed
 
 import java.util.List;
 

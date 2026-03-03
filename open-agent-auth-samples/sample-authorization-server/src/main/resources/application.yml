@@ -19,9 +19,9 @@ open-agent-auth:
     agent-idp:
       issuer: http://localhost:8082
     agent-user-idp:
-      issuer: http://localhost:8083
+      issuer: http://localhost:3000
     as-user-idp:
-      issuer: http://localhost:8084
+      issuer: http://localhost:3000
     agent:
       issuer: http://localhost:8081
     resource-server:

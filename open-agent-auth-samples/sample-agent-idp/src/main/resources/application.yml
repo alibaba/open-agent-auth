@@ -17,12 +17,20 @@ open-agent-auth:
   # Peer services (auto-configures JWKS consumers + service discovery)
   peers:
     agent-user-idp:
-      issuer: http://localhost:8083
+      issuer: http://localhost:3000
 
   # Capabilities configuration
   capabilities:
     workload-identity:
       enabled: true
+
+  # Infrastructure configuration
+  infrastructures:
+    key-management:
+      keys:
+        id-token-verification:
+          key-id: keystore-CHANGE-ME
+          jwks-consumer: agent-user-idp
 
 logging:
   level:
