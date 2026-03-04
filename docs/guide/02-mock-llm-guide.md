@@ -166,7 +166,7 @@ Here are some example queries and their expected results based on the configured
 
 ## For Real AI Experience
 
-To use a real AI model for more natural interactions, see [Using QwenCode](#optional-use-qwencode-for-deeper-experience) in the Quick Start Guide.
+To use a real AI model for more natural interactions, see [Using QwenCode](01-quick-start.md#optional-use-qwencode-for-deeper-experience) in the Quick Start Guide.
 
 ---
 

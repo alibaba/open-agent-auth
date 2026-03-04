@@ -528,9 +528,9 @@ Prompt Protection gives you a comprehensive way to keep sensitive information sa
 - **Compliance**: Help meet regulatory requirements
 
 **Want to learn more?**
-- [Configuration Guide](../configuration/00-configuration-overview.md)
+- [Configuration Guide](04-configuration.md)
 - [Security and Audit](../architecture/security/README.md)
-- [Agent Operation Authorization Draft](../../standard/draft-liu-agent-operation-authorization-01.txt)
+- [Agent Operation Authorization Draft](../standard/draft-liu-agent-operation-authorization-01.txt)
 
 ---
 
@@ -540,10 +540,10 @@ Prompt Protection gives you a comprehensive way to keep sensitive information sa
 
 - [RFC 7516 - JSON Web Encryption (JWE)](https://www.rfc-editor.org/rfc/rfc7516)
 - [WIMSE Protocol Specification](https://datatracker.ietf.org/doc/draft-ietf-wimse-wimse/)
-- [Agent Operation Authorization Draft](../../standard/draft-liu-agent-operation-authorization-01.txt)
+- [Agent Operation Authorization Draft](../standard/draft-liu-agent-operation-authorization-01.txt)
 
 ### Related Documentation
 
-- [Configuration Guide](../configuration/00-configuration-overview.md)
+- [Configuration Guide](04-configuration.md)
 - [Security and Audit](../architecture/security/README.md)
 - [Identity and Workload Management](../architecture/identity/README.md)

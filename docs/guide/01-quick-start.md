@@ -1,4 +1,4 @@
-# Open Agent Auth User Guide
+# Open Agent Auth User Guide & Quick Start
 
 ## 📖 Table of Contents
 
@@ -7,34 +7,27 @@
     - [2.1 System Requirements](#21-system-requirements)
     - [2.2 Installing Qwen Code CLI](#22-installing-qwen-code-cli)
     - [2.3 Configuring Qwen Code CLI](#23-configuring-qwen-code-cli)
-- [3. Quick Start](#3-quick-start)
-    - [3.1 Starting Sample Services](#31-starting-sample-services)
-    - [3.2 Accessing the Agent Interface](#32-accessing-the-agent-interface)
-    - [3.3 Experiencing the Agent Authorization Flow](#33-experiencing-the-agent-authorization-flow)
-- [4. Core Features](#4-core-features)
-    - [4.1 Agent Authentication](#41-agent-authentication)
-    - [4.2 Workload Management](#42-workload-management)
-    - [4.3 Tool Call Authorization](#43-tool-call-authorization)
-    - [4.4 Audit Trail](#44-audit-trail)
-- [5. Configuration](#5-configuration)
-    - [5.1 Agent Configuration](#51-agent-configuration)
-    - [5.2 Qwen Configuration](#52-qwen-configuration)
-    - [5.3 JWKS Configuration](#53-jwks-configuration)
-- [6. Troubleshooting](#6-troubleshooting)
-- [7. Next Steps](#7-next-steps)
+- [3. Quick Start (5 Minutes)](#3-quick-start-5-minutes)
+- [4. Service Endpoints](#4-service-endpoints)
+- [5. Core Features](#5-core-features)
+    - [5.1 Agent Authentication](#51-agent-authentication)
+    - [5.2 Workload Management](#52-workload-management)
+    - [5.3 Tool Call Authorization](#53-tool-call-authorization)
+    - [5.4 Audit Trail](#54-audit-trail)
+- [6. Core Concepts](#6-core-concepts)
+- [7. Configuration](#7-configuration)
+    - [7.1 Agent Configuration](#71-agent-configuration)
+    - [7.2 Qwen Configuration](#72-qwen-configuration)
+    - [7.3 JWKS Configuration](#73-jwks-configuration)
+- [8. Common Commands](#8-common-commands)
+- [9. Troubleshooting](#9-troubleshooting)
+- [10. Next Steps](#10-next-steps)
 
 ---
 
 ## 1. Overview
 
 Open Agent Auth is an enterprise-grade AI Agent operation authorization framework built on industry-standard protocols (OAuth 2.0, OpenID Connect, WIMSE, MCP). It provides comprehensive security guarantees for AI Agents executing operations on behalf of users.
-
-### Getting Started
-
-- 🚀 **Quick Start**: If you want to get started in 5 minutes, see the [Quick Start Guide](01-quick-start.md)
-- 📖 **Complete Configuration**: For detailed configuration options, see the [Configuration Guide](../configuration/)
-- 🔧 **Infrastructure Configuration**: For infrastructure configuration, see the [Infrastructure Configuration Guide](../configuration/01-infrastructure-configuration.md)
-- 🔐 **Infrastructure Configuration**: For infrastructure configuration, see the [Infrastructure Configuration Guide](../configuration/01-infrastructure-configuration.md)
 
 ### Key Features
 
@@ -219,70 +212,137 @@ qwencode chat --tool "calculator" "Calculate 2 + 2"
 
 ---
 
-## 3. Quick Start
+## 3. Quick Start (5 Minutes)
 
-### 3.1 Starting Sample Services
+This guide will help you experience the core features of Open Agent Auth in **5 minutes**.
 
-This project includes a complete sample project with all necessary service components.
-
-#### Clone the Project
+### Step 1: Clone and Build the Project (2 minutes)
 
 ```bash
 # Clone the project
 git clone https://github.com/alibaba/open-agent-auth.git
 cd open-agent-auth
-```
 
-#### Build the Project
-
-```bash
-# Build using JDK 17
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-
-# Build all modules
+# Build the project (skip tests to speed up)
 mvn clean package -DskipTests
 
-# Or use the provided startup script (will build automatically)
-cd open-agent-auth-samples/scripts
-./sample-start.sh
-```
-
-#### Start Services
-
-```bash
 # Enter the samples directory
 cd open-agent-auth-samples
+```
 
-# Start all services (using the startup script)
+### Step 2: Start All Services (2 minutes)
+
+The sample project provides two startup options:
+
+#### Option 1: Using Mock LLM (Quick Start)
+
+```bash
+# Start all services with mock LLM
+./scripts/sample-start.sh --profile mock-llm
+```
+
+#### Option 2: Using QwenCode (Deep Experience)
+
+The sample project integrates [qwencode-sdk](https://github.com/QwenLM/qwen-code/blob/main/packages/sdk-java/qwencode/README.md), enabling direct integration with QwenCode for a deeper experience with real AI conversations.
+
+After installing QwenCode (see Section 2.2), restart the services:
+
+```bash
+# Stop all services
+./scripts/sample-stop.sh
+
+# Start all services with QwenCode integration
 ./scripts/sample-start.sh
 ```
 
-#### Verify Services Are Running
+Now, the Agent will use the real Qwen model for conversations, providing a deeper experience.
+
+**Note:** Make sure QwenCode is properly installed and configured. If you encounter any issues, you can always fall back to Option 1 (Mock LLM) by using:
 
 ```bash
-# Check service ports
-lsof -i :8081 # Agent
-lsof -i :8082 # Agent IDP
-lsof -i :8083 # Agent User IDP
-lsof -i :8084 # AS User IDP
-lsof -i :8085 # Authorization Server
-lsof -i :8086 # Resource Server
-
-# Or use the provided status check script
-./scripts/sample-status.sh
+./scripts/sample-start.sh --profile mock-llm
 ```
 
-### 3.2 Accessing the Agent Interface
+Wait for all services to start (about 1-2 minutes). You should see output similar to:
+```
+# ✓ Agent User IDP is ready
+# ✓ Agent IDP is ready
+# ✓ AS User IDP is ready
+# ✓ Authorization Server is ready
+# ✓ Resource Server is ready
+# ✓ Agent is ready
+```
 
-After services start successfully, you can access the Agent interface through your browser:
+### Step 3: Access the Agent Interface (30 seconds)
 
-#### Main Interface
-
+Open your browser and navigate to:
 ```
 http://localhost:8081
 ```
 
-#### Service Endpoints
+You will see the main Agent interface.
+
+### Step 4: Experience the Agent Authorization Flow (1 minute)
+
+#### 4.1 User Login
+
+1. Click the "Login" button on the page
+2. Log in with the default credentials:
+    - **Username**: `alice`
+    - **Password**: `password123`
+3. After successful login, you will enter the Agent conversation interface
+
+#### 4.2 Initiate a Request
+
+Type in the dialog box:
+```
+I want to buy a smartphone
+```
+
+> **Tip**: The Mock LLM uses keyword-based matching. For available products and matching rules, see [Mock LLM Guide](02-mock-llm-guide.md).
+
+#### 4.3 Observe the Authorization Flow
+
+The agent will automatically perform the following steps:
+
+1. **Identity Authentication**
+    - The agent verifies your identity
+    - Creates a virtual workload
+    - Obtains a workload token (WIT)
+
+2. **Tool Call Preparation**
+    - The agent analyzes the request and determines it needs to call the shopping tool
+    - Displays Operation Policy:
+      ```rego
+      package agent
+      allow {
+        input.operationType == "search_products"
+        input.resourceId == "shopping"
+        # Additional context constraints
+        input.context.keywords == "iPhone 15"
+      }
+      ```
+
+3. **Authorization Confirmation**
+    - The agent asks if you confirm executing this operation
+    - Click the "Approve" button to confirm
+
+4. **Execute Tool Call**
+    - The agent uses the authorization token to call the shopping tool
+    - The tool server performs five-layer verification:
+        - ✓ Workload authentication
+        - ✓ Request integrity verification
+        - ✓ User authentication
+        - ✓ Identity consistency verification
+        - ✓ Policy evaluation
+
+5. **Return Result**
+    - The agent displays the purchase result
+    - Generates an audit trail record
+
+---
+
+## 4. Service Endpoints
 
 | Service | URL | Description |
 |---------|-----|-------------|
@@ -293,46 +353,11 @@ http://localhost:8081
 | Authorization Server | http://localhost:8085 | Authorization server |
 | Resource Server | http://localhost:8086 | Resource server (MCP Server) |
 
-### 3.3 Experiencing the Agent Authorization Flow
-
-#### Scenario: Shopping Assistant
-
-1. **Access the Agent Interface**
-   ```
-   http://localhost:8081
-   ```
-
-2. **User Login**
-    - Click the "Login" button
-    - Enter username and password (Sample default: `user/password`)
-    - Complete identity authentication
-
-3. **Initiate a Request**
-    - In the dialog box, type: "I want to buy an iPhone 15"
-    - The agent will analyze the request and prepare to call the shopping tool
-
-4. **Authorization Confirmation**
-    - The agent will display tool call details
-    - User confirms authorization: "Yes, please help me buy it"
-    - The agent executes the tool call
-
-5. **View Results**
-    - The agent returns the purchase result
-    - You can view the complete operation record in the audit log
-
-#### Complete Authorization Flow
-
-```
-User → Agent → Authentication → Create Workload → Request Authorization
-  ↓
-User confirms authorization → Get authorization token → Call tool → Five-layer verification → Return result
-```
-
 ---
 
-## 4. Core Features
+## 5. Core Features
 
-### 4.1 Agent Authentication
+### 5.1 Agent Authentication
 
 #### OAuth 2.0 Authorization Flow
 
@@ -356,7 +381,7 @@ User confirms authorization → Get authorization token → Call tool → Five-l
 
 The three layers of identity are cryptographically bound to ensure end-to-end identity consistency.
 
-### 4.2 Workload Management
+### 5.2 Workload Management
 
 #### Virtual Workload Creation
 
@@ -377,7 +402,7 @@ workload.setExpiration(System.currentTimeMillis() + 3600000);
 - **Resource limits**: Restricts resources that the workload can access
 - **Audit tracking**: Records all operations of the workload
 
-### 4.3 Tool Call Authorization
+### 5.3 Tool Call Authorization
 
 #### MCP Protocol Support
 
@@ -401,7 +426,7 @@ agent:
 4. **Identity Consistency**: Verifies user-workload-token identity binding
 5. **Policy Evaluation**: Fine-grained access control based on OPA policies
 
-### 4.4 Audit Trail
+### 5.4 Audit Trail
 
 #### W3C VC Verifiable Credentials
 
@@ -435,11 +460,33 @@ Each operation generates a verifiable credential:
 
 ---
 
-## 5. Configuration
+## 6. Core Concepts
 
-This section covers the essential configuration options for the Open Agent Auth framework. For a complete reference of all configuration properties, default values, and role-specific settings, please refer to the **[Configuration Guide](../configuration/)**.
+### What is Agent Authorization?
 
-### 5.1 Agent Configuration
+When AI agents perform operations on behalf of users, it needs to ensure:
+1. **Operation Legitimacy**: The operation is indeed initiated by the user
+2. **Identity Authenticity**: Both the agent and user identities are authentic
+3. **Permission Reasonableness**: The agent has permission to perform the operation
+4. **Traceability**: All operations can be audited and traced
+
+### Five-Layer Verification Mechanism
+
+```
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│  Layer 1:        │ →  │  Layer 2:        │ →  │  Layer 3:        │ →  │  Layer 4:        │ →  │  Layer 5:        │
+│  Workload Auth   │    │  Request Integ   │    │  User Auth       │    │  Identity Cons   │    │  Policy Eval     │
+│  Verify WIT sig  │    │  Verify WPT sig  │    │  Verify OA Token │    │  Verify binding  │    │  (OPA) Fine-grain│
+└──────────────────┘    └──────────────────┘    └──────────────────┘    └──────────────────┘    └──────────────────┘
+```
+
+---
+
+## 7. Configuration
+
+This section covers the essential configuration options for the Open Agent Auth framework. For a complete reference of all configuration properties, default values, and role-specific settings, please refer to the **[Configuration Guide](04-configuration.md)**.
+
+### 7.1 Agent Configuration
 
 #### Basic Configuration
 
@@ -489,7 +536,7 @@ open-agent-auth:
       session-ttl-seconds: 3600
 ```
 
-### 5.2 Qwen Configuration
+### 7.2 Qwen Configuration
 
 #### Basic Configuration
 
@@ -519,9 +566,9 @@ qwen:
   top-p: 0.9
 ```
 
-### 5.3 JWKS Configuration
+### 7.3 JWKS Configuration
 
-For comprehensive information about infrastructure configuration, including trust domain, key management, JWKS, and service discovery, please refer to the **[Infrastructure Configuration Guide](../configuration/01-infrastructure-configuration.md)**.
+For comprehensive information about infrastructure configuration, including trust domain, key management, JWKS, and service discovery, please refer to the **[Infrastructure Configuration Guide](04-configuration.md)**.
 
 #### Provider Configuration (Expose Public Keys)
 
@@ -560,7 +607,35 @@ open-agent-auth:
 
 ---
 
-## 6. Troubleshooting
+## 8. Common Commands
+
+### Service Management
+
+```bash
+# Start all services
+./scripts/sample-start.sh
+
+# Stop all services
+./scripts/sample-stop.sh
+
+# Check service status
+./scripts/sample-status.sh
+
+# View service logs
+./scripts/sample-logs.sh sample-agent
+./scripts/sample-logs.sh all
+```
+
+### Skip Build
+
+```bash
+# If already built, skip the build step
+./scripts/sample-start.sh --skip-build
+```
+
+---
+
+## 9. Troubleshooting
 
 ### Q1: What if Qwen Code CLI installation fails?
 
@@ -578,20 +653,30 @@ pip install qwencode-cli -i https://pypi.tuna.tsinghua.edu.cn/simple
 conda install -c conda-forge qwencode-cli
 ```
 
-### Q2: Service startup failed, port is already in use?
+### Q2: What if service startup fails?
 
-**Problem**: `Port 8081 is already in use`
+**Problem**: `Port 8081 is already in use` or service fails to start
 
 **Solution**:
 ```bash
+# Check if ports are occupied
+lsof -i :8081
+lsof -i :8082
+# ... check other ports
+
 # Find the process occupying the port
 lsof -i :8081
 
 # Kill the process
 kill -9 <PID>
 
-# Or modify port configuration
-# Modify server.port in application.yml
+# View service logs
+./scripts/sample-logs.sh sample-agent
+
+# Rebuild
+cd ..
+mvn clean package -DskipTests
+cd open-agent-auth-samples
 ```
 
 ### Q3: Qwen API call failed?
@@ -627,12 +712,18 @@ tail -f open-agent-auth-samples/logs/sample-agent.log
 ./scripts/sample-logs.sh all
 ```
 
-### Q5: How to stop all services?
+### Q5: How to reset all services?
 
 **Solution**:
 ```bash
-# Use the provided stop script
+# Stop all services
 ./scripts/sample-stop.sh
+
+# Clean up logs and process files
+rm -rf logs/* pids/*
+
+# Restart
+./scripts/sample-start.sh
 ```
 
 ### Q6: How to view test coverage?
@@ -652,18 +743,16 @@ open target/site/jacoco-aggregate/index.html
 
 ---
 
-## 7. Next Steps
+## 10. Next Steps
 
 ### Deep Dive
 
 - **Configuration Guides**:
-    - [Quick Start Guide](01-quick-start.md) - Get started in 5 minutes
-    - [Configuration Guide](../configuration/) - Complete configuration reference
-    - [Infrastructure Configuration Guide](../configuration/01-infrastructure-configuration.md) - Infrastructure configuration
-    - [Infrastructure Configuration Guide](../configuration/01-infrastructure-configuration.md) - Infrastructure configuration
+    - [Mock LLM Guide](02-mock-llm-guide.md) - Learn about Mock LLM configuration
+    - [Integration Guide](03-integration-guide.md) - Learn how to integrate into your own project
+    - [Configuration Guide](04-configuration.md) - Complete configuration reference
 - **Architecture Documents**: Read [Architecture Design Documents](../architecture/)
-- **Developer Guide**: Learn how to integrate into your own project
-- **API Documentation**: View [API Reference Documentation](../api/)
+- **API Documentation**: View [API Reference Documentation](../api/00-api-overview.md)
 - **Protocol Standards**: Learn about [OAuth 2.0](https://oauth.net/2/), [OIDC](https://openid.net/connect/), [WIMSE](https://datatracker.ietf.org/doc/html/draft-ietf-wimse-workload-identity)
 
 ### Contribute

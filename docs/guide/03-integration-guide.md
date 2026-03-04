@@ -1491,14 +1491,14 @@ For production deployments, consider implementing a distributed storage solution
 ### 7.1 Additional Guides
 
 - [Quick Start Guide](01-quick-start.md) - Get started in 5 minutes
-- [User Guide](00-user-guide.md) - Complete feature documentation
-- [Configuration Guide](../configuration/) - Detailed configuration reference
-- [Infrastructure Configuration Guide](../configuration/01-infrastructure-configuration.md) - Infrastructure setup
+- [User Guide](01-quick-start.md) - Complete feature documentation
+- [Configuration Guide](04-configuration.md) - Detailed configuration reference
+- [Infrastructure Configuration Guide](04-configuration.md) - Infrastructure setup
 
 ### 7.2 Architecture Documentation
 
 - [Architecture Overview](../architecture/) - System architecture design
-- [API Documentation](../api/) - API reference documentation
+- [API Documentation](../api/00-api-overview.md) - API reference documentation
 
 ### 7.3 Support
 
