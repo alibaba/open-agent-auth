@@ -295,8 +295,11 @@ public class QwenClientWrapper implements LLMClient {
     private String buildPromptWithToolDefinitions(List<Map<String, String>> messages, List<ToolDefinition> tools) {
         StringBuilder prompt = new StringBuilder();
         
-        // Build comprehensive system message
-        prompt.append("system\n");
+        // Build comprehensive system message using standard ChatML format
+        // Qwen3 models expect <|im_start|>role\ncontent<|im_end|> delimiters.
+        // Using non-standard delimiters (e.g., "role\n...content...</s>") causes the model
+        // to leak role markers like "<|im_start|>user" into generated text.
+        prompt.append("<|im_start|>system\n");
         
         // === Optimized System Prompt ===
         prompt.append("You are an intelligent AI assistant that can use tools to complete tasks.\n\n");
@@ -385,26 +388,26 @@ public class QwenClientWrapper implements LLMClient {
         }
         
         // === End System Message ===
-        prompt.append("</s>\n");
+        prompt.append("<|im_end|>\n");
         
-        // Append conversation history
+        // Append conversation history using standard ChatML delimiters
         for (Map<String, String> message : messages) {
             String role = message.get("role");
             String content = message.get("content");
             
             if (!ValidationUtils.isNullOrEmpty(content)) {
                 if ("user".equals(role)) {
-                    prompt.append("user\n").append(content).append("</s>\n");
+                    prompt.append("<|im_start|>user\n").append(content).append("<|im_end|>\n");
                 } else if ("assistant".equals(role)) {
-                    prompt.append("assistant\n").append(content).append("</s>\n");
+                    prompt.append("<|im_start|>assistant\n").append(content).append("<|im_end|>\n");
                 } else if ("tool".equals(role)) {
                     // Tool results are presented as user input with clear marker
-                    prompt.append("user\n").append("[Tool Result]\n").append(content).append("</s>\n");
+                    prompt.append("<|im_start|>user\n[Tool Result]\n").append(content).append("<|im_end|>\n");
                 }
             }
         }
         
-        prompt.append("assistant\n");
+        prompt.append("<|im_start|>assistant\n");
         return prompt.toString();
     }
     
