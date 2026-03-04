@@ -3,7 +3,7 @@
 
   # Open Agent Auth
 
-  **English** | [中文](README.zh-CN.md)
+  [English](README.md) | **中文**
 
   <h3>企业级 AI 智能体操作授权框架</h3>
 
@@ -127,7 +127,63 @@ open http://localhost:8081
    ```
 
 **注意：** 使用此方式前请确保 QwenCode 已正确安装并配置。如遇到问题，可使用方式一（模拟 LLM）进行快速测试。
-```
+
+**演示流程**
+
+以下截图展示了使用 **方式一（模拟 LLM）** 时的授权流程。方式二（QwenCode）的流程相同，只是由真实的 LLM 提供响应。
+
+以下截图展示了完整的授权流程，包括用户认证、智能体操作授权及响应交付：
+
+<table>
+<tr>
+<td align="center">
+  <img src="docs/image/sample/01-agent-user-idp-login.jpg" alt="Agent User IDP Login" width="400"/>
+  <br/>
+  <small><i><b>图 1：</b>用户通过智能体身份提供商进行认证，在与智能体交互前建立身份。</i></small>
+</td>
+<td align="center">
+  <img src="docs/image/sample/02-agent-user-idp.jpg" alt="Agent User IDP Dashboard" width="400"/>
+  <br/>
+  <small><i><b>图 2：</b>用户仪表盘显示可用的智能体及登录成功后的认证状态。</i></small>
+</td>
+</tr>
+<tr>
+<td align="center">
+  <img src="docs/image/sample/04-chat-2.jpg" alt="Chat Interface" width="400"/>
+  <br/>
+  <small><i><b>图 3：</b>用户向智能体提交自然语言请求，启动授权工作流。</i></small>
+</td>
+<td align="center">
+  <img src="docs/image/sample/05-as-user-idp-login.jpg" alt="AS User IDP Login" width="400"/>
+  <br/>
+  <small><i><b>图 4：</b>用户通过授权服务器的身份提供商进行认证，以授予智能体操作的同意。</i></small>
+</td>
+</tr>
+<tr>
+<td align="center">
+  <img src="docs/image/sample/07-authorize-1.jpg" alt="Authorization Page" width="400"/>
+  <br/>
+  <small><i><b>图 5：</b>授权同意页面展示智能体请求访问的操作详情和资源。</i></small>
+</td>
+<td align="center">
+  <img src="docs/image/sample/09-authorize-3.jpg" alt="Authorization Confirmation" width="400"/>
+  <br/>
+  <small><i><b>图 6：</b>用户确认授权请求，授予智能体执行操作的权限。</i></small>
+</td>
+</tr>
+<tr>
+<td align="center">
+  <img src="docs/image/sample/10-authorize-4.jpg" alt="Agent Receives Token" width="400"/>
+  <br/>
+  <small><i><b>图 7：</b>智能体从授权服务器接收 AOAT（智能体操作授权令牌）。</i></small>
+</td>
+<td align="center">
+  <img src="docs/image/sample/11-response.jpg" alt="Response Result" width="400"/>
+  <br/>
+  <small><i><b>图 8：</b>智能体从资源服务器接收操作结果并呈现给用户。</i></small>
+</td>
+</tr>
+</table>
 
 ### 集成指南
 
@@ -371,40 +427,3 @@ Open Agent Auth v0.1.0-beta.1 处于公开 Beta 测试阶段 — 功能完整、
 
 </div>
 
-## here are the updates to merge: 
-
-```markdown:README.zh-CN.md
-**演示流程**
-
-以下截图展示了使用 **方式一（模拟 LLM）** 时的授权流程。方式二（QwenCode）的流程相同，只是由真实的 LLM 提供响应。
-
-以下截图展示了完整的授权流程，包括用户认证、智能体操作授权及响应交付：
-```
-
-## here are the updates to merge: 
-
-```markdown:README.zh-CN.md
-### 运行示例程序
-
-示例程序提供两种启动方式：
-
-#### 方式一：使用模拟 LLM（快速开始）
-
-```bash
-# 克隆并构建
-git clone https://github.com/alibaba/open-agent-auth.git
-cd open-agent-auth
-mvn clean package -DskipTests
-
-# 使用模拟 LLM 启动所有服务
-cd open-agent-auth-samples
-./scripts/sample-start.sh --profile mock-llm
-
-# 访问智能体界面
-open http://localhost:8081
-```
-
-> **注意**：模拟 LLM 使用关键词匹配。关于可用产品和匹配规则，请参阅 [模拟 LLM 使用指南](docs/guide/start/mock-llm-guide.md)。
-
-#### 方式二：使用 QwenCode（深度体验）
-```
