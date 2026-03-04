@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy Registry - Admin</title>
+    
+    <!-- Google Fonts: DM Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #FAFAF8;
+            --primary-color: #B8860B;
+            --text-title: #1A1A1A;
+            --text-body: #4A4A4A;
+            --text-muted: #8A8A8A;
+            --surface-color: #FFFFFF;
+            --border-color: #E8E4DF;
+            --radius-card: 16px;
+            --radius-input: 8px;
+            --radius-section: 12px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --btn-primary-bg: #1A1A1A;
+            --btn-primary-text: #FFFFFF;
+            --btn-primary-hover: #333333;
+            --btn-danger-bg: rgba(199, 80, 80, 0.08);
+            --btn-danger-text: #C75050;
+            --toast-success-bg: rgba(76, 175, 80, 0.08);
+            --toast-success-text: #4CAF50;
+            --toast-error-bg: rgba(199, 80, 80, 0.08);
+            --toast-error-text: #C75050;
+            --code-bg: #F5F3EF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 25% 25%, rgba(184, 134, 11, 0.03) 0%, transparent 50%);
+            color: var(--text-body);
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header Section */
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-title);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Action Bar */
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-input);
+            border: none;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--btn-primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--surface-color);
+            color: var(--text-body);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #F5F3EF;
+        }
+
+        .btn-danger {
+            background-color: var(--btn-danger-bg);
+            color: var(--btn-danger-text);
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(199, 80, 80, 0.12);
+        }
+
+        /* Search Section */
+        .search-section {
+            background-color: var(--surface-color);
+            border-radius: var(--radius-section);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-input);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text-body);
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        /* Results Section */
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .policy-card {
+            background-color: var(--surface-color);
+            border-radius: var(--radius-card);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .policy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .policy-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-title);
+            margin-bottom: 4px;
+        }
+
+        .policy-description {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .policy-meta {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .policy-meta span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .policy-code {
+            background-color: var(--code-bg);
+            border-radius: var(--radius-input);
+            padding: 16px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+        }
+
+        .policy-code pre {
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-body);
+        }
+
+        .policy-code code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .policy-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .policy-expiration {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background-color: var(--surface-color);
+            border-radius: var(--radius-card);
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .modal-header {
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-title);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-body);
+            margin-bottom: 8px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-input);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text-body);
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+        }
+
+        textarea.form-control {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1100;
+        }
+
+        .toast {
+            background-color: var(--surface-color);
+            border-radius: var(--radius-input);
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: fadeInUp 0.3s ease-out;
+            max-width: 400px;
+        }
+
+        .toast.success {
+            background-color: var(--toast-success-bg);
+            color: var(--toast-success-text);
+        }
+
+        .toast.error {
+            background-color: var(--toast-error-bg);
+            color: var(--toast-error-text);
+            border-left: 3px solid var(--btn-danger-text);
+        }
+
+        .toast i {
+            font-size: 18px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+            color: var(--text-muted);
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+            font-size: 24px;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Policy List Styles */
+        .list-count {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+
+        .policy-list-item {
+            background-color: var(--surface-color);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .policy-list-item:hover {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .policy-list-header {
+            padding: 20px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: background-color 0.2s ease;
+        }
+
+        .policy-list-header:hover {
+            background-color: rgba(184, 134, 11, 0.03);
+        }
+
+        .policy-chevron {
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .policy-list-item.expanded .policy-chevron {
+            transform: rotate(90deg);
+        }
+
+        .policy-list-summary {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 2fr 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .policy-summary-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-title);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .policy-summary-value {
+            font-size: 14px;
+            color: var(--text-body);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .policy-list-detail {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            background-color: #F5F3EF;
+        }
+
+        .policy-list-item.expanded .policy-list-detail {
+            max-height: 1000px;
+            opacity: 1;
+        }
+
+        .policy-detail-content {
+            padding: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .policy-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .policy-detail-full {
+            grid-column: 1 / -1;
+        }
+
+        .policy-detail-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 24px;
+            padding: 16px 0;
+        }
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Policy Registry</h1>
+            <p>Manage authorization policies (Rego-based)</p>
+        </header>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="openModal()">
+                <i class="bi bi-plus-lg"></i>
+                Register Policy
+            </button>
+            <button class="btn btn-secondary" onclick="refreshPolicies()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Refresh
+            </button>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section">
+            <input type="text" class="search-input" id="policyIdInput" placeholder="Enter Policy ID...">
+            <button class="btn btn-primary" onclick="searchPolicy()">
+                <i class="bi bi-search"></i>
+                Search
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection">
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>Search for a policy by ID to view details</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Register Policy</h2>
+            </div>
+            <form id="policyForm" onsubmit="submitPolicy(event)">
+                <div class="form-group">
+                    <label for="regoPolicy">Rego Policy</label>
+                    <textarea class="form-control" id="regoPolicy" placeholder="package example
+
+allow {
+    input.user == &quot;admin&quot;
+}" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input type="text" class="form-control" id="description" placeholder="Policy description" required>
+                </div>
+                <div class="form-group">
+                    <label for="createdBy">Created By</label>
+                    <input type="text" class="form-control" id="createdBy" placeholder="Your name or identifier" required>
+                </div>
+                <div class="form-group">
+                    <label for="expirationTime">Expiration Time</label>
+                    <input type="datetime-local" class="form-control" id="expirationTime" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Pagination state
+        let currentPage = 1;
+        const pageSize = 20;
+
+        (function() {
+            if (window.location.search.indexOf('embedded=true') !== -1) {
+                document.body.style.padding = '20px';
+                document.body.style.background = 'var(--bg-color)';
+                document.body.style.backgroundImage = 'none';
+                document.body.style.minHeight = 'auto';
+            }
+        })();
+
+        // Modal Functions
+        function openModal() {
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            document.getElementById('policyForm').reset();
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Toast Functions
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle';
+            toast.innerHTML = `
+                <i class="bi ${icon}"></i>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // API Functions
+        async function searchPolicy() {
+            const policyId = document.getElementById('policyIdInput').value.trim();
+            if (!policyId) {
+                showToast('Please enter a Policy ID', 'error');
+                return;
+            }
+
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.innerHTML = `
+                <div class="loading">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/v1/policies/get', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ policyId })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Policy not found');
+                }
+
+                const policy = await response.json();
+                displayPolicy(policy);
+                showToast('Policy found successfully');
+            } catch (error) {
+                resultsSection.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-x-circle"></i>
+                        <p>${error.message || 'Failed to fetch policy'}</p>
+                    </div>
+                `;
+                showToast(error.message || 'Failed to fetch policy', 'error');
+            }
+        }
+
+        function displayPolicy(policy) {
+            const resultsSection = document.getElementById('resultsSection');
+            const expirationTime = policy.expirationTime 
+                ? new Date(policy.expirationTime).toLocaleString() 
+                : 'Never';
+            
+            resultsSection.innerHTML = `
+                <div class="policy-card">
+                    <div class="policy-header">
+                        <div>
+                            <div class="policy-id">${escapeHtml(policy.policyId)}</div>
+                            <div class="policy-description">${escapeHtml(policy.description || 'No description')}</div>
+                        </div>
+                        <button class="btn btn-danger" onclick="deletePolicy('${escapeHtml(policy.policyId)}')">
+                            <i class="bi bi-trash"></i>
+                            Delete
+                        </button>
+                    </div>
+                    <div class="policy-meta">
+                        <span>
+                            <i class="bi bi-person"></i>
+                            Created by: ${escapeHtml(policy.createdBy || 'Unknown')}
+                        </span>
+                        <span>
+                            <i class="bi bi-clock"></i>
+                            Expires: ${escapeHtml(expirationTime)}
+                        </span>
+                    </div>
+                    <div class="policy-code">
+                        <pre><code>${escapeHtml(policy.regoPolicy || '')}</code></pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function submitPolicy(event) {
+            event.preventDefault();
+            
+            const regoPolicy = document.getElementById('regoPolicy').value;
+            const description = document.getElementById('description').value;
+            const createdBy = document.getElementById('createdBy').value;
+            const expirationTime = document.getElementById('expirationTime').value;
+
+            try {
+                const response = await fetch('/api/v1/policies/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        regoPolicy,
+                        description,
+                        createdBy,
+                        expirationTime
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to register policy');
+                }
+
+                const result = await response.json();
+                showToast('Policy registered successfully');
+                closeModal();
+                
+                // Clear search and show empty state
+                document.getElementById('policyIdInput').value = '';
+                document.getElementById('resultsSection').innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-check-circle"></i>
+                        <p>Policy registered successfully. Search by ID to view details.</p>
+                    </div>
+                `;
+            } catch (error) {
+                showToast(error.message || 'Failed to register policy', 'error');
+            }
+        }
+
+        async function deletePolicy(policyId) {
+            if (!confirm(`Are you sure you want to delete policy "${policyId}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/policies/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ policyId })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete policy');
+                }
+
+                showToast('Policy deleted successfully');
+                document.getElementById('resultsSection').innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-check-circle"></i>
+                        <p>Policy deleted successfully.</p>
+                    </div>
+                `;
+            } catch (error) {
+                showToast(error.message || 'Failed to delete policy', 'error');
+            }
+        }
+
+        function refreshPolicies() {
+            document.getElementById('policyIdInput').value = '';
+            currentPage = 1;
+            loadPolicyList();
+        }
+
+        async function loadPolicyList() {
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.innerHTML = `
+                <div class="loading">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/v1/policies/list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ page: currentPage, size: pageSize })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const policies = data.items || [];
+                const page = data.page || currentPage;
+                const totalPages = data.totalPages || 1;
+                const totalItems = data.totalItems || 0;
+
+                displayPolicyList(policies, page, totalPages, totalItems);
+            } catch (error) {
+                resultsSection.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <p>Failed to load policies: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayPolicyList(policies, page, totalPages, totalItems) {
+            const resultsSection = document.getElementById('resultsSection');
+
+            if (policies.length === 0) {
+                resultsSection.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No policies found. Register a new policy to get started.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const countHtml = `<div class="list-count">Showing <strong>${policies.length}</strong> of <strong>${totalItems}</strong> policies (Page <strong>${page}</strong>/<strong>${totalPages}</strong>)</div>`;
+            const listHtml = policies.map((policy, index) => {
+                const truncatedDesc = policy.description && policy.description.length > 80 
+                    ? policy.description.substring(0, 80) + '...' 
+                    : policy.description || 'No description';
+
+                const expirationTime = policy.expirationTime 
+                    ? new Date(policy.expirationTime).toLocaleString() 
+                    : 'Never';
+
+                return `
+                    <div class="policy-list-item" data-index="${index}">
+                        <div class="policy-list-header" onclick="togglePolicyDetail(${index})">
+                            <i class="bi bi-chevron-right policy-chevron"></i>
+                            <div class="policy-list-summary">
+                                <span class="policy-summary-id" title="${escapeHtml(policy.policyId || '')}">${escapeHtml(policy.policyId || 'N/A')}</span>
+                                <span class="policy-summary-value">${escapeHtml(truncatedDesc)}</span>
+                                <span class="policy-summary-value">${escapeHtml(policy.createdBy || 'Unknown')}</span>
+                            </div>
+                        </div>
+                        <div class="policy-list-detail">
+                            <div class="policy-detail-content">
+                                <div class="policy-detail-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Policy ID</span>
+                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body); font-family: 'JetBrains Mono', monospace;">${escapeHtml(policy.policyId || 'N/A')}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Created By</span>
+                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body);">${escapeHtml(policy.createdBy || 'Unknown')}</span>
+                                    </div>
+                                    <div class="detail-item policy-detail-full">
+                                        <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Description</span>
+                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body);">${escapeHtml(policy.description || 'No description')}</span>
+                                    </div>
+                                    <div class="detail-item policy-detail-full">
+                                        <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Rego Policy</span>
+                                        <div class="policy-code">
+                                            <pre><code>${escapeHtml(policy.regoPolicy || '')}</code></pre>
+                                        </div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Expiration Time</span>
+                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body);">${escapeHtml(expirationTime)}</span>
+                                    </div>
+                                </div>
+                                <div class="policy-detail-actions">
+                                    <button class="btn btn-danger" onclick="event.stopPropagation(); deletePolicy('${escapeHtml(policy.policyId || '')}')">
+                                        <i class="bi bi-trash"></i>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const paginationHtml = `
+                <div class="pagination-controls">
+                    <button class="btn btn-secondary" onclick="goToPage(currentPage - 1)" id="prevPageBtn" ${page <= 1 ? 'disabled' : ''}>
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </button>
+                    <span class="pagination-info">Page <strong>${page}</strong> of <strong>${totalPages}</strong></span>
+                    <button class="btn btn-secondary" onclick="goToPage(currentPage + 1)" id="nextPageBtn" ${page >= totalPages ? 'disabled' : ''}>
+                        Next <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            `;
+
+            resultsSection.innerHTML = countHtml + listHtml + paginationHtml;
+        }
+
+        function goToPage(pageNum) {
+            if (pageNum < 1) return;
+            currentPage = pageNum;
+            loadPolicyList();
+        }
+
+        function togglePolicyDetail(index) {
+            const items = document.querySelectorAll('.policy-list-item');
+            const targetItem = items[index];
+            
+            if (targetItem) {
+                const isExpanded = targetItem.classList.contains('expanded');
+                
+                // Close all other items
+                items.forEach(item => item.classList.remove('expanded'));
+                
+                // Toggle current item
+                if (!isExpanded) {
+                    targetItem.classList.add('expanded');
+                }
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Handle Enter key in search input
+        document.getElementById('policyIdInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchPolicy();
+            }
+        });
+
+        // Load policy list on page load
+        document.addEventListener('DOMContentLoaded', loadPolicyList);
+    </script>
+</body>
+</html>

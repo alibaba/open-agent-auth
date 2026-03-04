@@ -17,6 +17,8 @@ package com.alibaba.openagentauth.spring.web.controller;
 
 import com.alibaba.openagentauth.core.binding.BindingInstance;
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
+import com.alibaba.openagentauth.core.model.page.PageRequest;
+import com.alibaba.openagentauth.core.model.page.PageResponse;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.core.model.identity.AgentIdentity;
 import org.slf4j.Logger;
@@ -28,6 +30,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * REST API controller for Binding Instance operations.
@@ -117,6 +121,29 @@ public class BindingInstanceController {
             return ResponseEntity.status(HttpStatus.CREATED).body(binding);
         } catch (Exception e) {
             logger.error("Failed to create binding instance", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Lists binding instances with pagination support.
+     *
+     * @param pageRequest the pagination parameters (page, size)
+     * @return a paginated response of binding instances
+     */
+    @PostMapping("${open-agent-auth.capabilities.operation-authorization.endpoints.binding.list:/api/v1/bindings/list}")
+    public ResponseEntity<PageResponse<BindingInstance>> listBindings(@RequestBody PageRequest pageRequest) {
+        logger.debug("Listing binding instances, page: {}, size: {}",
+                pageRequest.getEffectivePage(), pageRequest.getEffectiveSize());
+
+        try {
+            List<BindingInstance> allBindings = bindingInstanceStore.listAll();
+            PageResponse<BindingInstance> pageResponse = PageResponse.of(allBindings, pageRequest);
+            logger.debug("Retrieved {} binding instances (page {}/{})",
+                    pageResponse.getItems().size(), pageResponse.getPage(), pageResponse.getTotalPages());
+            return ResponseEntity.ok(pageResponse);
+        } catch (Exception e) {
+            logger.error("Failed to list binding instances", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

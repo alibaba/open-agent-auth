@@ -230,6 +230,18 @@ class IdTokenClaimsTest {
         }
 
         @Test
+        @DisplayName("Should build claims with atHash")
+        void shouldBuildClaimsWithAtHash() {
+            String atHash = "fUHyO2r2Z3DZ53EsNrWBb0xWXoaNy59IiKCAqksmQEo";
+
+            IdTokenClaims claims = createBasicClaimsBuilder()
+                    .atHash(atHash)
+                    .build();
+
+            assertThat(claims.getAtHash()).isEqualTo(atHash);
+        }
+
+        @Test
         @DisplayName("Should build claims with additional claims")
         void shouldBuildClaimsWithAdditionalClaims() {
             Map<String, Object> additionalClaims = Map.of(
@@ -298,11 +310,13 @@ class IdTokenClaimsTest {
             IdTokenClaims claims1 = createBasicClaimsBuilder()
                     .nonce("nonce-123")
                     .acr("acr-456")
+                    .atHash("test-hash")
                     .build();
 
             IdTokenClaims claims2 = createBasicClaimsBuilder()
                     .nonce("nonce-123")
                     .acr("acr-456")
+                    .atHash("test-hash")
                     .build();
 
             assertThat(claims1).isEqualTo(claims2);
@@ -363,6 +377,7 @@ class IdTokenClaimsTest {
                     .nonce("nonce-123")
                     .acr("acr-456")
                     .azp("azp-789")
+                    .atHash("at-hash-value")
                     .build();
 
             String toString = claims.toString();
@@ -370,6 +385,7 @@ class IdTokenClaimsTest {
             assertThat(toString).contains("nonce-123");
             assertThat(toString).contains("acr-456");
             assertThat(toString).contains("azp-789");
+            assertThat(toString).contains("at-hash-value");
         }
     }
 
@@ -387,6 +403,7 @@ class IdTokenClaimsTest {
             assertThat(claims.getAcr()).isNull();
             assertThat(claims.getAmr()).isNull();
             assertThat(claims.getAzp()).isNull();
+            assertThat(claims.getAtHash()).isNull();
             assertThat(claims.getAdditionalClaims()).isNull();
         }
     }

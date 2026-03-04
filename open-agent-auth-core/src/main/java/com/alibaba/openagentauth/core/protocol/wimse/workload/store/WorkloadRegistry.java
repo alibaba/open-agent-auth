@@ -130,4 +130,15 @@ public interface WorkloadRegistry {
      * @since 1.0
      */
     Optional<WorkloadInfo> findByWorkloadUniqueKey(String workloadUniqueKey);
+
+    /**
+     * Lists all active (non-expired) workloads.
+     * <p>
+     * This method returns all workloads that have not expired.
+     * Expired workloads are automatically filtered out.
+     * </p>
+     *
+     * @return a list of all active workloads
+     */
+    java.util.List<WorkloadInfo> listAll();
 }

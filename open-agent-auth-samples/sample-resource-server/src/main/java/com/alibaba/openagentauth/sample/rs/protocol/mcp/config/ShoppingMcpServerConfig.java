@@ -60,7 +60,7 @@ import java.util.function.BiFunction;
  *   <li>Uses {@link HttpServletStreamableServerTransportProvider} for Streamable HTTP transport</li>
  *   <li>Uses context extractor to extract authentication context from HTTP request</li>
  *   <li>Registers tools using {@link McpServerFeatures.SyncToolSpecification}</li>
- *   <li>Implements tool execution with {@link BiFunction}&lt;McpSyncServerExchange, Map, McpSchema.CallToolResult&gt;</li>
+ *   <li>Implements tool execution with {@link BiFunction}<McpSyncServerExchange, Map, McpSchema.CallToolResult></li>
  *   <li>Sets server capabilities using {@link McpSchema.ServerCapabilities}</li>
  * </ul>
  * <p>

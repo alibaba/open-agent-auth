@@ -95,7 +95,7 @@ import com.alibaba.openagentauth.framework.role.ApplicationRole;
  *    │ Agent Actor │       │ Agent IDP Actor │          │  Workload Store  │       │  Key Management  │
  *    └──────┬──────┘       └──────┬──────────┘          └──────────┬───────┘       └────────┬─────────┘
  *           │                     │                                │                        │
- *           │ 1. issueWit(workloadId)                              │                        │
+ *           │ 1. issueWit(IssueWitRequest)                          │                        │
  *           │────────────────────>│                                │                        │
  *           │                     │                                │                        │
  *           │                     │ 2. Retrieve Workload           │                        │
@@ -155,8 +155,14 @@ import com.alibaba.openagentauth.framework.role.ApplicationRole;
  * String workloadId = workloadInfo.getWorkloadId();
  * PublicKey publicKey = workloadInfo.getPublicKey();
  *
- * // Step 2: Issue WIT
- * WorkloadIdentityToken wit = agentIdpActor.issueWit(workloadId);
+ * // Step 2: Issue WIT using standard request model
+ * IssueWitRequest witRequest = IssueWitRequest.builder()
+ *     .context(operationContext)
+ *     .proposal(bindingProposal)
+ *     .publicKey(publicKeyString)
+ *     .oauthClientId("client-id")
+ *     .build();
+ * WorkloadIdentityToken wit = agentIdpActor.issueWit(witRequest);
  *
  * // Step 3: Use WIT for authorization
  * String witString = wit.getJwtString();
@@ -216,21 +222,6 @@ public interface AgentIdentityProvider {
     WorkloadInfo createAgentWorkload(String idToken, AgentRequestContext context) throws WorkloadCreationException;
 
     /**
-     * Issues a Workload Identity Token (WIT).
-     * <p>
-     * This method creates a WIT for the specified workload.
-     * </p>
-     *
-     * @param agentWorkloadId the agent workload identifier (must exist and be valid)
-     * @return the Workload Identity Token (WIT)
-     * @throws FrameworkTokenGenerationException if token generation fails
-     * @throws WorkloadNotFoundException if the workload does not exist or has been revoked
-     * @throws IllegalArgumentException if agentWorkloadId is null or invalid
-     */
-    WorkloadIdentityToken issueWit(String agentWorkloadId)
-        throws FrameworkTokenGenerationException, WorkloadNotFoundException;
-
-    /**
      * Issues a Workload Identity Token (WIT) using standard request model.
      * <p>
      * This is the standard-compliant implementation that accepts
@@ -267,8 +258,7 @@ public interface AgentIdentityProvider {
      * @throws IllegalArgumentException if request is null or invalid
      * @since 1.0
      */
-    WorkloadIdentityToken issueWit(IssueWitRequest request)
-        throws FrameworkTokenGenerationException, WorkloadCreationException;
+    WorkloadIdentityToken issueWit(IssueWitRequest request) throws FrameworkTokenGenerationException, WorkloadCreationException;
 
     /**
      * Revokes an agent workload.

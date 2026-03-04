@@ -170,26 +170,26 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
     }
 
     @Override
-    public String initiateUserAuth(InitiateAuthorizationRequest request) {
-        logger.debug("Initiating user authorization");
+    public String initiateUserAuthentication(InitiateAuthorizationRequest request) {
+        logger.debug("Initiating user authentication");
         return agent.initiateAuthorization(request);
     }
 
     @Override
-    public AgentAapExecutor exchangeUserIdToken(ExchangeCodeForTokenRequest request) {
-        logger.debug("Exchanging user ID token");
+    public AgentAapExecutor exchangeAuthorizationCodeForIdToken(ExchangeCodeForTokenRequest request) {
+        logger.debug("Exchanging authorization code for ID token");
         agent.exchangeCodeForToken(request);
         return this;
     }
 
     @Override
-    public AgentOperationAuthToken exchangeAgentAuthToken(AuthorizationResponse response) {
-        logger.debug("Exchanging agent authorization token");
+    public AgentOperationAuthToken exchangeAuthorizationCodeForAoat(AuthorizationResponse response) {
+        logger.debug("Exchanging authorization code for AOAT");
         return agent.handleAuthorizationCallback(response);
     }
 
     @Override
-    public AgentAuthorizationContext buildAuthContext(PrepareAuthorizationContextRequest request) {
+    public AgentAuthorizationContext buildAuthorizationContext(PrepareAuthorizationContextRequest request) {
         logger.debug("Building authorization context");
         return agent.prepareAuthorizationContext(request);
     }
@@ -200,8 +200,8 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
     }
 
     @Override
-    public void cleanup(WorkloadContext workloadContext) {
-        logger.debug("Cleaning up authorization context");
+    public void revokeWorkloadAndCleanup(WorkloadContext workloadContext) {
+        logger.debug("Revoking workload and cleaning up authorization context");
         agent.clearAuthorizationContext(workloadContext);
     }
 

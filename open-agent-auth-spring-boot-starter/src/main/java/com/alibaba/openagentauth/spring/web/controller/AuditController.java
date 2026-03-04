@@ -18,6 +18,8 @@ package com.alibaba.openagentauth.spring.web.controller;
 import com.alibaba.openagentauth.core.audit.api.AuditService;
 import com.alibaba.openagentauth.core.exception.audit.AuditStorageException;
 import com.alibaba.openagentauth.core.model.audit.AuditEvent;
+import com.alibaba.openagentauth.core.model.page.PageRequest;
+import com.alibaba.openagentauth.core.model.page.PageResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -115,7 +117,7 @@ public class AuditController {
      * @return a list of audit events in the specified range
      */
     @PostMapping("${open-agent-auth.capabilities.audit.endpoints.event.list:/api/v1/audit/events/list}")
-    public ResponseEntity<List<AuditEvent>> getEventsByTimeRange(@RequestBody TimeRangeRequest request) {
+    public ResponseEntity<PageResponse<AuditEvent>> getEventsByTimeRange(@RequestBody TimeRangeRequest request) {
         
         if (request.getStartTime() == null && request.getEndTime() == null) {
             logger.warn("Both startTime and endTime are null, returning bad request");
@@ -129,12 +131,14 @@ public class AuditController {
         logger.debug("Getting audit events between {} and {}", actualStartTime, actualEndTime);
 
         try {
-            List<AuditEvent> events = auditService.getEventsByTimeRange(actualStartTime, actualEndTime);
-            logger.debug("Retrieved {} audit events", events.size());
-            if (!events.isEmpty()) {
-                logger.debug("Event types: {}", events.stream().map(e -> e.getEventType().toString()).toList());
-            }
-            return ResponseEntity.ok(events);
+            List<AuditEvent> allEvents = auditService.getEventsByTimeRange(actualStartTime, actualEndTime);
+            logger.debug("Retrieved {} audit events total", allEvents.size());
+
+            PageRequest pageRequest = new PageRequest(request.getPage(), request.getSize());
+            PageResponse<AuditEvent> pageResponse = PageResponse.of(allEvents, pageRequest);
+            logger.debug("Returning page {}/{} with {} events",
+                    pageResponse.getPage(), pageResponse.getTotalPages(), pageResponse.getItems().size());
+            return ResponseEntity.ok(pageResponse);
         } catch (AuditStorageException e) {
             logger.error("Failed to retrieve audit events by time range", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -157,11 +161,13 @@ public class AuditController {
     }
 
     /**
-     * Request DTO for time range query.
+     * Request DTO for time range query with pagination support.
      */
     public static class TimeRangeRequest {
         private Instant startTime;
         private Instant endTime;
+        private Integer page;
+        private Integer size;
 
         public Instant getStartTime() {
             return startTime;
@@ -177,6 +183,22 @@ public class AuditController {
 
         public void setEndTime(Instant endTime) {
             this.endTime = endTime;
+        }
+
+        public Integer getPage() {
+            return page;
+        }
+
+        public void setPage(Integer page) {
+            this.page = page;
+        }
+
+        public Integer getSize() {
+            return size;
+        }
+
+        public void setSize(Integer size) {
+            this.size = size;
         }
     }
 }

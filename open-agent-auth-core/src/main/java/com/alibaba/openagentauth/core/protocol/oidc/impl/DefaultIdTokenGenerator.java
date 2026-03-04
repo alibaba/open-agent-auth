@@ -27,11 +27,15 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Date;
 
@@ -173,6 +177,9 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         if (claims.getAzp() != null) {
             claimsBuilder.azp(claims.getAzp());
         }
+        if (claims.getAtHash() != null) {
+            claimsBuilder.atHash(claims.getAtHash());
+        }
         if (claims.getAdditionalClaims() != null) {
             claimsBuilder.additionalClaims(claims.getAdditionalClaims());
         }
@@ -258,6 +265,9 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         }
         if (claims.getAzp() != null) {
             claimsSetBuilder.claim("azp", claims.getAzp());
+        }
+        if (claims.getAtHash() != null) {
+            claimsSetBuilder.claim("at_hash", claims.getAtHash());
         }
         if (claims.getAdditionalClaims() != null) {
             claims.getAdditionalClaims().forEach(claimsSetBuilder::claim);
@@ -366,6 +376,76 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         }
         // For standard Java keys, we don't have a kid
         return null;
+    }
+
+    /**
+     * Computes the at_hash claim value for an access token.
+     * <p>
+     * The at_hash is computed as the base64url-encoded hash of the left half
+     * of the access token. The hash algorithm is determined by the signing
+     * algorithm used for the ID token.
+     * </p>
+     * <p>
+     * Algorithm mapping:
+     * <ul>
+     *   <li>RS256, ES256, PS256 → SHA-256</li>
+     *   <li>RS384, ES384, PS384 → SHA-384</li>
+     *   <li>RS512, ES512, PS512 → SHA-512</li>
+     * </ul>
+     * </p>
+     *
+     * @param accessToken the access token value
+     * @param algorithm the signing algorithm (e.g., "RS256", "ES256")
+     * @return the base64url-encoded at_hash value
+     * @throws IllegalArgumentException if the algorithm is unsupported
+     */
+    public static String computeAtHash(String accessToken, String algorithm) {
+        try {
+            // Determine hash algorithm based on signing algorithm
+            String hashAlgorithm;
+            int hashLength;
+            
+            if (algorithm == null) {
+                throw new IllegalArgumentException("Algorithm cannot be null");
+            }
+            
+            switch (algorithm) {
+                case "RS256":
+                case "ES256":
+                case "PS256":
+                    hashAlgorithm = "SHA-256";
+                    hashLength = 32; // 256 bits = 32 bytes
+                    break;
+                case "RS384":
+                case "ES384":
+                case "PS384":
+                    hashAlgorithm = "SHA-384";
+                    hashLength = 48; // 384 bits = 48 bytes
+                    break;
+                case "RS512":
+                case "ES512":
+                case "PS512":
+                    hashAlgorithm = "SHA-512";
+                    hashLength = 64; // 512 bits = 64 bytes
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported algorithm for at_hash: " + algorithm);
+            }
+            
+            // Compute hash of access token
+            MessageDigest digest = MessageDigest.getInstance(hashAlgorithm);
+            byte[] hash = digest.digest(accessToken.getBytes(StandardCharsets.US_ASCII));
+            
+            // Take left half of hash (first hashLength/2 bytes)
+            byte[] leftHalf = new byte[hashLength / 2];
+            System.arraycopy(hash, 0, leftHalf, 0, leftHalf.length);
+            
+            // Base64URL encode
+            return Base64URL.encode(leftHalf).toString();
+            
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalArgumentException("Hash algorithm not available", e);
+        }
     }
 
 }

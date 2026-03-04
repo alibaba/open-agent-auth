@@ -15,6 +15,8 @@
  */
 package com.alibaba.openagentauth.framework.model.workload;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 
@@ -254,5 +256,80 @@ class WorkloadContextTest {
         assertThat(context.getUserId()).isEqualTo(TEST_USER_ID);
         assertThat(context.getWit()).isEqualTo(TEST_WIT);
         assertThat(context.getExpiresAt()).isEqualTo(expiresAt);
+    }
+
+    @Test
+    @DisplayName("Should exclude privateKey from JSON serialization via @JsonIgnore")
+    void shouldExcludePrivateKeyFromJsonSerialization() throws Exception {
+        // Given
+        Instant expiresAt = Instant.now().plusSeconds(3600);
+        WorkloadContext context = WorkloadContext.builder()
+                .workloadId(TEST_WORKLOAD_ID)
+                .userId(TEST_USER_ID)
+                .wit(TEST_WIT)
+                .publicKey(TEST_PUBLIC_KEY)
+                .privateKey(TEST_PRIVATE_KEY)
+                .expiresAt(expiresAt)
+                .build();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+
+        // When
+        String json = objectMapper.writeValueAsString(context);
+
+        // Then - privateKey must NOT appear in serialized output
+        assertThat(json).doesNotContain("privateKey");
+        assertThat(json).doesNotContain(TEST_PRIVATE_KEY);
+        // Other fields should still be present
+        assertThat(json).contains(TEST_WORKLOAD_ID);
+        assertThat(json).contains(TEST_USER_ID);
+        assertThat(json).contains(TEST_WIT);
+        assertThat(json).contains(TEST_PUBLIC_KEY);
+    }
+
+    @Test
+    @DisplayName("Should redact privateKey in toString output")
+    void shouldRedactPrivateKeyInToStringOutput() {
+        // Given
+        WorkloadContext context = WorkloadContext.builder()
+                .workloadId(TEST_WORKLOAD_ID)
+                .userId(TEST_USER_ID)
+                .wit(TEST_WIT)
+                .publicKey(TEST_PUBLIC_KEY)
+                .privateKey(TEST_PRIVATE_KEY)
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .build();
+
+        // When
+        String toStringResult = context.toString();
+
+        // Then - privateKey must be redacted
+        assertThat(toStringResult).contains("[REDACTED]");
+        assertThat(toStringResult).doesNotContain(TEST_PRIVATE_KEY);
+        // Other fields should be present (truncated for wit and publicKey)
+        assertThat(toStringResult).contains(TEST_WORKLOAD_ID);
+        assertThat(toStringResult).contains(TEST_USER_ID);
+    }
+
+    @Test
+    @DisplayName("Should handle null values safely in toString")
+    void shouldHandleNullValuesSafelyInToString() {
+        // Given
+        WorkloadContext context = WorkloadContext.builder()
+                .workloadId(null)
+                .userId(null)
+                .wit(null)
+                .publicKey(null)
+                .privateKey(null)
+                .expiresAt(null)
+                .build();
+
+        // When
+        String toStringResult = context.toString();
+
+        // Then - should not throw NPE and should contain redacted marker
+        assertThat(toStringResult).contains("[REDACTED]");
+        assertThat(toStringResult).contains("null");
     }
 }

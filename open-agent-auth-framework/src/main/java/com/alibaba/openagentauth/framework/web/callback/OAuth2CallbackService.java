@@ -17,7 +17,10 @@ package com.alibaba.openagentauth.framework.web.callback;
 
 import com.alibaba.openagentauth.core.exception.oauth2.OAuth2TokenException;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
+import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
+import com.alibaba.openagentauth.framework.actor.Agent;
 import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenRequest;
 import com.alibaba.openagentauth.framework.model.response.AuthenticationResponse;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
@@ -57,14 +60,49 @@ public class OAuth2CallbackService {
     private static final Logger logger = LoggerFactory.getLogger(OAuth2CallbackService.class);
     
     private final FrameworkOAuth2TokenClient oauth2TokenClient;
+    private final Agent agent;
     private final SessionMappingBizService sessionMappingBizService;
     private final String callbackEndpoint;
-    
+
+    /**
+     * Creates a new OAuth2CallbackService without Agent support.
+     * <p>
+     * This constructor is used when the service is deployed in a non-Agent role
+     * (e.g., Authorization Server), where Agent operation authorization callbacks
+     * are not expected.
+     * </p>
+     *
+     * @param oauth2TokenClient the framework-level token client for user authentication
+     * @param sessionMappingBizService the session mapping business service
+     * @param callbackEndpoint the callback endpoint path
+     */
     public OAuth2CallbackService(
             FrameworkOAuth2TokenClient oauth2TokenClient,
             SessionMappingBizService sessionMappingBizService,
             String callbackEndpoint) {
+        this(oauth2TokenClient, null, sessionMappingBizService, callbackEndpoint);
+    }
+
+    /**
+     * Creates a new OAuth2CallbackService with Agent support.
+     * <p>
+     * This constructor is used when the service is deployed in the Agent role,
+     * where Agent operation authorization callbacks need to be handled via
+     * {@link Agent#handleAuthorizationCallback(AuthorizationResponse)}.
+     * </p>
+     *
+     * @param oauth2TokenClient the framework-level token client for user authentication
+     * @param agent the Agent actor for handling Agent operation authorization callbacks (nullable)
+     * @param sessionMappingBizService the session mapping business service
+     * @param callbackEndpoint the callback endpoint path
+     */
+    public OAuth2CallbackService(
+            FrameworkOAuth2TokenClient oauth2TokenClient,
+            Agent agent,
+            SessionMappingBizService sessionMappingBizService,
+            String callbackEndpoint) {
         this.oauth2TokenClient = oauth2TokenClient;
+        this.agent = agent;
         this.sessionMappingBizService = sessionMappingBizService;
         this.callbackEndpoint = callbackEndpoint;
     }
@@ -89,23 +127,28 @@ public class OAuth2CallbackService {
                 );
             }
             
-            // Parse state
+            // Parse state to determine flow type
             OAuth2StateHandler stateHandler = new OAuth2StateHandler();
             OAuth2StateHandler.StateInfo stateInfo = stateHandler.parse(request.getState());
             
             // Build redirect URI
             String redirectUri = buildRedirectUri(request.getHttpRequest());
             
-            // Perform token exchange
-            TokenResponse tokenResponse = performTokenExchange(
-                    request.getCode(),
-                    redirectUri,
-                    clientId,
-                    request.getState()
-            );
-            
-            // Handle based on flow type
-            return handleFlow(stateInfo, tokenResponse, request.getHttpRequest());
+            // Route to flow-specific processing based on flow type
+            // User Authentication flow: exchanges code for ID Token via FrameworkOAuth2TokenClient
+            // Agent Operation Authorization flow: exchanges code for AOAT via Agent.handleAuthorizationCallback()
+            return switch (stateInfo.getFlowType()) {
+                case AGENT_OPERATION_AUTH -> {
+                    TokenResponse tokenResponse = performAgentAuthTokenExchange(
+                            request.getCode(), redirectUri, request.getState());
+                    yield handleFlow(stateInfo, tokenResponse, request.getHttpRequest());
+                }
+                default -> {
+                    TokenResponse tokenResponse = performUserAuthTokenExchange(
+                            request.getCode(), redirectUri, clientId, request.getState());
+                    yield handleFlow(stateInfo, tokenResponse, request.getHttpRequest());
+                }
+            };
             
         } catch (OAuth2TokenException e) {
             logger.error("Token exchange failed: {}", e.getMessage(), e);
@@ -132,8 +175,7 @@ public class OAuth2CallbackService {
         HttpSession session = request.getSession(false);
         return switch (stateInfo.getFlowType()) {
             case USER_AUTHENTICATION -> handleUserAuthenticationFlow(stateInfo, tokenResponse, session, request);
-            case AGENT_OPERATION_AUTH ->
-                    handleAgentOperationAuthorizationFlow(stateInfo, tokenResponse, session, request);
+            case AGENT_OPERATION_AUTH -> handleAgentOperationAuthorizationFlow(stateInfo, tokenResponse, session, request);
             default -> handleDefaultFlow(tokenResponse, session, request);
         };
     }
@@ -282,27 +324,88 @@ public class OAuth2CallbackService {
     }
 
     /**
-     * Perform token exchange.
+     * Perform token exchange for user authentication flow.
+     * <p>
+     * Exchanges the authorization code for an ID Token via the framework OAuth2 token client.
+     * This method is specifically designed for the User Authentication flow where the
+     * expected response is an OIDC ID Token per OIDC Core 1.0 Section 3.1.3.3.
+     * </p>
+     *
+     * @param code the authorization code
+     * @param redirectUri the redirect URI
+     * @param clientId the client ID
+     * @param state the state parameter
+     * @return the token response containing the ID Token
+     * @throws OAuth2TokenException if token exchange fails
      */
-    private TokenResponse performTokenExchange(String code, String redirectUri, String clientId,String state) throws OAuth2TokenException {
-        // Build request for framework OAuth2TokenClient
+    private TokenResponse performUserAuthTokenExchange(String code, String redirectUri, String clientId, String state) throws OAuth2TokenException {
+
         ExchangeCodeForTokenRequest request = ExchangeCodeForTokenRequest.builder()
                 .code(code)
-                .state(clientId)  // Use clientId as state for framework interface
                 .redirectUri(redirectUri)
                 .clientId(clientId)
                 .state(state)
                 .build();
 
-        // Use OAuth2TokenClient to exchange code for token
         AuthenticationResponse authResponse = oauth2TokenClient.exchangeCodeForToken(request);
 
-        // return token response
+        String idToken = authResponse.getIdToken();
         return TokenResponse.builder()
-                .accessToken(authResponse.getIdToken())
+                .accessToken(idToken)
                 .tokenType(authResponse.getTokenType())
                 .expiresIn(authResponse.getExpiresIn())
+                .idToken(idToken)
                 .build();
+    }
+
+    /**
+     * Perform token exchange for Agent operation authorization flow.
+     * <p>
+     * Delegates to {@link Agent#handleAuthorizationCallback(AuthorizationResponse)} to exchange
+     * the authorization code for an Agent Operation Authorization Token (AOAT). This ensures
+     * proper semantic separation: user authentication uses {@code exchangeCodeForToken()},
+     * while Agent operation authorization uses {@code handleAuthorizationCallback()}.
+     * </p>
+     *
+     * @param code the authorization code
+     * @param redirectUri the redirect URI
+     * @param state the state parameter
+     * @return the token response containing the AOAT as access_token
+     * @throws OAuth2TokenException if token exchange fails or Agent is not configured
+     */
+    private TokenResponse performAgentAuthTokenExchange(String code, String redirectUri, String state) throws OAuth2TokenException {
+
+        if (agent == null) {
+            throw OAuth2TokenException.serverError(
+                    "Agent operation authorization callback received but Agent is not configured. "
+                    + "Ensure the application is deployed with the Agent role enabled.");
+        }
+
+        try {
+            // Build AuthorizationResponse per RFC 6749 Section 4.1.2
+            AuthorizationResponse authorizationResponse = AuthorizationResponse.builder()
+                    .authorizationCode(code)
+                    .redirectUri(redirectUri)
+                    .state(state)
+                    .build();
+
+            // Delegate to Agent.handleAuthorizationCallback() which returns AOAT
+            AgentOperationAuthToken aoat = agent.handleAuthorizationCallback(authorizationResponse);
+
+            return TokenResponse.builder()
+                    .accessToken(aoat.getJwtString())
+                    .tokenType("Bearer")
+                    .expiresIn(aoat.getExpirationTime() != null
+                            ? (aoat.getExpirationTime().getEpochSecond() - System.currentTimeMillis() / 1000)
+                            : 3600)
+                    .build();
+
+        } catch (OAuth2TokenException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Failed to exchange authorization code for AOAT via Agent", e);
+            throw OAuth2TokenException.serverError("Failed to exchange code for AOAT: " + e.getMessage());
+        }
     }
 
     /**

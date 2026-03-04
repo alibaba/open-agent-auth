@@ -31,11 +31,11 @@ import java.util.Objects;
  * <b>Usage:</b></p>
  * <pre>
  * // Define session attributes as constants
- * public static final SessionAttribute&lt;String&gt; AUTHENTICATED_USER =
- *     new SessionAttribute&lt;&gt;("authenticated_user", String.class);
+ * public static final SessionAttribute<String> AUTHENTICATED_USER =
+ *     new SessionAttribute<>("authenticated_user", String.class);
  * 
- * public static final SessionAttribute&lt;List&lt;ChatMessage&gt;&gt; CONVERSATION_HISTORY =
- *     new SessionAttribute&lt;&gt;("conversation_history", List.class);
+ * public static final SessionAttribute<List<ChatMessage>> CONVERSATION_HISTORY =
+ *     new SessionAttribute<>("conversation_history", List.class);
  * 
  * // Use in SessionManager
  * String userId = sessionManager.getAttribute(session, AUTHENTICATED_USER);

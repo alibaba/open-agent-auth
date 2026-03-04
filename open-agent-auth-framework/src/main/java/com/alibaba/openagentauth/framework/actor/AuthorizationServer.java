@@ -27,7 +27,6 @@ import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
 import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
-// AuthorizationResponse is no longer needed as processAuthorization is removed
 
 import java.util.List;
 
@@ -313,7 +312,7 @@ import java.util.List;
  * @see WorkloadIdentityToken
  * @since 1.0
  */
-public interface AuthorizationServer extends FrameworkOAuth2TokenClient, FrameworkOAuth2TokenServer {
+public interface AuthorizationServer extends FrameworkOAuth2TokenServer, FrameworkOAuth2TokenClient {
     
     /**
      * Processes a Pushed Authorization Request (PAR).

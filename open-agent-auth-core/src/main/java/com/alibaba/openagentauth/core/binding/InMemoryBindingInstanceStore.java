@@ -19,6 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -201,5 +203,11 @@ public class InMemoryBindingInstanceStore implements BindingInstanceStore {
      */
     public int size() {
         return bindings.size();
+    }
+
+    @Override
+    public List<BindingInstance> listAll() {
+        logger.debug("Listing all binding instances, total count: {}", bindings.size());
+        return new ArrayList<>(bindings.values());
     }
 }

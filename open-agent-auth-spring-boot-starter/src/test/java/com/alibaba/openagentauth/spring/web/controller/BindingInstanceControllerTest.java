@@ -18,8 +18,11 @@ package com.alibaba.openagentauth.spring.web.controller;
 import com.alibaba.openagentauth.core.binding.BindingInstance;
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
 import com.alibaba.openagentauth.core.model.identity.AgentIdentity;
+import com.alibaba.openagentauth.core.model.page.PageRequest;
+import com.alibaba.openagentauth.core.model.page.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -28,6 +31,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -61,14 +67,18 @@ class BindingInstanceControllerTest {
     }
 
     private BindingInstance createTestBinding() {
+        return createTestBinding(BINDING_INSTANCE_ID);
+    }
+
+    private BindingInstance createTestBinding(String bindingInstanceId) {
         AgentIdentity agentIdentity = AgentIdentity.builder()
-                .id(BINDING_INSTANCE_ID)
+                .id(bindingInstanceId)
                 .issuer("https://as.example.com")
                 .issuedTo(USER_IDENTITY)
                 .build();
 
         return BindingInstance.builder()
-                .bindingInstanceId(BINDING_INSTANCE_ID)
+                .bindingInstanceId(bindingInstanceId)
                 .userIdentity(USER_IDENTITY)
                 .workloadIdentity(WORKLOAD_IDENTITY)
                 .agentIdentity(agentIdentity)
@@ -203,5 +213,87 @@ class BindingInstanceControllerTest {
 
         verify(bindingInstanceStore, never()).exists(any());
         verify(bindingInstanceStore, never()).delete(any());
+    }
+
+    @Nested
+    @DisplayName("List Bindings with Pagination Tests")
+    class ListBindingsPaginationTests {
+
+        @Test
+        @DisplayName("Should return paginated bindings")
+        void shouldReturnPaginatedBindings() {
+            // Arrange
+            List<BindingInstance> bindings = new ArrayList<>();
+            bindings.add(createTestBinding("urn:uuid:binding-1"));
+            bindings.add(createTestBinding("urn:uuid:binding-2"));
+            bindings.add(createTestBinding("urn:uuid:binding-3"));
+            when(bindingInstanceStore.listAll()).thenReturn(bindings);
+
+            PageRequest pageRequest = new PageRequest(1, 2);
+
+            // Act
+            ResponseEntity<PageResponse<BindingInstance>> response = controller.listBindings(pageRequest);
+
+            // Assert
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals(2, response.getBody().getItems().size());
+            assertEquals(3, response.getBody().getTotalItems());
+            assertEquals(2, response.getBody().getTotalPages());
+            assertEquals(1, response.getBody().getPage());
+        }
+
+        @Test
+        @DisplayName("Should return empty page when no bindings")
+        void shouldReturnEmptyPageWhenNoBindings() {
+            // Arrange
+            when(bindingInstanceStore.listAll()).thenReturn(Collections.emptyList());
+            PageRequest pageRequest = new PageRequest(1, 10);
+
+            // Act
+            ResponseEntity<PageResponse<BindingInstance>> response = controller.listBindings(pageRequest);
+
+            // Assert
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals(0, response.getBody().getItems().size());
+            assertEquals(0, response.getBody().getTotalItems());
+        }
+
+        @Test
+        @DisplayName("Should return second page")
+        void shouldReturnSecondPage() {
+            // Arrange
+            List<BindingInstance> bindings = new ArrayList<>();
+            bindings.add(createTestBinding("urn:uuid:binding-1"));
+            bindings.add(createTestBinding("urn:uuid:binding-2"));
+            bindings.add(createTestBinding("urn:uuid:binding-3"));
+            when(bindingInstanceStore.listAll()).thenReturn(bindings);
+            PageRequest pageRequest = new PageRequest(2, 2);
+
+            // Act
+            ResponseEntity<PageResponse<BindingInstance>> response = controller.listBindings(pageRequest);
+
+            // Assert
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals(1, response.getBody().getItems().size());
+            assertEquals(3, response.getBody().getTotalItems());
+            assertEquals(2, response.getBody().getPage());
+        }
+
+        @Test
+        @DisplayName("Should return 500 when list fails")
+        void shouldReturn500WhenListFails() {
+            // Arrange
+            when(bindingInstanceStore.listAll()).thenThrow(new RuntimeException("DB error"));
+            PageRequest pageRequest = new PageRequest(1, 10);
+
+            // Act
+            ResponseEntity<PageResponse<BindingInstance>> response = controller.listBindings(pageRequest);
+
+            // Assert
+            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        }
     }
 }

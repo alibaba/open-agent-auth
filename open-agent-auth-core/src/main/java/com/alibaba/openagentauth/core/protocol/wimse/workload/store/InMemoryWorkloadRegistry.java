@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -248,5 +250,20 @@ public class InMemoryWorkloadRegistry implements WorkloadRegistry {
         }
         
         return count;
+    }
+
+    @Override
+    public List<WorkloadInfo> listAll() {
+        Instant now = Instant.now();
+        List<WorkloadInfo> activeWorkloads = new ArrayList<>();
+        
+        for (WorkloadInfo workload : store.values()) {
+            if (!workload.getExpiresAt().isBefore(now)) {
+                activeWorkloads.add(workload);
+            }
+        }
+        
+        logger.debug("Listed {} active workloads out of {} total", activeWorkloads.size(), store.size());
+        return activeWorkloads;
     }
 }

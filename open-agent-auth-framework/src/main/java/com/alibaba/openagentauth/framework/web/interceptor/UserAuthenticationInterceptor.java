@@ -67,7 +67,7 @@ import java.util.UUID;
  * @Bean
  * public UserAuthenticationInterceptor userAuthInterceptor(
  *         SessionMappingBizService sessionMappingBizService) {
- *     List&lt;String&gt; excludedPaths = List.of("/login", "/callback", "/public/**");
+ *     List<String> excludedPaths = List.of("/login", "/callback", "/public/**");
  *     return new AsUserIdpUserAuthInterceptor(sessionMappingBizService, excludedPaths);
  * }
  *

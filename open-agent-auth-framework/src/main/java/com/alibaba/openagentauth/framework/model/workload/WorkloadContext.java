@@ -16,6 +16,7 @@
 package com.alibaba.openagentauth.framework.model.workload;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -43,7 +44,7 @@ public class WorkloadContext {
     @JsonProperty("publicKey")
     private final String publicKey;
     
-    @JsonProperty("privateKey")
+    @JsonIgnore
     private final String privateKey;
     
     @JsonProperty("expiresAt")
@@ -70,6 +71,7 @@ public class WorkloadContext {
     public String getUserId() { return userId; }
     public String getWit() { return wit; }
     public String getPublicKey() { return publicKey; }
+    @JsonIgnore
     public String getPrivateKey() { return privateKey; }
     public Instant getExpiresAt() { return expiresAt; }
     
@@ -80,6 +82,18 @@ public class WorkloadContext {
         return Instant.now().isAfter(expiresAt);
     }
     
+    @Override
+    public String toString() {
+        return "WorkloadContext{"
+                + "workloadId='" + workloadId + '\''
+                + ", userId='" + userId + '\''
+                + ", wit='" + (wit != null ? wit.substring(0, Math.min(wit.length(), 8)) + "..." : "null") + '\''
+                + ", publicKey='" + (publicKey != null ? publicKey.substring(0, Math.min(publicKey.length(), 8)) + "..." : "null") + '\''
+                + ", privateKey='[REDACTED]'"
+                + ", expiresAt=" + expiresAt
+                + '}';
+    }
+
     public static Builder builder() {
         return new Builder();
     }

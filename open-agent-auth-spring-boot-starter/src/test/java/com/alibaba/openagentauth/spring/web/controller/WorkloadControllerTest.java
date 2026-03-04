@@ -18,6 +18,8 @@ package com.alibaba.openagentauth.spring.web.controller;
 import com.alibaba.openagentauth.core.exception.workload.WorkloadCreationException;
 import com.alibaba.openagentauth.core.exception.workload.WorkloadNotFoundException;
 import com.alibaba.openagentauth.core.model.context.OperationRequestContext;
+import com.alibaba.openagentauth.core.model.page.PageRequest;
+import com.alibaba.openagentauth.core.model.page.PageResponse;
 import com.alibaba.openagentauth.core.model.proposal.AgentUserBindingProposal;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.GetWorkloadRequest;
@@ -25,6 +27,7 @@ import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitRequ
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitResponse;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.RevokeWorkloadRequest;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.WorkloadInfo;
+import com.alibaba.openagentauth.core.protocol.wimse.workload.store.WorkloadRegistry;
 import com.alibaba.openagentauth.framework.actor.AgentIdentityProvider;
 import com.alibaba.openagentauth.framework.exception.token.FrameworkTokenGenerationException;
 import com.alibaba.openagentauth.framework.model.response.WorkloadResponse;
@@ -39,7 +42,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -49,16 +56,16 @@ import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link WorkloadController}.
- * <p>
+ * &lt;p&gt;
  * Tests the Workload Identity Provider REST controller's behavior including:
- * <ul>
- *   <li>Workload creation endpoint</li>
- *   <li>WIT issuance endpoints</li>
- *   <li>Workload revocation endpoint</li>
- *   <li>Workload information retrieval endpoint</li>
- *   <li>Error handling and exception scenarios</li>
- * </ul>
- * </p>
+ * &lt;ul&gt;
+ *   &lt;li&gt;Workload creation endpoint&lt;/li&gt;
+ *   &lt;li&gt;WIT issuance endpoints&lt;/li&gt;
+ *   &lt;li&gt;Workload revocation endpoint&lt;/li&gt;
+ *   &lt;li&gt;Workload information retrieval endpoint&lt;/li&gt;
+ *   &lt;li&gt;Error handling and exception scenarios&lt;/li&gt;
+ * &lt;/ul&gt;
+ * &lt;/p&gt;
  *
  * @since 1.0
  */
@@ -79,7 +86,7 @@ class WorkloadControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new WorkloadController(agentIdentityProvider);
+        controller = new WorkloadController(agentIdentityProvider, Optional.empty());
     }
 
     private WorkloadInfo createTestWorkloadInfo() {
@@ -118,8 +125,6 @@ class WorkloadControllerTest {
                 .jwtString(JWT_TOKEN)
                 .build();
     }
-
-
 
     @Nested
     @DisplayName("Issue WIT Endpoint Tests")
@@ -240,8 +245,6 @@ class WorkloadControllerTest {
         }
     }
 
-
-
     @Nested
     @DisplayName("Revoke Workload Endpoint Tests")
     class RevokeWorkloadTests {
@@ -328,6 +331,100 @@ class WorkloadControllerTest {
 
             // Then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("List Workloads with Pagination Tests")
+    class ListWorkloadsWithPaginationTests {
+
+        @Mock
+        private WorkloadRegistry workloadRegistry;
+
+        private WorkloadController controllerWithRegistry;
+
+        @BeforeEach
+        void setUp() {
+            controllerWithRegistry = new WorkloadController(agentIdentityProvider, Optional.of(workloadRegistry));
+        }
+
+        @Test
+        @DisplayName("Should return paginated workloads")
+        void shouldReturnPaginatedWorkloads() {
+            // Given
+            List<WorkloadInfo> workloads = new ArrayList<>();
+            workloads.add(new WorkloadInfo(
+                    "workload-1", "user-1", "wimse://example.com", "https://idp.example.com",
+                    "public-key-1", null, Instant.now(), Instant.now().plusSeconds(3600),
+                    "ACTIVE", null, null
+            ));
+            workloads.add(new WorkloadInfo(
+                    "workload-2", "user-2", "wimse://example.com", "https://idp.example.com",
+                    "public-key-2", null, Instant.now(), Instant.now().plusSeconds(3600),
+                    "ACTIVE", null, null
+            ));
+            workloads.add(new WorkloadInfo(
+                    "workload-3", "user-3", "wimse://example.com", "https://idp.example.com",
+                    "public-key-3", null, Instant.now(), Instant.now().plusSeconds(3600),
+                    "ACTIVE", null, null
+            ));
+
+            when(workloadRegistry.listAll()).thenReturn(workloads);
+
+            PageRequest pageRequest = new PageRequest(1, 2);
+
+            // When
+            ResponseEntity<PageResponse<WorkloadResponse>> response = controllerWithRegistry.listWorkloads(pageRequest);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getItems()).hasSize(2);
+            assertThat(response.getBody().getTotalItems()).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("Should return SERVICE_UNAVAILABLE when registry is null")
+        void shouldReturnServiceUnavailableWhenRegistryIsNull() {
+            // Given
+            WorkloadController controllerWithoutRegistry = new WorkloadController(agentIdentityProvider, Optional.empty());
+            PageRequest pageRequest = new PageRequest(1, 10);
+
+            // When
+            ResponseEntity<PageResponse<WorkloadResponse>> response = controllerWithoutRegistry.listWorkloads(pageRequest);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        }
+
+        @Test
+        @DisplayName("Should return empty page when no workloads")
+        void shouldReturnEmptyPageWhenNoWorkloads() {
+            // Given
+            when(workloadRegistry.listAll()).thenReturn(Collections.emptyList());
+            PageRequest pageRequest = new PageRequest(1, 10);
+
+            // When
+            ResponseEntity<PageResponse<WorkloadResponse>> response = controllerWithRegistry.listWorkloads(pageRequest);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getItems()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should return 500 when list fails")
+        void shouldReturn500WhenListFails() {
+            // Given
+            when(workloadRegistry.listAll()).thenThrow(new RuntimeException("error"));
+            PageRequest pageRequest = new PageRequest(1, 10);
+
+            // When
+            ResponseEntity<PageResponse<WorkloadResponse>> response = controllerWithRegistry.listWorkloads(pageRequest);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

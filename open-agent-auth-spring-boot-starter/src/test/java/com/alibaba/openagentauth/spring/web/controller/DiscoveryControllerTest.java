@@ -15,6 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.web.controller;
 
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
+import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
+import com.alibaba.openagentauth.core.crypto.key.model.KeyInfo;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.RolesProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.CapabilitiesProperties;
@@ -27,6 +30,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,6 +58,9 @@ class DiscoveryControllerTest {
     @Mock
     private OpenAgentAuthProperties properties;
 
+    @Mock
+    private KeyManager keyManager;
+
     private DiscoveryController controller;
 
     private static final String ISSUER = "https://example.com";
@@ -60,7 +68,17 @@ class DiscoveryControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new DiscoveryController(properties);
+        // Configure KeyManager to return a default active key with RS256
+        KeyInfo activeKeyInfo = KeyInfo.builder()
+                .keyId("test-signing-key")
+                .algorithm(KeyAlgorithm.RS256)
+                .createdAt(Instant.now())
+                .activatedAt(Instant.now())
+                .active(true)
+                .build();
+        when(keyManager.getActiveKeys()).thenReturn(List.of(activeKeyInfo));
+
+        controller = new DiscoveryController(properties, keyManager);
     }
 
     private RolesProperties.RoleProperties createRoleWithIssuer(String issuer) {
@@ -142,6 +160,9 @@ class DiscoveryControllerTest {
             assertThat(config.get("scopes_supported")).isNotNull();
             assertThat(config.get("token_endpoint_auth_methods_supported")).isNotNull();
             assertThat(config.get("claims_supported")).isNotNull();
+            assertThat(config.get("userinfo_endpoint")).isNotNull();
+            assertThat(config.get("revocation_endpoint")).isNotNull();
+            assertThat(config.get("code_challenge_methods_supported")).isNotNull();
         }
 
         @Test
@@ -208,6 +229,81 @@ class DiscoveryControllerTest {
             assertThat(config.get("pushed_authorization_request_endpoint")).isEqualTo(ISSUER + "/par");
             assertThat(config.get("token_endpoint")).isEqualTo(ISSUER + "/oauth2/token");
             assertThat(config.get("authorization_endpoint")).isEqualTo(ISSUER + "/oauth2/authorize");
+        }
+
+        @Test
+        @DisplayName("Should include correct claims supported")
+        void shouldIncludeCorrectClaimsSupported() {
+            // Given
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+            // Update to use new architecture: capabilities.oauth2Server
+            when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
+            properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
+            properties.getCapabilities().getOAuth2Server().setEndpoints(new OAuth2ServerProperties.OAuth2EndpointsProperties());
+
+            // When
+            Map<String, Object> config = controller.discovery();
+
+            // Then
+            assertThat(config.get("claims_supported")).isNotNull();
+            // Verify it contains "sub", "iss", "aud", "exp", "iat"
+        }
+
+        @Test
+        @DisplayName("Should include userinfo endpoint")
+        void shouldIncludeUserinfoEndpoint() {
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+            when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
+            properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
+            properties.getCapabilities().getOAuth2Server().setEndpoints(new OAuth2ServerProperties.OAuth2EndpointsProperties());
+
+            Map<String, Object> config = controller.discovery();
+
+            assertThat(config.get("userinfo_endpoint")).isEqualTo(ISSUER + "/oauth2/userinfo");
+        }
+
+        @Test
+        @DisplayName("Should include revocation endpoint")
+        void shouldIncludeRevocationEndpoint() {
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+            when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
+            properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
+            properties.getCapabilities().getOAuth2Server().setEndpoints(new OAuth2ServerProperties.OAuth2EndpointsProperties());
+
+            Map<String, Object> config = controller.discovery();
+
+            assertThat(config.get("revocation_endpoint")).isEqualTo(ISSUER + "/oauth2/revoke");
+        }
+
+        @Test
+        @DisplayName("Should include code challenge methods supported")
+        void shouldIncludeCodeChallengeMethodsSupported() {
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+            when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
+            properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
+            properties.getCapabilities().getOAuth2Server().setEndpoints(new OAuth2ServerProperties.OAuth2EndpointsProperties());
+
+            Map<String, Object> config = controller.discovery();
+
+            assertThat(config.get("code_challenge_methods_supported")).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Should dynamically resolve signing algorithms from KeyManager")
+        void shouldDynamicallyResolveSigningAlgorithms() {
+            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
+            when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
+            properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
+            properties.getCapabilities().getOAuth2Server().setEndpoints(new OAuth2ServerProperties.OAuth2EndpointsProperties());
+
+            Map<String, Object> config = controller.discovery();
+
+            Object signingAlgs = config.get("id_token_signing_alg_values_supported");
+            assertThat(signingAlgs).isNotNull();
+            assertThat(signingAlgs).isInstanceOf(List.class);
+            @SuppressWarnings("unchecked")
+            List<String> algList = (List<String>) signingAlgs;
+            assertThat(algList).contains("RS256");
         }
     }
 
@@ -321,24 +417,6 @@ class DiscoveryControllerTest {
             // Then
             assertThat(config.get("token_endpoint_auth_methods_supported")).isNotNull();
             // Verify it contains "private_key_jwt" and "client_secret_basic"
-        }
-
-        @Test
-        @DisplayName("Should include correct claims supported")
-        void shouldIncludeCorrectClaimsSupported() {
-            // Given
-            when(properties.getRole("agent-user-idp")).thenReturn(createRoleWithIssuer(ISSUER));
-            // Update to use new architecture: capabilities.oauth2Server
-            when(properties.getCapabilities()).thenReturn(new CapabilitiesProperties());
-            properties.getCapabilities().setOAuth2Server(new OAuth2ServerProperties());
-            properties.getCapabilities().getOAuth2Server().setEndpoints(new OAuth2ServerProperties.OAuth2EndpointsProperties());
-
-            // When
-            Map<String, Object> config = controller.discovery();
-
-            // Then
-            assertThat(config.get("claims_supported")).isNotNull();
-            // Verify it contains "sub", "iss", "aud", "exp", "iat"
         }
     }
 }

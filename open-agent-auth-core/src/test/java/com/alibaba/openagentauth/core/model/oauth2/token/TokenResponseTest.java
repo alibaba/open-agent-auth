@@ -68,6 +68,7 @@ class TokenResponseTest {
                     .expiresIn(EXPIRES_IN)
                     .refreshToken(REFRESH_TOKEN)
                     .scope(SCOPE)
+                    .idToken("test-id-token")
                     .build();
 
             // Then
@@ -77,6 +78,7 @@ class TokenResponseTest {
             assertThat(response.getExpiresIn()).isEqualTo(EXPIRES_IN);
             assertThat(response.getRefreshToken()).isEqualTo(REFRESH_TOKEN);
             assertThat(response.getScope()).isEqualTo(SCOPE);
+            assertThat(response.getIdToken()).isEqualTo("test-id-token");
         }
     }
 
@@ -94,6 +96,7 @@ class TokenResponseTest {
                     .expiresIn(EXPIRES_IN)
                     .refreshToken(REFRESH_TOKEN)
                     .scope(SCOPE)
+                    .idToken("test-id-token")
                     .build();
 
             // Then
@@ -103,6 +106,7 @@ class TokenResponseTest {
             assertThat(response.getExpiresIn()).isEqualTo(EXPIRES_IN);
             assertThat(response.getRefreshToken()).isEqualTo(REFRESH_TOKEN);
             assertThat(response.getScope()).isEqualTo(SCOPE);
+            assertThat(response.getIdToken()).isEqualTo("test-id-token");
         }
     }
 
@@ -178,6 +182,24 @@ class TokenResponseTest {
             assertThat(response.getExpiresIn()).isNull();
             assertThat(response.getRefreshToken()).isNull();
             assertThat(response.getScope()).isNull();
+            assertThat(response.getIdToken()).isNull();
+        }
+
+        @Test
+        @DisplayName("Should set optional idToken field")
+        void shouldSetOptionalIdTokenField() {
+            // Given
+            String idToken = "eyJhbGciOiJSUzI1NiJ9.test-id-token";
+
+            // When
+            TokenResponse response = TokenResponse.builder()
+                    .accessToken(ACCESS_TOKEN)
+                    .tokenType(TOKEN_TYPE)
+                    .idToken(idToken)
+                    .build();
+
+            // Then
+            assertThat(response.getIdToken()).isEqualTo(idToken);
         }
 
         @Test

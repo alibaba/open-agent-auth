@@ -523,7 +523,7 @@ public class WorkloadIdentityToken {
          * The Workload Identifier is scoped within an issuer and its sub-components (path portion)
          * are only unique within a trust domain defined by the issuer. The identifier format is
          * implementation-specific and may follow standards such as SPIFFE
-         * (spiffe://&lt;trust-domain&gt;/&lt;workload-identifier&gt;) or other formats.
+         * (spiffe://<trust-domain>/<workload-identifier>) or other formats.
          * </p>
          * <p>
          * <b>Security Note:</b> Using a Workload Identifier without taking into account the trust

@@ -536,7 +536,7 @@ public class EnhancedAgentService {
             }
             
             // Prepare authorization context
-            AgentAuthorizationContext authContext = agentAapExecutor.buildAuthContext(
+            AgentAuthorizationContext authContext = agentAapExecutor.buildAuthorizationContext(
                     PrepareAuthorizationContextRequest.builder()
                             .workloadContext(workloadContext)
                             .aoat(aoat)
@@ -601,7 +601,7 @@ public class EnhancedAgentService {
             SessionManager.addToList(session, SessionAttributes.CONVERSATION_HISTORY, finalMessage, ChatMessage.class);
 
             // Clear authorization context after use
-            agentAapExecutor.cleanup(workloadContext);
+            agentAapExecutor.revokeWorkloadAndCleanup(workloadContext);
             SessionManager.removeAttribute(session, SessionAttributes.AGENT_OA_TOKEN);
             
             return finalMessage;

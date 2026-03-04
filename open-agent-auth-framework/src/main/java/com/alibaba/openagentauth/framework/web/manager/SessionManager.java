@@ -142,8 +142,8 @@ public class SessionManager {
      * <b>Usage:</b></p>
      * <pre>
      * // Before optimization:
-     * List&lt;Object&gt; conversationHistoryObj = SessionManager.getAttribute(session, SessionAttributes.CONVERSATION_HISTORY);
-     * List&lt;ChatMessage&gt; conversationHistory = new ArrayList&lt;&gt;();
+     * List<Object> conversationHistoryObj = SessionManager.getAttribute(session, SessionAttributes.CONVERSATION_HISTORY);
+     * List<ChatMessage> conversationHistory = new ArrayList<>();
      * if (conversationHistoryObj != null) {
      *     for (Object obj : conversationHistoryObj) {
      *         if (obj instanceof ChatMessage) {
@@ -153,7 +153,7 @@ public class SessionManager {
      * }
      * 
      * // After optimization:
-     * List&lt;ChatMessage&gt; conversationHistory = SessionManager.getAttributeAsList(
+     * List<ChatMessage> conversationHistory = SessionManager.getAttributeAsList(
      *     session, 
      *     SessionAttributes.CONVERSATION_HISTORY, 
      *     ChatMessage.class
@@ -198,10 +198,10 @@ public class SessionManager {
      * <b>Usage:</b></p>
      * <pre>
      * // Before optimization:
-     * List&lt;ChatMessage&gt; conversationHistory = SessionManager.getAttributeAsList(session, SessionAttributes.CONVERSATION_HISTORY, ChatMessage.class);
+     * List<ChatMessage> conversationHistory = SessionManager.getAttributeAsList(session, SessionAttributes.CONVERSATION_HISTORY, ChatMessage.class);
      * conversationHistory.add(errorMessage);
      * @SuppressWarnings("unchecked")
-     * List&lt;Object&gt; conversationHistoryToStore = (List&lt;Object&gt;) (List&lt;?&gt;) conversationHistory;
+     * List<Object> conversationHistoryToStore = (List<Object>) (List<?>) conversationHistory;
      * SessionManager.setAttribute(session, SessionAttributes.CONVERSATION_HISTORY, conversationHistoryToStore);
      * 
      * // After optimization:

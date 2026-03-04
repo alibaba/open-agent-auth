@@ -95,7 +95,7 @@ class AgentUserIdpUserAuthInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class)))
+            when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class)))
                 .thenReturn("https://agent-idp.example.com/authorize?code=test123");
 
             // Act
@@ -103,7 +103,7 @@ class AgentUserIdpUserAuthInterceptorTest {
 
             // Assert
             assertThat(authUrl).isEqualTo("https://agent-idp.example.com/authorize?code=test123");
-            verify(agentAapExecutor).initiateUserAuth(any(InitiateAuthorizationRequest.class));
+            verify(agentAapExecutor).initiateUserAuthentication(any(InitiateAuthorizationRequest.class));
         }
 
         @Test
@@ -121,14 +121,14 @@ class AgentUserIdpUserAuthInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("/app");
-            when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class)))
+            when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class)))
                 .thenReturn("https://agent-idp.example.com/authorize");
 
             // Act
             String authUrl = testableInterceptor.testBuildAuthorizationUrl(request, "test-state");
 
             // Assert
-            verify(agentAapExecutor).initiateUserAuth(any(InitiateAuthorizationRequest.class));
+            verify(agentAapExecutor).initiateUserAuthentication(any(InitiateAuthorizationRequest.class));
         }
 
         @Test
@@ -146,14 +146,14 @@ class AgentUserIdpUserAuthInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(8080);
             when(request.getContextPath()).thenReturn("");
-            when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class)))
+            when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class)))
                 .thenReturn("https://agent-idp.example.com/authorize");
 
             // Act
             String authUrl = testableInterceptor.testBuildAuthorizationUrl(request, "test-state");
 
             // Assert
-            verify(agentAapExecutor).initiateUserAuth(any(InitiateAuthorizationRequest.class));
+            verify(agentAapExecutor).initiateUserAuthentication(any(InitiateAuthorizationRequest.class));
         }
     }
 

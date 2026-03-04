@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binding Instances - Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --font-sans: 'DM Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --color-bg: #FAFAF8;
+            --color-primary: #B8860B;
+            --color-text-title: #1A1A1A;
+            --color-text-body: #4A4A4A;
+            --color-text-muted: #8A8A8A;
+            --color-surface: #FFFFFF;
+            --color-border: #E8E4DF;
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --radius-card: 16px;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --btn-primary-bg: #1A1A1A;
+            --btn-primary-hover: #333333;
+            --btn-primary-text: #FFFFFF;
+            --btn-danger-bg: rgba(199, 80, 80, 0.08);
+            --btn-danger-text: #C75050;
+            --btn-danger-hover: rgba(199, 80, 80, 0.12);
+            --toast-success-bg: rgba(76, 175, 80, 0.08);
+            --toast-success-text: #4CAF50;
+            --toast-error-bg: rgba(199, 80, 80, 0.08);
+            --toast-error-text: #C75050;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            background-image: radial-gradient(circle at 25% 25%, rgba(184, 134, 11, 0.03) 0%, transparent 50%);
+            color: var(--color-text-body);
+            min-height: 100vh;
+            padding: 40px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--color-text-title);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: var(--color-text-muted);
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid var(--color-border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--color-surface);
+            color: var(--color-text-body);
+        }
+
+        .btn:hover {
+            background: #F5F5F3;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
+            border-color: var(--btn-primary-bg);
+        }
+
+        .btn-primary:hover {
+            background: var(--btn-primary-hover);
+            border-color: var(--btn-primary-hover);
+        }
+
+        .btn-danger {
+            background: var(--btn-danger-bg);
+            color: var(--btn-danger-text);
+            border-color: transparent;
+        }
+
+        .btn-danger:hover {
+            background: var(--btn-danger-hover);
+        }
+
+        .search-section {
+            background: var(--color-surface);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .search-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-group {
+            flex: 1;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            color: var(--color-text-body);
+            background: var(--color-surface);
+            transition: border-color 0.2s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .input-field::placeholder {
+            color: var(--color-text-muted);
+        }
+
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--color-text-muted);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .binding-card {
+            background: var(--color-surface);
+            border-radius: var(--radius-card);
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--color-border);
+        }
+
+        .binding-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .binding-id {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-text-title);
+            background: rgba(184, 134, 11, 0.08);
+            padding: 6px 12px;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+
+        .binding-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: var(--color-text-body);
+            word-break: break-all;
+        }
+
+        .detail-value.mono {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            background: #F5F5F3;
+            padding: 8px 12px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .binding-footer {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 16px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--color-surface);
+            border-radius: var(--radius-card);
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+            box-shadow: var(--shadow-card);
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--color-text-title);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-text-body);
+            margin-bottom: 8px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .modal-footer {
+            padding: 20px 24px;
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toast {
+            padding: 16px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: var(--shadow-sm);
+            animation: slideIn 0.3s ease-out;
+            min-width: 300px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            background: var(--toast-success-bg);
+            color: var(--toast-success-text);
+        }
+
+        .toast.error {
+            background: var(--toast-error-bg);
+            color: var(--toast-error-text);
+            border-left: 3px solid var(--toast-error-text);
+        }
+
+        .toast i {
+            font-size: 18px;
+        }
+
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loading::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--color-border);
+            border-top-color: var(--color-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+
+            .binding-details {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Binding List Styles */
+        .list-count {
+            font-size: 14px;
+            color: var(--color-text-muted);
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+
+        .binding-list-item {
+            background: var(--color-surface);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .binding-list-item:hover {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .binding-list-header {
+            padding: 20px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: background-color 0.2s ease;
+        }
+
+        .binding-list-header:hover {
+            background-color: rgba(184, 134, 11, 0.03);
+        }
+
+        .binding-chevron {
+            color: var(--color-text-muted);
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .binding-list-item.expanded .binding-chevron {
+            transform: rotate(90deg);
+        }
+
+        .binding-list-summary {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .binding-summary-id {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-text-title);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .binding-summary-value {
+            font-size: 14px;
+            color: var(--color-text-body);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .binding-list-detail {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            background-color: #F5F5F3;
+        }
+
+        .binding-list-item.expanded .binding-list-detail {
+            max-height: 1000px;
+            opacity: 1;
+        }
+
+        .binding-detail-content {
+            padding: 24px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .binding-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .binding-detail-full {
+            grid-column: 1 / -1;
+        }
+
+        .binding-detail-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 16px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 24px;
+            padding: 16px 0;
+        }
+        .pagination-info {
+            font-size: 14px;
+            color: var(--color-text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Binding Instances</h1>
+            <p>Manage user-workload binding instances</p>
+        </header>
+
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="openModal()">
+                <i class="bi bi-plus-lg"></i>
+                Create Binding
+            </button>
+            <button class="btn" onclick="refresh()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Refresh
+            </button>
+        </div>
+
+        <section class="search-section">
+            <form class="search-form" onsubmit="searchBinding(event)">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="input-field" placeholder="Enter Binding Instance ID">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i>
+                    Search
+                </button>
+            </form>
+        </section>
+
+        <section class="results-section" id="resultsSection">
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>Search for a binding instance or create a new one</p>
+            </div>
+        </section>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Create Binding Instance</h2>
+            </div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <div class="form-group">
+                        <label for="bindingInstanceId">Binding Instance ID *</label>
+                        <input type="text" id="bindingInstanceId" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userIdentity">User Identity *</label>
+                        <input type="text" id="userIdentity" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="workloadIdentity">Workload Identity *</label>
+                        <input type="text" id="workloadIdentity" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="agentIdentity">Agent Identity (JSON) *</label>
+                        <textarea id="agentIdentity" class="input-field" required>{}</textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="createdAt">Created At *</label>
+                            <input type="datetime-local" id="createdAt" class="input-field" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expiresAt">Expires At *</label>
+                            <input type="datetime-local" id="expiresAt" class="input-field" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitCreate()">
+                    <i class="bi bi-check-lg"></i>
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Pagination state
+        let currentPage = 1;
+        const pageSize = 20;
+
+        (function() {
+            if (window.location.search.indexOf('embedded=true') !== -1) {
+                document.body.style.padding = '20px';
+                document.body.style.background = 'var(--color-bg)';
+                document.body.style.backgroundImage = 'none';
+                document.body.style.minHeight = 'auto';
+            }
+        })();
+
+        function openModal() {
+            document.getElementById('modalOverlay').classList.add('active');
+            const now = new Date();
+            const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            document.getElementById('createdAt').value = formatDateTimeLocal(now);
+            document.getElementById('expiresAt').value = formatDateTimeLocal(expiresAt);
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            document.getElementById('createForm').reset();
+        }
+
+        function formatDateTimeLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        async function searchBinding(event) {
+            event.preventDefault();
+            const bindingInstanceId = document.getElementById('searchInput').value.trim();
+            
+            if (!bindingInstanceId) {
+                showToast('Please enter a Binding Instance ID', 'error');
+                return;
+            }
+
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.innerHTML = '<div class="loading">Searching...</div>';
+
+            try {
+                const response = await fetch('/api/v1/bindings/get', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ bindingInstanceId })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayBinding(data);
+                showToast('Binding instance found', 'success');
+            } catch (error) {
+                resultsSection.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-x-circle"></i>
+                        <p>Binding instance not found: ${error.message}</p>
+                    </div>
+                `;
+                showToast('Failed to fetch binding instance', 'error');
+            }
+        }
+
+        function displayBinding(binding) {
+            const resultsSection = document.getElementById('resultsSection');
+            
+            const agentIdentityJson = typeof binding.agentIdentity === 'string' 
+                ? binding.agentIdentity 
+                : JSON.stringify(binding.agentIdentity, null, 2);
+
+            resultsSection.innerHTML = `
+                <div class="binding-card">
+                    <div class="binding-header">
+                        <span class="binding-id">${binding.bindingInstanceId}</span>
+                        <button class="btn btn-danger" onclick="deleteBinding('${binding.bindingInstanceId}')">
+                            <i class="bi bi-trash"></i>
+                            Delete
+                        </button>
+                    </div>
+                    <div class="binding-details">
+                        <div class="detail-item">
+                            <span class="detail-label">User Identity</span>
+                            <span class="detail-value">${binding.userIdentity || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Workload Identity</span>
+                            <span class="detail-value">${binding.workloadIdentity || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item" style="grid-column: 1 / -1;">
+                            <span class="detail-label">Agent Identity</span>
+                            <span class="detail-value mono">${agentIdentityJson}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Created At</span>
+                            <span class="detail-value">${binding.createdAt ? formatDateTime(binding.createdAt) : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Expires At</span>
+                            <span class="detail-value">${binding.expiresAt ? formatDateTime(binding.expiresAt) : 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function submitCreate() {
+            const bindingInstanceId = document.getElementById('bindingInstanceId').value.trim();
+            const userIdentity = document.getElementById('userIdentity').value.trim();
+            const workloadIdentity = document.getElementById('workloadIdentity').value.trim();
+            const agentIdentityStr = document.getElementById('agentIdentity').value.trim();
+            const createdAt = document.getElementById('createdAt').value;
+            const expiresAt = document.getElementById('expiresAt').value;
+
+            if (!bindingInstanceId || !userIdentity || !workloadIdentity || !agentIdentityStr || !createdAt || !expiresAt) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+
+            let agentIdentity;
+            try {
+                agentIdentity = JSON.parse(agentIdentityStr);
+            } catch (error) {
+                showToast('Invalid JSON format for Agent Identity', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/bindings/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        bindingInstanceId,
+                        userIdentity,
+                        workloadIdentity,
+                        agentIdentity,
+                        createdAt: new Date(createdAt).toISOString(),
+                        expiresAt: new Date(expiresAt).toISOString()
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                showToast('Binding instance created successfully', 'success');
+                closeModal();
+                refresh();
+            } catch (error) {
+                showToast('Failed to create binding instance: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteBinding(bindingInstanceId) {
+            if (!confirm(`Are you sure you want to delete binding instance "${bindingInstanceId}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/bindings/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ bindingInstanceId })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                showToast('Binding instance deleted successfully', 'success');
+                refresh();
+            } catch (error) {
+                showToast('Failed to delete binding instance: ' + error.message, 'error');
+            }
+        }
+
+        function refresh() {
+            document.getElementById('searchInput').value = '';
+            currentPage = 1;
+            loadBindingList();
+        }
+
+        async function loadBindingList() {
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.innerHTML = '<div class="loading">Loading bindings...</div>';
+
+            try {
+                const response = await fetch('/api/v1/bindings/list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ page: currentPage, size: pageSize })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const bindings = data.items || [];
+                const page = data.page || currentPage;
+                const totalPages = data.totalPages || 1;
+                const totalItems = data.totalItems || 0;
+
+                displayBindingList(bindings, page, totalPages, totalItems);
+            } catch (error) {
+                resultsSection.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <p>Failed to load bindings: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayBindingList(bindings, page, totalPages, totalItems) {
+            const resultsSection = document.getElementById('resultsSection');
+
+            if (bindings.length === 0) {
+                resultsSection.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No binding instances found. Create a new one to get started.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const countHtml = `<div class="list-count">Showing <strong>${bindings.length}</strong> of <strong>${totalItems}</strong> binding instances (Page <strong>${page}</strong>/<strong>${totalPages}</strong>)</div>`;
+            const listHtml = bindings.map((binding, index) => {
+                const agentIdentityJson = typeof binding.agentIdentity === 'string' 
+                    ? binding.agentIdentity 
+                    : JSON.stringify(binding.agentIdentity, null, 2);
+                
+                const truncatedId = binding.bindingInstanceId && binding.bindingInstanceId.length > 50 
+                    ? binding.bindingInstanceId.substring(0, 50) + '...' 
+                    : binding.bindingInstanceId || 'N/A';
+
+                return `
+                    <div class="binding-list-item" data-index="${index}">
+                        <div class="binding-list-header" onclick="toggleBindingDetail(${index})">
+                            <i class="bi bi-chevron-right binding-chevron"></i>
+                            <div class="binding-list-summary">
+                                <span class="binding-summary-id" title="${escapeHtml(binding.bindingInstanceId || '')}">${escapeHtml(truncatedId)}</span>
+                                <span class="binding-summary-value">${escapeHtml(binding.userIdentity || 'N/A')}</span>
+                                <span class="binding-summary-value">${binding.createdAt ? formatDateTime(binding.createdAt) : 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="binding-list-detail">
+                            <div class="binding-detail-content">
+                                <div class="binding-detail-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Binding Instance ID</span>
+                                        <span class="detail-value mono">${escapeHtml(binding.bindingInstanceId || 'N/A')}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">User Identity</span>
+                                        <span class="detail-value">${escapeHtml(binding.userIdentity || 'N/A')}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Workload Identity</span>
+                                        <span class="detail-value">${escapeHtml(binding.workloadIdentity || 'N/A')}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Created At</span>
+                                        <span class="detail-value">${binding.createdAt ? formatDateTime(binding.createdAt) : 'N/A'}</span>
+                                    </div>
+                                    <div class="detail-item binding-detail-full">
+                                        <span class="detail-label">Agent Identity</span>
+                                        <span class="detail-value mono">${escapeHtml(agentIdentityJson)}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Expires At</span>
+                                        <span class="detail-value">${binding.expiresAt ? formatDateTime(binding.expiresAt) : 'N/A'}</span>
+                                    </div>
+                                </div>
+                                <div class="binding-detail-actions">
+                                    <button class="btn btn-danger" onclick="event.stopPropagation(); deleteBinding('${escapeHtml(binding.bindingInstanceId || '')}')">
+                                        <i class="bi bi-trash"></i>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const paginationHtml = `
+                <div class="pagination-controls">
+                    <button class="btn" onclick="goToPage(currentPage - 1)" id="prevPageBtn" ${page <= 1 ? 'disabled' : ''}>
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </button>
+                    <span class="pagination-info">Page <strong>${page}</strong> of <strong>${totalPages}</strong></span>
+                    <button class="btn" onclick="goToPage(currentPage + 1)" id="nextPageBtn" ${page >= totalPages ? 'disabled' : ''}>
+                        Next <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            `;
+
+            resultsSection.innerHTML = countHtml + listHtml + paginationHtml;
+        }
+
+        function goToPage(pageNum) {
+            if (pageNum < 1) return;
+            currentPage = pageNum;
+            loadBindingList();
+        }
+
+        function toggleBindingDetail(index) {
+            const items = document.querySelectorAll('.binding-list-item');
+            const targetItem = items[index];
+            
+            if (targetItem) {
+                const isExpanded = targetItem.classList.contains('expanded');
+                
+                // Close all other items
+                items.forEach(item => item.classList.remove('expanded'));
+                
+                // Toggle current item
+                if (!isExpanded) {
+                    targetItem.classList.add('expanded');
+                }
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message, type) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Load binding list on page load
+        document.addEventListener('DOMContentLoaded', loadBindingList);
+    </script>
+</body>
+</html>

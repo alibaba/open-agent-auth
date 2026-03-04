@@ -56,8 +56,6 @@ import com.alibaba.openagentauth.framework.model.request.ParSubmissionRequest;
 import com.alibaba.openagentauth.framework.model.request.PrepareAuthorizationContextRequest;
 import com.alibaba.openagentauth.framework.model.response.AuthenticationResponse;
 import com.alibaba.openagentauth.framework.model.workload.WorkloadContext;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2StateHandler;
-
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -229,10 +227,17 @@ public class DefaultAgent implements Agent {
     }
 
     /**
-     * Exchanges the authorization code for an ID Token.
+     * Exchanges the authorization code for an ID Token via the Agent User IDP.
      * <p>
-     * This method is used for user authentication flow with Agent User IDP.
-     * It exchanges the authorization code obtained from Agent User IDP for an ID Token.
+     * This method handles <b>only</b> the User Authentication flow (OIDC Authorization Code Flow).
+     * It exchanges the authorization code with the Agent User IDP for an ID Token per
+     * OIDC Core 1.0 Section 3.1.3.3.
+     * </p>
+     * <p>
+     * Agent Operation Authorization flow is handled separately by
+     * {@link #handleAuthorizationCallback(AuthorizationResponse)}, which exchanges the
+     * authorization code with the Authorization Server for an AOAT.
+     * </p>
      *
      * @param request the exchange code request
      * @return the authentication response containing the ID Token
@@ -244,11 +249,10 @@ public class DefaultAgent implements Agent {
         // Validate parameters
         ValidationUtils.validateNotNull(request, "Exchange code request");
 
-        logger.debug("Exchanging authorization code for ID Token with Agent User IDP");
+        logger.debug("Exchanging authorization code for ID Token via Agent User IDP");
 
         try {
-            // Build token request for Agent User IDP
-            // Note: redirect_uri must match the one used in the authorization request
+            // Build token request for User Authentication flow
             TokenRequest tokenRequest = TokenRequest.builder()
                     .grantType(GRANT_TYPE_AUTHORIZATION_CODE)
                     .code(request.getCode())
@@ -256,14 +260,21 @@ public class DefaultAgent implements Agent {
                     .clientId(request.getClientId())
                     .build();
 
-            // Exchange code for ID Token using appropriate token client based on state prefix
-            TokenResponse tokenResponse = selectTokenClient(request.getState()).exchangeCodeForToken(tokenRequest);
+            // Exchange code for token using the user authentication token client
+            TokenResponse tokenResponse = userAuthenticationTokenClient.exchangeCodeForToken(tokenRequest);
 
-            // Extract ID Token from response
-            String idToken = tokenResponse.getAccessToken();
-            logger.info("ID Token exchange completed successfully");
+            // Extract ID Token per OIDC Core 1.0 Section 3.1.3.3
+            String idToken = tokenResponse.getIdToken();
+            if (idToken == null) {
+                throw new FrameworkAuthenticationException(
+                        "Token response does not contain id_token. "
+                        + "Ensure the authorization request scope includes 'openid' "
+                        + "and the IDP is OIDC-compliant (OIDC Core 1.0 Section 3.1.3.3).");
+            }
 
-            // Build and return authentication response
+            logger.info("Token exchange completed successfully, id_token received");
+
+            // Build and return authentication response with ID Token
             long expiresIn = tokenResponse.getExpiresIn() != null ? tokenResponse.getExpiresIn().intValue() : DEFAULT_TOKEN_EXPIRATION_SECONDS;
             return AuthenticationResponse.builder()
                     .success(true)
@@ -272,24 +283,14 @@ public class DefaultAgent implements Agent {
                     .expiresIn(expiresIn)
                     .build();
             
+        } catch (FrameworkAuthenticationException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("Failed to exchange authorization code for ID Token", e);
             throw new FrameworkAuthenticationException("Failed to exchange authorization code for ID Token", e);
         }
     }
 
-    /**
-     * Creates a virtual workload for the given user.
-     * <p>
-     * This method creates a virtual workload by:
-     * </p>
-     * <ol>
-     *   <li>Generating a key pair on the Agent side</li>
-     *   <li>Sending the public key to Agent IDP via HTTP</li>
-     *   <li>Agent IDP validates the ID Token and binds the public key</li>
-     *   <li>Requesting WIT (Workload Identity Token) from Agent IDP</li>
-     *   <li>Building the workload context with WIT and credentials</li>
-    
     /**
      * Issues a Workload Identity Token (WIT) based on the provided request.
      * <p>
@@ -794,38 +795,6 @@ public class DefaultAgent implements Agent {
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse AOAT from token response", e);
         }
-    }
-
-    /**
-     * Selects the appropriate token client based on the state parameter prefix.
-     * <p>
-     * This method implements a strategy pattern for selecting the token client:
-     * </p>
-     * <ul>
-     *   <li>If state starts with "agent", returns the agent operation authorization token client</li>
-     *   <li>Otherwise, returns the user authentication token client</li>
-     * </ul>
-     *
-     * @param state the OAuth 2.0 state parameter
-     * @return the selected token client
-     * @throws IllegalArgumentException if state is null or empty
-     */
-    private OAuth2TokenClient selectTokenClient(String state) {
-
-        // Validate state
-        ValidationUtils.validateNotEmpty(state, "State parameter");
-
-        // Parse state
-        OAuth2StateHandler stateHandler = new OAuth2StateHandler();
-        OAuth2StateHandler.StateInfo stateInfo = stateHandler.parse(state);
-        if (stateInfo.getFlowType() == OAuth2StateHandler.FlowType.AGENT_OPERATION_AUTH) {
-            logger.debug("Selected agent operation authorization token client for agent flow");
-            return agentOperationAuthorizationTokenClient;
-        }
-
-        // Default to user authentication token client
-        logger.debug("Selected user authentication token client for user flow");
-        return userAuthenticationTokenClient;
     }
 
     /**

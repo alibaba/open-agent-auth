@@ -20,6 +20,7 @@ import com.alibaba.openagentauth.core.model.oauth2.authorization.AuthorizationCo
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenRequest;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.token.oidc.IdTokenGeneratorAdapter;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,8 +82,11 @@ public class DefaultOAuth2TokenServer implements OAuth2TokenServer {
             // Step 4: Consume authorization code
             consumeAuthorizationCode(authCode.getCode());
 
-            // Step 5: Build token response
-            TokenResponse response = buildTokenResponse(accessToken, tokenGenerator.getExpirationSeconds(), authCode.getScope());
+            // Step 5: Determine if id_token should be included (OIDC Core 1.0 Section 3.1.3.3)
+            String idToken = resolveIdToken(accessToken, authCode.getScope());
+
+            // Step 6: Build token response
+            TokenResponse response = buildTokenResponse(accessToken, tokenGenerator.getExpirationSeconds(), authCode.getScope(), idToken);
 
             logger.info("Token issued successfully for client: {}", clientId);
             return response;
@@ -207,12 +211,69 @@ public class DefaultOAuth2TokenServer implements OAuth2TokenServer {
 
     @Override
     public TokenResponse buildTokenResponse(String accessToken, long expiresIn, String scope) {
+        return buildTokenResponse(accessToken, expiresIn, scope, null);
+    }
+
+    /**
+     * Builds a token response with an optional ID Token.
+     * <p>
+     * When the authorization request scope includes "openid", the response MUST include
+     * an id_token field per OIDC Core 1.0 Section 3.1.3.3.
+     * </p>
+     *
+     * @param accessToken the access token string
+     * @param expiresIn the expiration time in seconds
+     * @param scope the scope (may be null)
+     * @param idToken the ID Token (may be null if scope does not include "openid")
+     * @return the token response
+     */
+    public TokenResponse buildTokenResponse(String accessToken, long expiresIn, String scope, String idToken) {
         return TokenResponse.builder()
                 .accessToken(accessToken)
                 .tokenType("Bearer")
                 .expiresIn(expiresIn)
                 .scope(scope)
+                .idToken(idToken)
                 .build();
+    }
+
+    /**
+     * Resolves the ID Token value based on the granted scope.
+     * <p>
+     * Per OIDC Core 1.0 Section 3.1.3.3, when the scope includes "openid",
+     * the token response MUST include an id_token. In the current IDP architecture,
+     * the {@link IdTokenGeneratorAdapter IdTokenGeneratorAdapter} generates an ID Token as the access token,
+     * so the same value is used for both access_token and id_token fields.
+     * </p>
+     *
+     * @param accessToken the generated access token
+     * @param scope the granted scope
+     * @return the ID Token value, or null if scope does not include "openid"
+     */
+    private String resolveIdToken(String accessToken, String scope) {
+        if (scopeContainsOpenId(scope)) {
+            logger.debug("Scope includes 'openid', including id_token in response");
+            return accessToken;
+        }
+        return null;
+    }
+
+    /**
+     * Checks if the scope string contains the "openid" scope value.
+     *
+     * @param scope the space-delimited scope string
+     * @return true if scope contains "openid"
+     */
+    private boolean scopeContainsOpenId(String scope) {
+        if (scope == null || scope.isBlank()) {
+            return false;
+        }
+        for (String scopeValue : scope.split("\\s+")) {
+            if ("openid".equals(scopeValue)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

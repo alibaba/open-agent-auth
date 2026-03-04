@@ -16,6 +16,8 @@
 package com.alibaba.openagentauth.spring.web.controller;
 
 import com.alibaba.openagentauth.core.exception.policy.PolicyNotFoundException;
+import com.alibaba.openagentauth.core.model.page.PageRequest;
+import com.alibaba.openagentauth.core.model.page.PageResponse;
 import com.alibaba.openagentauth.core.model.policy.Policy;
 import com.alibaba.openagentauth.core.model.policy.PolicyMetadata;
 import com.alibaba.openagentauth.core.model.policy.PolicyRegistration;
@@ -32,6 +34,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -88,6 +93,21 @@ class PolicyRegistryControllerTest {
                 .originalProposal(REGO_POLICY)
                 .registeredAt(Instant.now())
                 .status("SUCCESS")
+                .build();
+    }
+
+    private Policy createTestPolicy(String policyId) {
+        PolicyMetadata metadata =
+            PolicyMetadata.builder()
+                .createdAt(Instant.now())
+                .createdBy(CREATED_BY)
+                .build();
+
+        return Policy.builder()
+                .policyId(policyId)
+                .regoPolicy(REGO_POLICY)
+                .description(DESCRIPTION)
+                .metadata(metadata)
                 .build();
     }
 
@@ -289,6 +309,66 @@ class PolicyRegistryControllerTest {
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("List Policies with Pagination Tests")
+    class ListPoliciesPaginationTests {
+
+        @Test
+        @DisplayName("Should return paginated policies")
+        void shouldReturnPaginatedPolicies() {
+            // Arrange
+            List<Policy> policies = new ArrayList<>();
+            policies.add(createTestPolicy("policy-1"));
+            policies.add(createTestPolicy("policy-2"));
+            policies.add(createTestPolicy("policy-3"));
+            when(policyRegistry.listAll()).thenReturn(policies);
+
+            PageRequest pageRequest = new PageRequest(1, 2);
+
+            // Act
+            ResponseEntity<PageResponse<Policy>> response = controller.listPolicies(pageRequest);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getItems()).hasSize(2);
+            assertThat(response.getBody().getTotalItems()).isEqualTo(3);
+            assertThat(response.getBody().getTotalPages()).isEqualTo(2);
+            assertThat(response.getBody().getPage()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Should return empty page when no policies")
+        void shouldReturnEmptyPageWhenNoPolicies() {
+            // Arrange
+            when(policyRegistry.listAll()).thenReturn(Collections.emptyList());
+            PageRequest pageRequest = new PageRequest(1, 10);
+
+            // Act
+            ResponseEntity<PageResponse<Policy>> response = controller.listPolicies(pageRequest);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getItems()).isEmpty();
+            assertThat(response.getBody().getTotalItems()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("Should return 500 when list fails")
+        void shouldReturn500WhenListFails() {
+            // Arrange
+            when(policyRegistry.listAll()).thenThrow(new RuntimeException("error"));
+            PageRequest pageRequest = new PageRequest(1, 10);
+
+            // Act
+            ResponseEntity<PageResponse<Policy>> response = controller.listPolicies(pageRequest);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

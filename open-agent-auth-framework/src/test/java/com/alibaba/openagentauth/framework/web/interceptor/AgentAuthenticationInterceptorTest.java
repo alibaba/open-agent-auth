@@ -164,7 +164,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -190,7 +190,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -312,7 +312,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -343,14 +343,14 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("/app");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
 
             // Assert
             ArgumentCaptor<InitiateAuthorizationRequest> captor = ArgumentCaptor.forClass(InitiateAuthorizationRequest.class);
-            verify(agentAapExecutor).initiateUserAuth(captor.capture());
+            verify(agentAapExecutor).initiateUserAuthentication(captor.capture());
             assertThat(captor.getValue().getRedirectUri()).isEqualTo("https://example.com/app/callback");
         }
 
@@ -370,14 +370,14 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("localhost");
             when(request.getServerPort()).thenReturn(8080);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
 
             // Assert
             ArgumentCaptor<InitiateAuthorizationRequest> captor = ArgumentCaptor.forClass(InitiateAuthorizationRequest.class);
-            verify(agentAapExecutor).initiateUserAuth(captor.capture());
+            verify(agentAapExecutor).initiateUserAuthentication(captor.capture());
             assertThat(captor.getValue().getRedirectUri()).isEqualTo("http://localhost:8080/callback");
         }
 
@@ -397,14 +397,14 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
 
             // Assert
             ArgumentCaptor<InitiateAuthorizationRequest> captor = ArgumentCaptor.forClass(InitiateAuthorizationRequest.class);
-            verify(agentAapExecutor).initiateUserAuth(captor.capture());
+            verify(agentAapExecutor).initiateUserAuthentication(captor.capture());
             String state = captor.getValue().getState();
             assertThat(state).startsWith("user:");
             assertThat(state).contains(SESSION_ID);
@@ -426,7 +426,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
@@ -457,7 +457,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
@@ -504,7 +504,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -580,7 +580,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -622,7 +622,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -664,7 +664,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -694,7 +694,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -720,7 +720,7 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -764,14 +764,14 @@ class AgentAuthenticationInterceptorTest {
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("/myapp");
-            lenient().when(agentAapExecutor.initiateUserAuth(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
 
             // Assert
             ArgumentCaptor<InitiateAuthorizationRequest> captor = ArgumentCaptor.forClass(InitiateAuthorizationRequest.class);
-            verify(agentAapExecutor).initiateUserAuth(captor.capture());
+            verify(agentAapExecutor).initiateUserAuthentication(captor.capture());
             assertThat(captor.getValue().getRedirectUri()).isEqualTo("https://example.com/myapp/callback");
         }
     }

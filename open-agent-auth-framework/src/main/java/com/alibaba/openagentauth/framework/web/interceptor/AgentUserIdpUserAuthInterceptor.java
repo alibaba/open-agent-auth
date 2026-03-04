@@ -42,7 +42,7 @@ import java.util.List;
  * public AgentUserIdpUserAuthInterceptor agentUserIdpInterceptor(
  *         SessionMappingBizService sessionMappingBizService,
  *         AgentAapExecutor agentAapExecutor) {
- *     List&lt;String&gt; excludedPaths = List.of("/callback", "/public/**");
+ *     List<String> excludedPaths = List.of("/callback", "/public/**");
  *     return new AgentUserIdpUserAuthInterceptor(
  *         sessionMappingBizService, excludedPaths, agentAapExecutor);
  * }
@@ -95,7 +95,7 @@ public class AgentUserIdpUserAuthInterceptor extends UserAuthenticationIntercept
     /**
      * Builds the authorization URL for Agent User IDP.
      * <p>
-     * This method uses {@link AgentAapExecutor#initiateUserAuth(InitiateAuthorizationRequest)}
+     * This method uses {@link AgentAapExecutor#initiateUserAuthentication(InitiateAuthorizationRequest)}
      * to generate the authorization URL. The executor handles the complete OIDC
      * authorization code flow initialization.
      * </p>
@@ -113,7 +113,7 @@ public class AgentUserIdpUserAuthInterceptor extends UserAuthenticationIntercept
                 .state(state)
                 .build();
 
-        String authorizationUrl = agentAapExecutor.initiateUserAuth(authRequest);
+        String authorizationUrl = agentAapExecutor.initiateUserAuthentication(authRequest);
         
         logger.debug("Built authorization URL for Agent User IDP: {}", authorizationUrl);
         return authorizationUrl;

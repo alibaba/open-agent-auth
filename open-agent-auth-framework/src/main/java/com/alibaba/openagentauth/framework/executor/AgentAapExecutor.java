@@ -38,12 +38,12 @@ import com.alibaba.openagentauth.framework.role.ApplicationRole;
  *
  * <h3>Protocol Flow:</h3>
  * <ol>
- *   <li>Initiate user authentication with {@link #initiateUserAuth(InitiateAuthorizationRequest)}</li>
- *   <li>Exchange authorization code for ID Token with {@link #exchangeUserIdToken(ExchangeCodeForTokenRequest)}</li>
+ *   <li>Initiate user authentication with {@link #initiateUserAuthentication(InitiateAuthorizationRequest)}</li>
+ *   <li>Exchange authorization code for ID Token with {@link #exchangeAuthorizationCodeForIdToken(ExchangeCodeForTokenRequest)}</li>
  *   <li>Request authorization URL with {@link #requestAuthUrl(RequestAuthUrlRequest)}</li>
- *   <li>Exchange authorization code for Agent OA Token with {@link #exchangeAgentAuthToken(AuthorizationResponse)}</li>
- *   <li>Build authorization context with {@link #buildAuthContext(PrepareAuthorizationContextRequest)}</li>
- *   <li>Cleanup resources with {@link #cleanup(WorkloadContext)}</li>
+ *   <li>Exchange authorization code for Agent OA Token with {@link #exchangeAuthorizationCodeForAoat(AuthorizationResponse)}</li>
+ *   <li>Build authorization context with {@link #buildAuthorizationContext(PrepareAuthorizationContextRequest)}</li>
+ *   <li>Cleanup resources with {@link #revokeWorkloadAndCleanup(WorkloadContext)}</li>
  * </ol>
  *
  * <h3>Usage Example:</h3>
@@ -55,14 +55,14 @@ import com.alibaba.openagentauth.framework.role.ApplicationRole;
  *     .redirectUri("https://example.com/callback")
  *     .state("random-state-value")
  *     .build();
- * String authUrl = executor.initiateUserAuth(authRequest);
+ * String authUrl = executor.initiateUserAuthentication(authRequest);
  *
  * // Step 2: Exchange authorization code for ID Token
  * ExchangeCodeForTokenRequest exchangeRequest = ExchangeCodeForTokenRequest.builder()
  *     .code("authorization-code-from-callback")
  *     .state("random-state-value")
  *     .build();
- * executor = executor.exchangeUserIdToken(exchangeRequest);
+ * executor = executor.exchangeAuthorizationCodeForIdToken(exchangeRequest);
  *
  * // Step 3: Request authorization URL
  * WorkloadRequestContext workloadContext = WorkloadRequestContext.builder()
@@ -82,29 +82,25 @@ import com.alibaba.openagentauth.framework.role.ApplicationRole;
  *     .authorizationCode("authorization-code")
  *     .state("random-state-value")
  *     .build();
- * executor = executor.exchangeAgentAuthToken(authResponse);
+ * executor = executor.exchangeAuthorizationCodeForAoat(authResponse);
  *
  * // Step 5: Build authorization context
  * PrepareAuthorizationContextRequest contextRequest = PrepareAuthorizationContextRequest.builder()
  *     .contextId("context-id")
  *     .build();
- * ToolAuthorizationContext authContext = executor.buildAuthContext(contextRequest);
+ * ToolAuthorizationContext authContext = executor.buildAuthorizationContext(contextRequest);
  *
  * // Step 6: Cleanup
  * WorkloadContext workloadContext = executor.getWorkloadContext();
- * executor.cleanup(workloadContext);
+ * executor.revokeWorkloadAndCleanup(workloadContext);
  * </pre>
  *
  * <h3>Role-Specific Executors:</h3>
  * <p>
- * This interface is specifically for the Agent role. Other roles may have their
- * own executor implementations:
+ * This interface is specifically for the Agent role. The Agent role executor
+ * orchestrates the complete AOA protocol flow by coordinating multiple Actor
+ * interfaces (Agent, AgentIdentityProvider, AuthorizationServer).
  * </p>
- * <ul>
- *   <li>{@link AgentAapExecutor} - Agent role executor (this interface)</li>
- *   <li>AgentIdpAapExecutor - Agent IDP role executor</li>
- *   <li>ResourceServerAapExecutor - Resource Server role executor</li>
- * </ul>
  *
  * @see Agent
  * @see ApplicationRole#AGENT
@@ -126,7 +122,7 @@ public interface AgentAapExecutor {
      *   <li>Frontend redirects user to the authorization URL</li>
      *   <li>User authenticates at Agent User IDP</li>
      *   <li>Agent User IDP returns authorization code via callback</li>
-     *   <li>Frontend calls {@link #exchangeUserIdToken(ExchangeCodeForTokenRequest)} to exchange code for ID Token</li>
+     *   <li>Frontend calls {@link #exchangeAuthorizationCodeForIdToken(ExchangeCodeForTokenRequest)} to exchange code for ID Token</li>
      * </ol>
      *
      * <h4>Parameters:</h4>
@@ -138,7 +134,7 @@ public interface AgentAapExecutor {
      * @param request the initiate authorization request containing redirectUri and state
      * @return the authorization URL to redirect the user to
      */
-    String initiateUserAuth(InitiateAuthorizationRequest request);
+    String initiateUserAuthentication(InitiateAuthorizationRequest request);
 
     /**
      * Exchanges the authorization code for an ID Token.
@@ -166,7 +162,7 @@ public interface AgentAapExecutor {
      * @param request the exchange code request containing code and state
      * @return the updated executor instance with ID Token
      */
-    AgentAapExecutor exchangeUserIdToken(ExchangeCodeForTokenRequest request);
+    AgentAapExecutor exchangeAuthorizationCodeForIdToken(ExchangeCodeForTokenRequest request);
 
     /**
      * Requests the authorization redirect URL.
@@ -247,7 +243,7 @@ public interface AgentAapExecutor {
      * @param response the authorization response containing the authorization code
      * @return the updated executor instance with Agent OA Token
      */
-    AgentOperationAuthToken exchangeAgentAuthToken(AuthorizationResponse response);
+    AgentOperationAuthToken exchangeAuthorizationCodeForAoat(AuthorizationResponse response);
 
     /**
      * Builds the authorization context for tool execution.
@@ -270,7 +266,7 @@ public interface AgentAapExecutor {
      * PrepareAuthorizationContextRequest contextRequest = PrepareAuthorizationContextRequest.builder()
      *     .contextId("context-id")
      *     .build();
-     * ToolAuthorizationContext authContext = executor.buildAuthContext(contextRequest);
+     * ToolAuthorizationContext authContext = executor.buildAuthorizationContext(contextRequest);
      *
      * // MCP Protocol Adapter
      * McpAsyncHttpClientRequestCustomizer customizer = (builder, method, uri, body, ctx) -> {
@@ -284,7 +280,7 @@ public interface AgentAapExecutor {
      * @param contextRequest the prepare authorization context request containing contextId
      * @return the authorization context containing WIT, WPT, and AOAT
      */
-    AgentAuthorizationContext buildAuthContext(PrepareAuthorizationContextRequest contextRequest);
+    AgentAuthorizationContext buildAuthorizationContext(PrepareAuthorizationContextRequest contextRequest);
 
     /**
      * Gets the workload context for cleanup.
@@ -323,6 +319,6 @@ public interface AgentAapExecutor {
      *
      * @param workloadContext the workload context to clean up
      */
-    void cleanup(WorkloadContext workloadContext);
+    void revokeWorkloadAndCleanup(WorkloadContext workloadContext);
 
 }

@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Events</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --bg-primary: #FAFAF8;
+            --bg-surface: #FFFFFF;
+            --primary: #B8860B;
+            --text-title: #1A1A1A;
+            --text-body: #4A4A4A;
+            --text-muted: #8A8A8A;
+            --border: #E8E4DF;
+            --shadow: 0 8px 32px rgba(0,0,0,0.08);
+            --radius-card: 16px;
+            --radius-input: 8px;
+            --radius-section: 12px;
+            --btn-bg: #1A1A1A;
+            --btn-bg-hover: #333333;
+            --btn-text: #FFFFFF;
+            
+            --badge-default-bg: rgba(184, 134, 11, 0.1);
+            --badge-default-text: #B8860B;
+            --badge-success-bg: rgba(76, 175, 80, 0.1);
+            --badge-success-text: #4CAF50;
+            --badge-warning-bg: rgba(255, 152, 0, 0.1);
+            --badge-warning-text: #FF9800;
+            --badge-error-bg: rgba(199, 80, 80, 0.1);
+            --badge-error-text: #C75050;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            background-image: radial-gradient(circle at 25% 25%, rgba(184, 134, 11, 0.03) 0%, transparent 50%);
+            color: var(--text-body);
+            min-height: 100vh;
+            padding: 40px 20px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-title);
+            margin-bottom: 8px;
+        }
+
+        .page-description {
+            font-size: 16px;
+            color: var(--text-muted);
+        }
+
+        .card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow);
+            padding: 32px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: var(--radius-input);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            color: var(--text-body);
+        }
+
+        .tab.active {
+            background: var(--badge-default-bg);
+            color: var(--badge-default-text);
+        }
+
+        .search-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-body);
+        }
+
+        .form-input {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-input);
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-surface);
+            color: var(--text-body);
+            transition: border-color 0.2s ease;
+            min-width: 280px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-input[type="datetime-local"] {
+            min-width: 220px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: var(--radius-input);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--btn-bg);
+            color: var(--btn-text);
+        }
+
+        .btn-primary:hover {
+            background: var(--btn-bg-hover);
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 16px;
+            border-radius: var(--radius-input);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--bg-surface);
+            color: var(--text-body);
+            transition: all 0.2s ease;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .quick-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .quick-btn.active {
+            background: var(--badge-default-bg);
+            border-color: var(--badge-default-text);
+            color: var(--badge-default-text);
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .event-detail-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-section);
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .event-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .event-detail-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-title);
+        }
+
+        .event-detail-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .event-detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .event-detail-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .event-detail-value {
+            font-size: 14px;
+            color: var(--text-body);
+        }
+
+        .event-detail-value.code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .badge-default {
+            background: var(--badge-default-bg);
+            color: var(--badge-default-text);
+        }
+
+        .badge-success {
+            background: var(--badge-success-bg);
+            color: var(--badge-success-text);
+        }
+
+        .badge-warning {
+            background: var(--badge-warning-bg);
+            color: var(--badge-warning-text);
+        }
+
+        .badge-error {
+            background: var(--badge-error-bg);
+            color: var(--badge-error-text);
+        }
+
+        .json-viewer {
+            background: var(--bg-primary);
+            border-radius: var(--radius-section);
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .json-viewer pre {
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-body);
+        }
+
+        .json-viewer code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg-primary);
+        }
+
+        th {
+            padding: 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 16px;
+            font-size: 14px;
+            color: var(--text-body);
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover td {
+            background: rgba(184, 134, 11, 0.03);
+        }
+
+        .event-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-body);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .timestamp {
+            font-size: 14px;
+            color: var(--text-body);
+        }
+
+        .expand-icon {
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .expand-icon:hover {
+            color: var(--primary);
+        }
+
+        .expandable-row {
+            display: none;
+        }
+
+        .expandable-row.active {
+            display: table-row;
+        }
+
+        .expandable-cell {
+            padding: 0 !important;
+        }
+
+        .expandable-content {
+            padding: 16px;
+            background: var(--bg-primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 64px 32px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+        }
+
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: var(--radius-input);
+            background: var(--bg-surface);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--badge-success-text);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--badge-error-text);
+        }
+
+        .toast i {
+            font-size: 20px;
+        }
+
+        .toast.success i {
+            color: var(--badge-success-text);
+        }
+
+        .toast.error i {
+            color: var(--badge-error-text);
+        }
+
+        .toast-message {
+            font-size: 14px;
+            color: var(--text-body);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .search-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .form-input {
+                min-width: 100%;
+            }
+
+            .event-detail-meta {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 24px;
+            padding: 16px 0;
+        }
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1 class="page-title">Audit Events</h1>
+            <p class="page-description">View and search audit trail events</p>
+        </header>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" data-tab="by-id">By Event ID</button>
+                <button class="tab" data-tab="by-time">By Time Range</button>
+            </div>
+
+            <div id="search-by-id" class="search-form">
+                <div class="form-group">
+                    <label for="event-id">Event ID</label>
+                    <input type="text" id="event-id" class="form-input" placeholder="Enter event ID..." />
+                </div>
+                <button class="btn btn-primary" onclick="searchById()">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+
+            <div id="search-by-time" class="search-form hidden">
+                <div class="form-group">
+                    <label for="start-time">Start Time</label>
+                    <input type="datetime-local" id="start-time" class="form-input" />
+                </div>
+                <div class="form-group">
+                    <label for="end-time">End Time</label>
+                    <input type="datetime-local" id="end-time" class="form-input" />
+                </div>
+                <button class="btn btn-primary" onclick="searchByTimeRange()">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+
+            <div id="quick-actions" class="quick-actions hidden">
+                <button class="quick-btn" onclick="setTimeRange('1h')">Last 1 Hour</button>
+                <button class="quick-btn" onclick="setTimeRange('24h')">Last 24 Hours</button>
+                <button class="quick-btn" onclick="setTimeRange('7d')">Last 7 Days</button>
+            </div>
+        </div>
+
+        <div id="results-section" class="results-section">
+            <!-- Results will be populated here -->
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        // Pagination state
+        let currentPage = 1;
+        const pageSize = 20;
+        let currentStartTime = null;
+        let currentEndTime = null;
+
+        (function() {
+            if (window.location.search.indexOf('embedded=true') !== -1) {
+                document.body.style.padding = '20px';
+                document.body.style.background = 'var(--bg-primary)';
+                document.body.style.backgroundImage = 'none';
+                document.body.style.minHeight = 'auto';
+            }
+        })();
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+
+                const tabName = this.dataset.tab;
+                if (tabName === 'by-id') {
+                    document.getElementById('search-by-id').classList.remove('hidden');
+                    document.getElementById('search-by-time').classList.add('hidden');
+                    document.getElementById('quick-actions').classList.add('hidden');
+                } else {
+                    document.getElementById('search-by-id').classList.add('hidden');
+                    document.getElementById('search-by-time').classList.remove('hidden');
+                    document.getElementById('quick-actions').classList.remove('hidden');
+                }
+            });
+        });
+
+        // Set time range for quick actions
+        function setTimeRange(range) {
+            const now = new Date();
+            let startTime;
+
+            switch(range) {
+                case '1h':
+                    startTime = new Date(now.getTime() - 60 * 60 * 1000);
+                    break;
+                case '24h':
+                    startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                    break;
+                case '7d':
+                    startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+            }
+
+            document.getElementById('start-time').value = toLocalISOString(startTime);
+            document.getElementById('end-time').value = toLocalISOString(now);
+
+            // Update active button
+            document.querySelectorAll('.quick-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function toLocalISOString(date) {
+            const offset = date.getTimezoneOffset() * 60000;
+            const localISOTime = new Date(date - offset).toISOString().slice(0, 16);
+            return localISOTime;
+        }
+
+        // Search by Event ID
+        async function searchById() {
+            const eventId = document.getElementById('event-id').value.trim();
+            if (!eventId) {
+                showToast('Please enter an event ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/audit/events/get', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ eventId })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch event');
+                }
+
+                const data = await response.json();
+                displaySingleEvent(data);
+                showToast('Event found successfully', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Failed to fetch event: ' + error.message, 'error');
+                displayEmptyState();
+            }
+        }
+
+        // Search by time range
+        async function searchByTimeRange() {
+            const startTime = document.getElementById('start-time').value;
+            const endTime = document.getElementById('end-time').value;
+
+            if (!startTime || !endTime) {
+                showToast('Please select both start and end time', 'error');
+                return;
+            }
+
+            currentStartTime = new Date(startTime).toISOString();
+            currentEndTime = new Date(endTime).toISOString();
+            currentPage = 1;
+
+            try {
+                const response = await fetch('/api/v1/audit/events/list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        startTime: currentStartTime,
+                        endTime: currentEndTime,
+                        page: currentPage,
+                        size: pageSize
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch events');
+                }
+
+                const data = await response.json();
+                displayEventList(data);
+                showToast('Events fetched successfully', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Failed to fetch events: ' + error.message, 'error');
+                displayEmptyState();
+            }
+        }
+
+        // Display single event
+        function displaySingleEvent(event) {
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.classList.add('active');
+
+            const badgeClass = getBadgeClass(event.eventType);
+            const formattedTime = formatTimestamp(event.timestamp);
+
+            resultsSection.innerHTML = `
+                <div class="card">
+                    <div class="event-detail-card">
+                        <div class="event-detail-header">
+                            <h2 class="event-detail-title">Event Details</h2>
+                            <span class="badge ${badgeClass}">${event.eventType}</span>
+                        </div>
+                        <div class="event-detail-meta">
+                            <div class="event-detail-item">
+                                <span class="event-detail-label">Event ID</span>
+                                <span class="event-detail-value code">${event.eventId}</span>
+                            </div>
+                            <div class="event-detail-item">
+                                <span class="event-detail-label">Timestamp</span>
+                                <span class="event-detail-value">${formattedTime}</span>
+                            </div>
+                            <div class="event-detail-item">
+                                <span class="event-detail-label">Actor ID</span>
+                                <span class="event-detail-value code">${event.actorId || 'N/A'}</span>
+                            </div>
+                            <div class="event-detail-item">
+                                <span class="event-detail-label">Resource ID</span>
+                                <span class="event-detail-value code">${event.resourceId || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="event-detail-item">
+                            <span class="event-detail-label">Event Details</span>
+                            <div class="json-viewer">
+                                <pre><code>${JSON.stringify(event, null, 2)}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Display event list
+        function displayEventList(data) {
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.classList.add('active');
+
+            // Handle both direct array and {events: [...]} format
+            const events = data.items || [];
+
+            if (events.length === 0) {
+                displayEmptyState();
+                return;
+            }
+
+            const page = data.page || currentPage;
+            const totalPages = data.totalPages || 1;
+            const totalItems = data.totalItems || 0;
+
+            let tableHTML = `
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Event ID</th>
+                                    <th>Event Type</th>
+                                    <th>Timestamp</th>
+                                    <th>Actor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            events.forEach((event, index) => {
+                const badgeClass = getBadgeClass(event.eventType);
+                const formattedTime = formatTimestamp(event.timestamp);
+
+                tableHTML += `
+                    <tr onclick="toggleRow(${index})">
+                        <td><i class="bi bi-chevron-right expand-icon" id="icon-${index}"></i></td>
+                        <td><span class="event-id" title="${event.eventId}">${event.eventId}</span></td>
+                        <td><span class="badge ${badgeClass}">${event.eventType}</span></td>
+                        <td><span class="timestamp">${formattedTime}</span></td>
+                        <td><span class="event-id">${event.actorId || 'N/A'}</span></td>
+                    </tr>
+                    <tr class="expandable-row" id="row-${index}">
+                        <td colspan="5" class="expandable-cell">
+                            <div class="expandable-content">
+                                <div class="json-viewer">
+                                    <pre><code>${JSON.stringify(event, null, 2)}</code></pre>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-primary" onclick="goToPage(currentPage - 1)" id="prevPageBtn" ${page <= 1 ? 'disabled' : ''}>
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </button>
+                        <span class="pagination-info">Page <strong>${page}</strong> of <strong>${totalPages}</strong> (${totalItems} events)</span>
+                        <button class="btn btn-primary" onclick="goToPage(currentPage + 1)" id="nextPageBtn" ${page >= totalPages ? 'disabled' : ''}>
+                            Next <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            resultsSection.innerHTML = tableHTML;
+        }
+
+        // Toggle expandable row
+        function toggleRow(index) {
+            const row = document.getElementById(`row-${index}`);
+            const icon = document.getElementById(`icon-${index}`);
+
+            if (row.classList.contains('active')) {
+                row.classList.remove('active');
+                icon.classList.remove('bi-chevron-down');
+                icon.classList.add('bi-chevron-right');
+            } else {
+                row.classList.add('active');
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-down');
+            }
+        }
+
+        // Display empty state
+        function displayEmptyState() {
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.classList.add('active');
+
+            resultsSection.innerHTML = `
+                <div class="card">
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No audit events found</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Go to specific page
+        function goToPage(pageNum) {
+            if (pageNum < 1) return;
+            currentPage = pageNum;
+            
+            if (currentStartTime && currentEndTime) {
+                searchByTimeRangeWithPagination();
+            } else {
+                loadRecentEvents();
+            }
+        }
+
+        // Search by time range with pagination
+        async function searchByTimeRangeWithPagination() {
+            try {
+                const response = await fetch('/api/v1/audit/events/list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        startTime: currentStartTime,
+                        endTime: currentEndTime,
+                        page: currentPage,
+                        size: pageSize
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch events');
+                }
+
+                const data = await response.json();
+                displayEventList(data);
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Failed to fetch events: ' + error.message, 'error');
+                displayEmptyState();
+            }
+        }
+
+        // Get badge class based on event type
+        function getBadgeClass(eventType) {
+            if (!eventType) return 'badge-default';
+
+            const type = eventType.toLowerCase();
+            if (type.includes('success') || type.includes('created') || type.includes('approved')) {
+                return 'badge-success';
+            } else if (type.includes('error') || type.includes('failed') || type.includes('denied') || type.includes('rejected')) {
+                return 'badge-error';
+            } else if (type.includes('warning') || type.includes('pending') || type.includes('review')) {
+                return 'badge-warning';
+            }
+            return 'badge-default';
+        }
+
+        // Format timestamp
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'N/A';
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icon = type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle';
+
+            toast.innerHTML = `
+                <i class="bi ${icon}"></i>
+                <span class="toast-message">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Load recent events (last 24 hours) on page load
+        async function loadRecentEvents() {
+            const now = new Date();
+            const startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            currentStartTime = startTime.toISOString();
+            currentEndTime = now.toISOString();
+            currentPage = 1;
+
+            try {
+                const response = await fetch('/api/v1/audit/events/list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        startTime: currentStartTime,
+                        endTime: currentEndTime,
+                        page: currentPage,
+                        size: pageSize
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch recent events');
+                }
+
+                const data = await response.json();
+                displayEventList(data);
+            } catch (error) {
+                console.error('Error loading recent events:', error);
+                displayEmptyState();
+            }
+        }
+
+        // Load recent events when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadRecentEvents);
+    </script>
+</body>
+</html>

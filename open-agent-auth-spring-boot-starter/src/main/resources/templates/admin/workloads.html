@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workload Identity Management</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --bg-primary: #FAFAF8;
+            --bg-surface: #FFFFFF;
+            --text-primary: #1A1A1A;
+            --text-secondary: #4A4A4A;
+            --text-tertiary: #8A8A8A;
+            --primary-color: #B8860B;
+            --border-color: #E8E4DF;
+            --success-bg: rgba(76, 175, 80, 0.1);
+            --success-text: #4CAF50;
+            --danger-bg: rgba(199, 80, 80, 0.08);
+            --danger-text: #C75050;
+            --expired-bg: rgba(158, 158, 158, 0.1);
+            --expired-text: #9E9E9E;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --radius-card: 16px;
+            --radius-button: 8px;
+            --radius-section: 12px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            background-image: radial-gradient(circle at 25% 25%, rgba(184, 134, 11, 0.03) 0%, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .header {
+            animation: fadeInUp 0.6s ease-out;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+        
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.6s ease-out 0.1s backwards;
+        }
+        
+        .btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-button);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--text-primary);
+            color: var(--bg-surface);
+        }
+        
+        .btn-primary:hover {
+            background: #333333;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-primary);
+        }
+        
+        .btn-danger {
+            background: var(--danger-bg);
+            color: var(--danger-text);
+        }
+        
+        .btn-danger:hover {
+            background: rgba(199, 80, 80, 0.12);
+        }
+        
+        .search-section {
+            background: var(--bg-surface);
+            padding: 24px;
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            animation: fadeInUp 0.6s ease-out 0.2s backwards;
+        }
+        
+        .search-input {
+            flex: 1;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-button);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+        
+        .search-input:focus {
+            border-color: var(--primary-color);
+        }
+        
+        .search-input::placeholder {
+            color: var(--text-tertiary);
+        }
+        
+        .result-card {
+            background: var(--bg-surface);
+            padding: 32px;
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.6s ease-out 0.3s backwards;
+            display: none;
+        }
+        
+        .result-card.active {
+            display: block;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .result-title {
+            font-size: 14px;
+            color: var(--text-tertiary);
+            margin-bottom: 8px;
+        }
+        
+        .result-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .result-value.mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: var(--radius-button);
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-active {
+            background: var(--success-bg);
+            color: var(--success-text);
+        }
+        
+        .badge-revoked {
+            background: var(--danger-bg);
+            color: var(--danger-text);
+        }
+        
+        .badge-expired {
+            background: var(--expired-bg);
+            color: var(--expired-text);
+        }
+        
+        .result-section {
+            margin-bottom: 20px;
+        }
+        
+        .result-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .result-section-label {
+            font-size: 14px;
+            color: var(--text-tertiary);
+            margin-bottom: 8px;
+        }
+        
+        .public-key-container {
+            position: relative;
+        }
+        
+        .public-key {
+            background: var(--bg-primary);
+            padding: 16px;
+            border-radius: var(--radius-section);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+        
+        .public-key.collapsed {
+            max-height: 80px;
+            overflow: hidden;
+        }
+        
+        .toggle-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: var(--radius-button);
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+        
+        .toggle-btn:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .timestamp-row {
+            display: flex;
+            gap: 40px;
+        }
+        
+        .timestamp-item {
+            flex: 1;
+        }
+        
+        .timestamp-value {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: var(--bg-surface);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow);
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        .modal-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .modal-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+        
+        .modal-body {
+            padding: 32px;
+        }
+        
+        .modal-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .modal-textarea {
+            width: 100%;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-section);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            resize: vertical;
+            min-height: 250px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+        
+        .modal-textarea:focus {
+            border-color: var(--primary-color);
+        }
+        
+        .response-area {
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--bg-primary);
+            border-radius: var(--radius-section);
+            border: 1px solid var(--border-color);
+            display: none;
+        }
+        
+        .response-area.active {
+            display: block;
+        }
+        
+        .response-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .response-content {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            word-break: break-all;
+            background: var(--bg-surface);
+            padding: 12px;
+            border-radius: var(--radius-button);
+            border: 1px solid var(--border-color);
+        }
+        
+        .copy-btn {
+            font-size: 12px;
+            padding: 6px 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-button);
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+        
+        .copy-btn:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .modal-footer {
+            padding: 24px 32px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 24px;
+            right: 32px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: var(--radius-button);
+            background: var(--bg-surface);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1001;
+            animation: fadeInUp 0.3s ease-out;
+            max-width: 400px;
+        }
+        
+        .toast.success {
+            border-left: 4px solid var(--success-text);
+        }
+        
+        .toast.error {
+            border-left: 4px solid var(--danger-text);
+        }
+        
+        .toast-icon {
+            font-size: 20px;
+        }
+        
+        .toast.success .toast-icon {
+            color: var(--success-text);
+        }
+        
+        .toast.error .toast-icon {
+            color: var(--danger-text);
+        }
+        
+        .toast-message {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--text-tertiary);
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .empty-state p {
+            font-size: 16px;
+        }
+
+        .workload-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .workload-list-header {
+            font-size: 14px;
+            color: var(--text-tertiary);
+            margin-bottom: 8px;
+        }
+
+        .workload-list-item {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-card);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .workload-list-item:hover {
+            box-shadow: var(--shadow);
+        }
+
+        .workload-list-item-header {
+            display: flex;
+            align-items: center;
+            padding: 20px 24px;
+            cursor: pointer;
+            gap: 16px;
+        }
+
+        .workload-list-item-header:hover {
+            background: var(--bg-primary);
+        }
+
+        .workload-expand-icon {
+            color: var(--text-tertiary);
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .workload-list-item.expanded .workload-expand-icon {
+            transform: rotate(90deg);
+        }
+
+        .workload-list-item-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .workload-list-item-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--text-primary);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .workload-list-item-user {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .workload-list-item-time {
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+
+        .workload-list-item-detail {
+            display: none;
+            padding: 24px;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .workload-list-item.expanded .workload-list-item-detail {
+            display: block;
+        }
+
+        .workload-detail-row {
+            margin-bottom: 20px;
+        }
+
+        .workload-detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .workload-detail-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .workload-detail-value {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .workload-detail-value.mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
+        .workload-detail-actions {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 24px;
+            padding: 16px 0;
+        }
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Workload Identity</h1>
+            <p>Manage workload identities and issue WIT tokens</p>
+        </div>
+        
+        <div class="action-bar">
+            <button class="btn btn-secondary" onclick="loadWorkloadList()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Refresh
+            </button>
+            <button class="btn btn-primary" onclick="openIssueModal()">
+                <i class="bi bi-plus-circle"></i>
+                Issue WIT
+            </button>
+        </div>
+        
+        <div class="search-section">
+            <input type="text" class="search-input" id="workloadIdInput" placeholder="Enter Workload ID...">
+            <button class="btn btn-primary" onclick="searchWorkload()">
+                <i class="bi bi-search"></i>
+                Search
+            </button>
+        </div>
+        
+        <div id="resultCard" class="result-card">
+            <div class="result-header">
+                <div>
+                    <div class="result-title">Workload ID</div>
+                    <div class="result-value mono" id="workloadId"></div>
+                </div>
+                <div id="statusBadge"></div>
+            </div>
+            
+            <div class="result-section">
+                <div class="result-section-label">User ID</div>
+                <div class="result-value mono" id="userId"></div>
+            </div>
+            
+            <div class="result-section">
+                <div class="result-section-label">Public Key</div>
+                <div class="public-key-container">
+                    <div class="public-key" id="publicKey"></div>
+                    <button class="toggle-btn" onclick="togglePublicKey()" id="toggleBtn">Show more</button>
+                </div>
+            </div>
+            
+            <div class="result-section">
+                <div class="timestamp-row">
+                    <div class="timestamp-item">
+                        <div class="result-section-label">Created At</div>
+                        <div class="timestamp-value" id="createdAt"></div>
+                    </div>
+                    <div class="timestamp-item">
+                        <div class="result-section-label">Expires At</div>
+                        <div class="timestamp-value" id="expiresAt"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="result-section" id="revokeSection">
+                <button class="btn btn-danger" onclick="revokeWorkload()">
+                    <i class="bi bi-x-circle"></i>
+                    Revoke Workload
+                </button>
+            </div>
+        </div>
+        
+        <div id="workloadListContainer" class="workload-list">
+            <div class="workload-list-header">Workload List</div>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+            <i class="bi bi-search"></i>
+            <p>Search for a workload to view its details</p>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="issueModal">
+        <div class="modal">
+            <button class="close-btn" onclick="closeIssueModal()">&times;</button>
+            <div class="modal-header">
+                <div class="modal-title">Issue Workload Identity Token</div>
+                <div class="modal-description">Issue a Workload Identity Token (WIT) with automatic workload lifecycle management</div>
+            </div>
+            <div class="modal-body">
+                <label class="modal-label">Request Body (JSON)</label>
+                <textarea class="modal-textarea" id="requestBody" spellcheck="false">{
+  "context": {},
+  "proposal": {},
+  "publicKey": ""
+}</textarea>
+                
+                <div class="response-area" id="responseArea">
+                    <div class="response-label">
+                        <span>WIT Token</span>
+                        <button class="copy-btn" onclick="copyToken()">
+                            <i class="bi bi-copy"></i> Copy
+                        </button>
+                    </div>
+                    <div class="response-content" id="tokenContent"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeIssueModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitIssueWIT()">
+                    <i class="bi bi-check-circle"></i>
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Pagination state
+        let currentPage = 1;
+        const pageSize = 20;
+
+        (function() {
+            if (window.location.search.indexOf('embedded=true') !== -1) {
+                document.body.style.padding = '0';
+                document.body.style.background = 'var(--bg-primary)';
+                document.body.style.backgroundImage = 'none';
+                document.body.style.minHeight = 'auto';
+                var container = document.querySelector('.container');
+                if (container) {
+                    container.style.padding = '20px 24px';
+                }
+            }
+        })();
+
+        let currentWorkloadId = null;
+        let isPublicKeyCollapsed = true;
+        
+        function searchWorkload() {
+            const workloadId = document.getElementById('workloadIdInput').value.trim();
+            if (!workloadId) {
+                showToast('Please enter a Workload ID', 'error');
+                return;
+            }
+            
+            fetch('/api/v1/workloads/get', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ workloadId: workloadId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.workloadId) {
+                    currentWorkloadId = data.workloadId;
+                    displayWorkload(data);
+                    showToast('Workload found successfully', 'success');
+                } else {
+                    showToast('Workload not found', 'error');
+                    hideResult();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to search workload', 'error');
+                hideResult();
+            });
+        }
+        
+        function displayWorkload(data) {
+            document.getElementById('workloadId').textContent = data.workloadId;
+            document.getElementById('userId').textContent = data.userId || 'N/A';
+            document.getElementById('publicKey').textContent = data.publicKey || 'N/A';
+            document.getElementById('createdAt').textContent = formatDate(data.createdAt);
+            document.getElementById('expiresAt').textContent = formatDate(data.expiresAt);
+            
+            const statusBadge = document.getElementById('statusBadge');
+            const revokeSection = document.getElementById('revokeSection');
+            
+            if (data.status === 'ACTIVE') {
+                statusBadge.innerHTML = '<span class="badge badge-active"><i class="bi bi-check-circle"></i> ACTIVE</span>';
+                revokeSection.style.display = 'block';
+            } else if (data.status === 'REVOKED') {
+                statusBadge.innerHTML = '<span class="badge badge-revoked"><i class="bi bi-x-circle"></i> REVOKED</span>';
+                revokeSection.style.display = 'none';
+            } else {
+                statusBadge.innerHTML = '<span class="badge badge-expired"><i class="bi bi-clock"></i> EXPIRED</span>';
+                revokeSection.style.display = 'none';
+            }
+            
+            document.getElementById('resultCard').classList.add('active');
+            document.getElementById('emptyState').style.display = 'none';
+            
+            isPublicKeyCollapsed = true;
+            document.getElementById('publicKey').classList.add('collapsed');
+            document.getElementById('toggleBtn').textContent = 'Show more';
+        }
+        
+        function hideResult() {
+            document.getElementById('resultCard').classList.remove('active');
+            document.getElementById('emptyState').style.display = 'block';
+            currentWorkloadId = null;
+        }
+        
+        function togglePublicKey() {
+            const publicKey = document.getElementById('publicKey');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            isPublicKeyCollapsed = !isPublicKeyCollapsed;
+            
+            if (isPublicKeyCollapsed) {
+                publicKey.classList.add('collapsed');
+                toggleBtn.textContent = 'Show more';
+            } else {
+                publicKey.classList.remove('collapsed');
+                toggleBtn.textContent = 'Show less';
+            }
+        }
+        
+        function revokeWorkload() {
+            if (!currentWorkloadId) {
+                showToast('No workload selected', 'error');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to revoke this workload?')) {
+                return;
+            }
+            
+            fetch('/api/v1/workloads/revoke', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ workloadId: currentWorkloadId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showToast('Workload revoked successfully', 'success');
+                searchWorkload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to revoke workload', 'error');
+            });
+        }
+        
+        function openIssueModal() {
+            document.getElementById('issueModal').classList.add('active');
+            document.getElementById('responseArea').classList.remove('active');
+        }
+        
+        function closeIssueModal() {
+            document.getElementById('issueModal').classList.remove('active');
+        }
+        
+        function submitIssueWIT() {
+            const requestBody = document.getElementById('requestBody').value.trim();
+            
+            try {
+                JSON.parse(requestBody);
+            } catch (e) {
+                showToast('Invalid JSON format', 'error');
+                return;
+            }
+            
+            fetch('/api/v1/workloads/token/issue', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: requestBody
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.token) {
+                    document.getElementById('tokenContent').textContent = data.token;
+                    document.getElementById('responseArea').classList.add('active');
+                    showToast('WIT issued successfully', 'success');
+                } else {
+                    showToast('Failed to issue WIT', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to issue WIT', 'error');
+            });
+        }
+        
+        function copyToken() {
+            const token = document.getElementById('tokenContent').textContent;
+            navigator.clipboard.writeText(token).then(() => {
+                showToast('Token copied to clipboard', 'success');
+            }).catch(err => {
+                showToast('Failed to copy token', 'error');
+            });
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            });
+        }
+        
+        function showToast(message, type) {
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'} toast-icon"></i>
+                <span class="toast-message">${message}</span>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        document.getElementById('workloadIdInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchWorkload();
+            }
+        });
+
+        // Load workload list on page load
+        async function loadWorkloadList() {
+            try {
+                const response = await fetch('/api/v1/workloads/list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ page: currentPage, size: pageSize })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch workload list');
+                }
+
+                const data = await response.json();
+                const workloads = data.items || [];
+                const page = data.page || currentPage;
+                const totalPages = data.totalPages || 1;
+                const totalItems = data.totalItems || 0;
+
+                displayWorkloadList(workloads, page, totalPages, totalItems);
+            } catch (error) {
+                console.error('Error loading workload list:', error);
+                displayEmptyWorkloadList();
+            }
+        }
+
+        // Display workload list
+        function displayWorkloadList(workloads, page, totalPages, totalItems) {
+            const listContainer = document.getElementById('workloadListContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!workloads || workloads.length === 0) {
+                displayEmptyWorkloadList();
+                return;
+            }
+
+            let listHTML = `
+                <div class="workload-list-header">Showing <strong>${workloads.length}</strong> of <strong>${totalItems}</strong> workloads (Page <strong>${page}</strong>/<strong>${totalPages}</strong>)</div>
+            `;
+
+            workloads.forEach((workload, index) => {
+                const statusBadge = getWorkloadStatusBadge(workload.status);
+                const createdAt = formatDate(workload.createdAt);
+
+                listHTML += `
+                    <div class="workload-list-item" id="workload-item-${index}">
+                        <div class="workload-list-item-header" onclick="toggleWorkloadDetail(${index})">
+                            <i class="bi bi-chevron-right workload-expand-icon"></i>
+                            <div class="workload-list-item-info">
+                                <span class="workload-list-item-id" title="${workload.workloadId}">${workload.workloadId}</span>
+                                <span class="workload-list-item-user">${workload.userId || 'N/A'}</span>
+                                ${statusBadge}
+                                <span class="workload-list-item-time">${createdAt}</span>
+                            </div>
+                        </div>
+                        <div class="workload-list-item-detail">
+                            <div class="workload-detail-row">
+                                <div class="workload-detail-label">Workload ID</div>
+                                <div class="workload-detail-value mono">${workload.workloadId}</div>
+                            </div>
+                            <div class="workload-detail-row">
+                                <div class="workload-detail-label">User ID</div>
+                                <div class="workload-detail-value mono">${workload.userId || 'N/A'}</div>
+                            </div>
+                            <div class="workload-detail-row">
+                                <div class="workload-detail-label">Public Key</div>
+                                <div class="public-key-container">
+                                    <div class="public-key collapsed" id="public-key-list-${index}">${workload.publicKey || 'N/A'}</div>
+                                    <button class="toggle-btn" onclick="togglePublicKeyList(${index})" id="toggle-btn-list-${index}">Show more</button>
+                                </div>
+                            </div>
+                            <div class="workload-detail-row">
+                                <div class="workload-detail-label">Created At</div>
+                                <div class="workload-detail-value">${formatDate(workload.createdAt)}</div>
+                            </div>
+                            <div class="workload-detail-row">
+                                <div class="workload-detail-label">Expires At</div>
+                                <div class="workload-detail-value">${formatDate(workload.expiresAt)}</div>
+                            </div>
+                            <div class="workload-detail-row">
+                                <div class="workload-detail-label">Status</div>
+                                ${statusBadge}
+                            </div>
+                            ${workload.status === 'ACTIVE' ? `
+                                <div class="workload-detail-actions">
+                                    <button class="btn btn-danger" onclick="revokeWorkloadById('${workload.workloadId}')">
+                                        <i class="bi bi-x-circle"></i>
+                                        Revoke Workload
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            const paginationHtml = `
+                <div class="pagination-controls">
+                    <button class="btn btn-secondary" onclick="goToPage(currentPage - 1)" id="prevPageBtn" ${page <= 1 ? 'disabled' : ''}>
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </button>
+                    <span class="pagination-info">Page <strong>${page}</strong> of <strong>${totalPages}</strong></span>
+                    <button class="btn btn-secondary" onclick="goToPage(currentPage + 1)" id="nextPageBtn" ${page >= totalPages ? 'disabled' : ''}>
+                        Next <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            `;
+
+            listContainer.innerHTML = listHTML + paginationHtml;
+            emptyState.style.display = 'none';
+        }
+
+        // Display empty workload list
+        function displayEmptyWorkloadList() {
+            const listContainer = document.getElementById('workloadListContainer');
+            listContainer.innerHTML = `
+                <div class="workload-list-header">Workload List</div>
+                <div class="empty-state" style="padding: 40px 24px;">
+                    <i class="bi bi-inbox"></i>
+                    <p>No workloads found</p>
+                </div>
+            `;
+        }
+
+        // Go to specific page
+        function goToPage(pageNum) {
+            if (pageNum < 1) return;
+            currentPage = pageNum;
+            loadWorkloadList();
+        }
+
+        // Toggle workload detail
+        function toggleWorkloadDetail(index) {
+            const item = document.getElementById(`workload-item-${index}`);
+            item.classList.toggle('expanded');
+        }
+
+        // Toggle public key in list
+        function togglePublicKeyList(index) {
+            const publicKey = document.getElementById(`public-key-list-${index}`);
+            const toggleBtn = document.getElementById(`toggle-btn-list-${index}`);
+
+            if (publicKey.classList.contains('collapsed')) {
+                publicKey.classList.remove('collapsed');
+                toggleBtn.textContent = 'Show less';
+            } else {
+                publicKey.classList.add('collapsed');
+                toggleBtn.textContent = 'Show more';
+            }
+        }
+
+        // Get workload status badge
+        function getWorkloadStatusBadge(status) {
+            switch(status) {
+                case 'ACTIVE':
+                    return '<span class="badge badge-active"><i class="bi bi-check-circle"></i> ACTIVE</span>';
+                case 'REVOKED':
+                    return '<span class="badge badge-revoked"><i class="bi bi-x-circle"></i> REVOKED</span>';
+                default:
+                    return '<span class="badge badge-expired"><i class="bi bi-clock"></i> EXPIRED</span>';
+            }
+        }
+
+        // Revoke workload by ID
+        function revokeWorkloadById(workloadId) {
+            if (!confirm('Are you sure you want to revoke this workload?')) {
+                return;
+            }
+
+            fetch('/api/v1/workloads/revoke', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ workloadId: workloadId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showToast('Workload revoked successfully', 'success');
+                loadWorkloadList();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to revoke workload', 'error');
+            });
+        }
+
+        // Load workload list when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadWorkloadList);
+    </script>
+</body>
+</html>

@@ -121,4 +121,15 @@ public interface BindingInstanceStore {
      */
     int deleteExpired();
 
+    /**
+     * Lists all binding instances.
+     * <p>
+     * This method returns all binding instances currently stored,
+     * including expired ones. Callers should check validity if needed.
+     * </p>
+     *
+     * @return a list of all binding instances
+     */
+    java.util.List<BindingInstance> listAll();
+
 }

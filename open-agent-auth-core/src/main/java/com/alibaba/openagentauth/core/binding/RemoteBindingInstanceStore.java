@@ -212,6 +212,12 @@ public class RemoteBindingInstanceStore implements BindingInstanceStore {
         return 0;
     }
 
+    @Override
+    public java.util.List<BindingInstance> listAll() {
+        logger.warn("Remote binding instance listing is not supported.");
+        return java.util.List.of();
+    }
+
     /**
      * Parses the BindingInstance response from the Authorization Server.
      *

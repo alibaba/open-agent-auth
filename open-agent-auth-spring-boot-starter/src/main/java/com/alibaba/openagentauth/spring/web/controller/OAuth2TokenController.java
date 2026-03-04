@@ -126,7 +126,7 @@ public class OAuth2TokenController {
 
             logger.info("Token issued successfully for grant_type: {}", request.getGrantType());
 
-            // Step 4: Build response body dynamically
+            // Step 4: Build response body per RFC 6749 Section 5.1 and OIDC Core 1.0 Section 3.1.3.3
             Map<String, Object> responseBody = new java.util.HashMap<>();
             responseBody.put("access_token", response.getAccessToken());
             responseBody.put("token_type", response.getTokenType());
@@ -135,6 +135,11 @@ public class OAuth2TokenController {
             // Add scope if present
             if (response.getScope() != null) {
                 responseBody.put("scope", response.getScope());
+            }
+
+            // Add id_token if present (OIDC Core 1.0 Section 3.1.3.3)
+            if (response.getIdToken() != null) {
+                responseBody.put("id_token", response.getIdToken());
             }
             
             return ResponseEntity.ok(responseBody);

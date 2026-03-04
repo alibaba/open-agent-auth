@@ -36,7 +36,7 @@ import java.util.Map;
  * // Returns: http://localhost:8082/api/v1/workloads/token/issue
  * 
  * // Resolve with path variables
- * Map&lt;String, String&gt; pathVars = Map.of("policyId", "123");
+ * Map<String, String> pathVars = Map.of("policyId", "123");
  * String url = endpointResolver.resolveConsumer("authorization-server", "policy.registry", pathVars);
  * // Returns: http://localhost:8085/api/v1/policies/123
  * </pre>

@@ -137,6 +137,61 @@ class OAuth2TokenControllerTest {
         }
 
         @Test
+        @DisplayName("Should include id_token in response when present")
+        void shouldIncludeIdTokenInResponseWhenPresent() {
+            // Given
+            String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            String idToken = "eyJhbGciOiJSUzI1NiJ9.id-token-value";
+            
+            TokenResponse tokenResponse = TokenResponse.builder()
+                    .accessToken(ACCESS_TOKEN)
+                    .tokenType(TOKEN_TYPE)
+                    .expiresIn((long) EXPIRES_IN)
+                    .scope(SCOPE)
+                    .idToken(idToken)
+                    .build();
+            when(tokenServer.issueToken(any(TokenRequest.class), eq(CLIENT_ID)))
+                    .thenReturn(tokenResponse);
+
+            // When
+            ResponseEntity<Map<String, Object>> response = controller.token(
+                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
+            );
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().get("id_token")).isEqualTo(idToken);
+            assertThat(response.getBody().get("access_token")).isEqualTo(ACCESS_TOKEN);
+        }
+
+        @Test
+        @DisplayName("Should not include id_token in response when not present")
+        void shouldNotIncludeIdTokenInResponseWhenNotPresent() {
+            // Given
+            String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            
+            TokenResponse tokenResponse = TokenResponse.builder()
+                    .accessToken(ACCESS_TOKEN)
+                    .tokenType(TOKEN_TYPE)
+                    .expiresIn((long) EXPIRES_IN)
+                    .scope(SCOPE)
+                    .build();
+            when(tokenServer.issueToken(any(TokenRequest.class), eq(CLIENT_ID)))
+                    .thenReturn(tokenResponse);
+
+            // When
+            ResponseEntity<Map<String, Object>> response = controller.token(
+                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
+            );
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).doesNotContainKey("id_token");
+        }
+
+        @Test
         @DisplayName("Should issue token with null scope when scope is not provided")
         void shouldIssueTokenWithNullScopeWhenScopeIsNotProvided() {
             // Given
