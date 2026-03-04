@@ -241,13 +241,17 @@ sequenceDiagram
     participant User
     participant Agent
     participant AgentIDP
+    participant AgentUserIDP
     participant AuthServer
     participant ResourceServer
 
     User->>Agent: Natural Language Request
+    Agent->>User: Should Execute User Login
+    User->>AgentUserIDP: User Login
+    AgentUserIDP-->>Agent: ID Token (After Login)
     Agent->>AgentIDP: Create Virtual Workload
     AgentIDP-->>Agent: WIT (Workload Identity Token)
-    Agent->>AuthServer: PAR Request (with Operation Proposal JWT)
+    Agent->>AuthServer: PAR Request (with Operation Proposal JWT, contains ID Token and WIT)
     AuthServer-->>Agent: request_uri
     Agent->>User: Redirect to /authorize?request_uri=...
     User->>AuthServer: Approve Authorization

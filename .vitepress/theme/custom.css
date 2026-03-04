@@ -1,0 +1,221 @@
+/**
+ * Open Agent Auth — Custom VitePress Theme
+ *
+ * Aesthetic: Clean, professional documentation with emerald green
+ * brand colors derived from the OAA logo gradient.
+ * Typography: DM Sans (body) + JetBrains Mono (code).
+ */
+
+/* ─── Color Palette ─── */
+:root {
+  /* Brand — Emerald green, aligned with logo gradient */
+  --vp-c-brand-1: #059669;
+  --vp-c-brand-2: #10b981;
+  --vp-c-brand-3: #34d399;
+  --vp-c-brand-soft: rgba(16, 185, 129, 0.14);
+
+  /* Backgrounds */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-soft: #f8faf9;
+  --vp-c-bg-mute: #f1f5f3;
+
+  /* Typography */
+  --vp-font-family-base: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* Home hero gradient — matches logo colors */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #34d399 0%, #10b981 40%, #059669 100%);
+  --vp-home-hero-image-background-image: radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+  --vp-home-hero-image-filter: blur(56px);
+
+  /* Button */
+  --vp-button-brand-bg: #059669;
+  --vp-button-brand-hover-bg: #047857;
+  --vp-button-brand-active-bg: #065f46;
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #ffffff;
+}
+
+/* ─── Dark Mode ─── */
+.dark {
+  --vp-c-brand-1: #34d399;
+  --vp-c-brand-2: #10b981;
+  --vp-c-brand-3: #059669;
+  --vp-c-brand-soft: rgba(52, 211, 153, 0.12);
+
+  --vp-c-bg: #0a0f0d;
+  --vp-c-bg-soft: #111a16;
+  --vp-c-bg-mute: #162019;
+
+  --vp-home-hero-name-background: linear-gradient(135deg, #86efac 0%, #34d399 40%, #10b981 100%);
+  --vp-home-hero-image-background-image: radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+
+  --vp-button-brand-bg: #10b981;
+  --vp-button-brand-hover-bg: #34d399;
+  --vp-button-brand-active-bg: #059669;
+}
+
+/* ─── Typography ─── */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.vp-doc h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  border-bottom: 2px solid var(--vp-c-brand-soft);
+  padding-bottom: 0.6em;
+}
+
+/* ─── Code Blocks ─── */
+.vp-doc div[class*='language-'] {
+  border-radius: 10px;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.dark .vp-doc div[class*='language-'] {
+  background: #0d1510;
+  border-color: rgba(52, 211, 153, 0.08);
+}
+
+.vp-doc div[class*='language-'] code {
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+/* ─── Sidebar ─── */
+.VPSidebar {
+  border-right: 1px solid var(--vp-c-divider);
+}
+
+.dark .VPSidebar {
+  background: #080d0b;
+}
+
+.VPSidebarItem .indicator {
+  background: var(--vp-c-brand-1) !important;
+}
+
+/* ─── Nav ─── */
+.VPNav {
+  backdrop-filter: blur(12px) saturate(150%);
+}
+
+.dark .VPNav {
+  background: rgba(10, 15, 13, 0.85) !important;
+}
+
+/* ─── Home Page ─── */
+.VPHero .name {
+  font-size: 3rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em;
+}
+
+@media (min-width: 640px) {
+  .VPHero .name {
+    font-size: 4rem !important;
+  }
+}
+
+@media (min-width: 960px) {
+  .VPHero .name {
+    font-size: 4.5rem !important;
+  }
+}
+
+.VPHero .tagline {
+  font-size: 1.25rem !important;
+  color: var(--vp-c-text-2);
+  max-width: 560px;
+}
+
+/* Feature cards */
+.VPFeature {
+  border-radius: 12px !important;
+  border: 1px solid var(--vp-c-divider) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.VPFeature:hover {
+  border-color: var(--vp-c-brand-1) !important;
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.08);
+  transform: translateY(-2px);
+}
+
+.dark .VPFeature:hover {
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.12);
+}
+
+.VPFeature .title {
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+}
+
+/* ─── Tables ─── */
+.vp-doc table {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc th {
+  background: var(--vp-c-bg-soft);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.dark .vp-doc th {
+  background: #111a16;
+}
+
+/* ─── Custom Badge ─── */
+.VPBadge.tip {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+}
+
+/* ─── Footer ─── */
+.VPFooter {
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.dark .VPFooter {
+  background: #060a08;
+}
+
+/* ─── Scrollbar (Webkit) ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vp-c-divider);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vp-c-brand-1);
+}
+
+/* ─── Targeted transitions (no global * override) ─── */
+a,
+button,
+.VPButton,
+.VPNavBarMenuLink,
+.VPSidebarItem .link,
+.VPBadge,
+::-webkit-scrollbar-thumb {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}

@@ -185,13 +185,17 @@ sequenceDiagram
     participant User
     participant Agent
     participant AgentIDP
+    participant AgentUserIDP
     participant AuthServer
     participant ResourceServer
 
     User->>Agent: 自然语言请求
+    Agent->>User: 需要执行用户登录
+    User->>AgentUserIDP: 用户登录
+    AgentUserIDP-->>Agent: ID Token (登录后颁发)
     Agent->>AgentIDP: 创建虚拟工作负载
     AgentIDP-->>Agent: WIT (工作负载身份令牌)
-    Agent->>AuthServer: PAR 请求（带操作提案 JWT）
+    Agent->>AuthServer: PAR 请求（带操作提案 JWT，包括 ID Token 和 WIT）
     AuthServer-->>Agent: request_uri
     Agent->>User: 重定向到 /authorize?request_uri=...
     User->>AuthServer: 批准授权

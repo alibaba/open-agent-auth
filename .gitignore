@@ -95,6 +95,11 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
+### Node.js / VitePress ###
+node_modules/
+.vitepress/dist/
+.vitepress/cache/
+
 ### Aone Copilot ###
 .aone_copilot
 
