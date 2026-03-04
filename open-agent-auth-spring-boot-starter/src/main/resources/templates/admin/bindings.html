@@ -507,7 +507,7 @@
             overflow: hidden;
             transition: max-height 0.3s ease, opacity 0.3s ease;
             opacity: 0;
-            background-color: #F5F5F3;
+            background: var(--color-bg);
         }
 
         .binding-list-item.expanded .binding-list-detail {
@@ -917,7 +917,7 @@
                                 <div class="binding-detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">Binding Instance ID</span>
-                                        <span class="detail-value mono">${escapeHtml(binding.bindingInstanceId || 'N/A')}</span>
+                                        <span class="detail-value">${escapeHtml(binding.bindingInstanceId || 'N/A')}</span>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label">User Identity</span>
