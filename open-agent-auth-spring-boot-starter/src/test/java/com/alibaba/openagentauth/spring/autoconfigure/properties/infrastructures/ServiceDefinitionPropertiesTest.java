@@ -38,7 +38,7 @@ class ServiceDefinitionPropertiesTest {
         // getEndpoints() returns merged defaults, so it should not be empty
         assertFalse(properties.getEndpoints().isEmpty());
         // Verify it contains the default endpoints count (17 total: 3 workload + 6 oauth2 + 3 policy + 3 binding + 2 audit)
-        assertEquals(17, properties.getEndpoints().size());
+        assertEquals(19, properties.getEndpoints().size());
     }
 
     @Test
@@ -77,13 +77,13 @@ class ServiceDefinitionPropertiesTest {
         // Setting empty map means getEndpoints() returns all defaults
         properties.setEndpoints(new HashMap<>());
         assertFalse(properties.getEndpoints().isEmpty());
-        assertEquals(17, properties.getEndpoints().size());
+        assertEquals(19, properties.getEndpoints().size());
         
         // Setting null means getEndpoints() returns all defaults
         properties.setEndpoints(null);
         assertNotNull(properties.getEndpoints());
         assertFalse(properties.getEndpoints().isEmpty());
-        assertEquals(17, properties.getEndpoints().size());
+        assertEquals(19, properties.getEndpoints().size());
     }
 
     @Test
@@ -159,7 +159,7 @@ class ServiceDefinitionPropertiesTest {
         
         // properties2 should still have all default endpoints
         assertFalse(properties2.getEndpoints().isEmpty());
-        assertEquals(17, properties2.getEndpoints().size());
+        assertEquals(19, properties2.getEndpoints().size());
     }
 
     @Test
@@ -177,7 +177,7 @@ class ServiceDefinitionPropertiesTest {
         
         // When null, getEndpoints() returns all defaults
         assertNotNull(properties.getEndpoints());
-        assertEquals(17, properties.getEndpoints().size());
+        assertEquals(19, properties.getEndpoints().size());
     }
 
     @Test

@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.List;
 
@@ -120,7 +121,7 @@ public class AgentController {
     public String deleteSession(@PathVariable String id) {
         log.info("Deleting session via API: {}", id);
         enhancedAgentService.deleteSession(id);
-        return "Session deleted: " + id;
+        return "Session deleted: " + HtmlUtils.htmlEscape(id);
     }
     
     /**
@@ -131,7 +132,7 @@ public class AgentController {
     public String selectSession(@RequestBody SessionSelectRequest request) {
         log.info("Selecting session via API: {}", request.getSessionId());
         enhancedAgentService.selectSession(request.getSessionId());
-        return "Session selected: " + request.getSessionId();
+        return "Session selected: " + HtmlUtils.htmlEscape(request.getSessionId());
     }
     
     /**

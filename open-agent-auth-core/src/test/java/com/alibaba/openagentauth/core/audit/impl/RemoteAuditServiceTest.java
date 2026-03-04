@@ -484,8 +484,10 @@ class RemoteAuditServiceTest {
         @BeforeEach
         void setUp() {
             mockServiceEndpointResolver = mock(ServiceEndpointResolver.class);
+            // Use null endpoint to ensure deterministic AuditStorageException
+            // (avoids dependency on network availability at localhost)
             when(mockServiceEndpointResolver.resolveConsumer(anyString(), anyString()))
-                    .thenReturn(BASE_URL + "/api/v1/audit/events/retrieve");
+                    .thenReturn(null);
             auditService = new RemoteAuditService(mockServiceEndpointResolver);
         }
 
@@ -497,7 +499,8 @@ class RemoteAuditServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> auditService.getEvent(longEventId))
-                    .isInstanceOf(AuditStorageException.class);
+                    .isInstanceOf(AuditStorageException.class)
+                    .hasMessageContaining("Failed to resolve endpoint");
         }
 
         @Test
@@ -508,7 +511,8 @@ class RemoteAuditServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> auditService.getEvent(specialEventId))
-                    .isInstanceOf(AuditStorageException.class);
+                    .isInstanceOf(AuditStorageException.class)
+                    .hasMessageContaining("Failed to resolve endpoint");
         }
 
         @Test
@@ -519,7 +523,8 @@ class RemoteAuditServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> auditService.getEventsByTimeRange(now, now))
-                    .isInstanceOf(AuditStorageException.class);
+                    .isInstanceOf(AuditStorageException.class)
+                    .hasMessageContaining("Failed to resolve endpoint");
         }
 
         @Test
@@ -531,7 +536,8 @@ class RemoteAuditServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> auditService.getEventsByTimeRange(startTime, endTime))
-                    .isInstanceOf(AuditStorageException.class);
+                    .isInstanceOf(AuditStorageException.class)
+                    .hasMessageContaining("Failed to resolve endpoint");
         }
     }
 
@@ -572,10 +578,10 @@ class RemoteAuditServiceTest {
         @Test
         @DisplayName("Should allow concurrent getEvent() calls")
         void shouldAllowConcurrentGetEventCalls() throws InterruptedException {
-            // Arrange
+            // Arrange - Use null endpoint to ensure deterministic AuditStorageException
             mockServiceEndpointResolver = mock(ServiceEndpointResolver.class);
             when(mockServiceEndpointResolver.resolveConsumer(anyString(), anyString()))
-                    .thenReturn(BASE_URL + "/api/v1/audit/events/retrieve");
+                    .thenReturn(null);
             auditService = new RemoteAuditService(mockServiceEndpointResolver);
             int threadCount = 10;
             Thread[] threads = new Thread[threadCount];
@@ -607,10 +613,10 @@ class RemoteAuditServiceTest {
         @Test
         @DisplayName("Should allow concurrent getEventsByTimeRange() calls")
         void shouldAllowConcurrentGetEventsByTimeRangeCalls() throws InterruptedException {
-            // Arrange
+            // Arrange - Use null endpoint to ensure deterministic AuditStorageException
             mockServiceEndpointResolver = mock(ServiceEndpointResolver.class);
             when(mockServiceEndpointResolver.resolveConsumer(anyString(), anyString()))
-                    .thenReturn(BASE_URL + "/api/v1/audit/events/list");
+                    .thenReturn(null);
             auditService = new RemoteAuditService(mockServiceEndpointResolver);
             int threadCount = 10;
             Thread[] threads = new Thread[threadCount];
