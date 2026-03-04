@@ -21,7 +21,7 @@ spring:
 
 open-agent-auth:
   enabled: true
-  
+
   # Infrastructure: only trust-domain is required; keys, JWKS consumers,
   # service-discovery entries are all inferred from roles + peers.
   infrastructures:

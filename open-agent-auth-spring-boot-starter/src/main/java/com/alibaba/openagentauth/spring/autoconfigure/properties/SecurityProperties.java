@@ -51,6 +51,11 @@ public class SecurityProperties {
     private CorsProperties cors = new CorsProperties();
 
     /**
+     * Session cookie configuration.
+     */
+    private SessionCookieProperties sessionCookie = new SessionCookieProperties();
+
+    /**
      * Gets the CSRF configuration.
      *
      * @return the CSRF properties
@@ -84,6 +89,24 @@ public class SecurityProperties {
      */
     public void setCors(CorsProperties cors) {
         this.cors = cors;
+    }
+
+    /**
+     * Gets the session cookie configuration.
+     *
+     * @return the session cookie properties
+     */
+    public SessionCookieProperties getSessionCookie() {
+        return sessionCookie;
+    }
+
+    /**
+     * Sets the session cookie configuration.
+     *
+     * @param sessionCookie the session cookie properties to set
+     */
+    public void setSessionCookie(SessionCookieProperties sessionCookie) {
+        this.sessionCookie = sessionCookie;
     }
 
     /**

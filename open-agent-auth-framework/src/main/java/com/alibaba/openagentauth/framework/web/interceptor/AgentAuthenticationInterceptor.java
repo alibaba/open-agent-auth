@@ -16,7 +16,6 @@
 package com.alibaba.openagentauth.framework.web.interceptor;
 
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -68,16 +67,13 @@ public class AgentAuthenticationInterceptor {
      * Constructs a new AgentAuthenticationInterceptor with external configuration.
      *
      * @param agentAapExecutor the Agent AAP executor
-     * @param sessionMappingBizService the session mapping business service
      * @param excludedPaths the list of paths to exclude from authentication
      */
     public AgentAuthenticationInterceptor(
             AgentAapExecutor agentAapExecutor,
-            SessionMappingBizService sessionMappingBizService,
             List<String> excludedPaths
     ) {
         this.delegate = new AgentUserIdpUserAuthInterceptor(
-                sessionMappingBizService,
                 excludedPaths,
                 agentAapExecutor);
         logger.info("AgentAuthenticationInterceptor initialized with excluded paths: {}", excludedPaths);

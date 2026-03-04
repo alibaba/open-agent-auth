@@ -17,7 +17,6 @@ package com.alibaba.openagentauth.spring.web.controller;
 
 import com.alibaba.openagentauth.core.protocol.oidc.registry.UserRegistry;
 import com.alibaba.openagentauth.framework.web.manager.SessionAttributes;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +34,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -61,18 +59,13 @@ class UserLoginControllerTest {
     private static final String NAME = "Test User";
     private static final String EMAIL = "test@example.com";
     private static final String REDIRECT_URI = "/oauth2/authorize?client_id=test";
+    private static final String CSRF_TOKEN = "test-csrf-token-abc123";
 
     @Mock
     private UserRegistry userRegistry;
 
     @Mock
-    private SessionMappingBizService sessionMappingBizService;
-
-    @Mock
     private HttpSession session;
-
-    @Mock
-    private HttpSession originalSession;
 
     @Mock
     private HttpServletRequest request;
@@ -91,6 +84,14 @@ class UserLoginControllerTest {
             // Return null by default for any session attribute
             return null;
         });
+    }
+
+    /**
+     * Helper method to set up CSRF token validation in session mock.
+     * The CSRF token is stored in session and consumed (removed) during validation.
+     */
+    private void setupCsrfToken() {
+        when(session.getAttribute(SessionAttributes.CSRF_TOKEN.getKey())).thenReturn(CSRF_TOKEN);
     }
 
     @Nested
@@ -138,10 +139,14 @@ class UserLoginControllerTest {
         }
 
         @Test
-        @DisplayName("Should handle null session gracefully")
-        void shouldHandleNullSessionGracefully() {
+        @DisplayName("Should display login page with redirect URI parameter when session has no stored URI")
+        void shouldDisplayLoginPageWithRedirectUriParameterWhenSessionHasNoStoredUri() {
+            // Arrange
+            HttpSession freshSession = mock(HttpSession.class);
+            when(freshSession.getAttribute(SessionAttributes.REDIRECT_URI.getKey())).thenReturn(null);
+
             // Act
-            String viewName = controller.loginPage(REDIRECT_URI, mock(org.springframework.ui.Model.class), null);
+            String viewName = controller.loginPage(REDIRECT_URI, mock(org.springframework.ui.Model.class), freshSession);
 
             // Assert
             assertThat(viewName).isEqualTo("login");
@@ -156,14 +161,14 @@ class UserLoginControllerTest {
         @DisplayName("Should login successfully and redirect to session redirect URI")
         void shouldLoginSuccessfullyAndRedirectToSessionRedirectUri() throws Exception {
             // Arrange
+            setupCsrfToken();
             when(userRegistry.authenticate(USERNAME, PASSWORD)).thenReturn(SUBJECT);
             when(userRegistry.getName(USERNAME)).thenReturn(NAME);
             when(userRegistry.getEmail(USERNAME)).thenReturn(EMAIL);
             when(session.getAttribute(SessionAttributes.REDIRECT_URI.getKey())).thenReturn(REDIRECT_URI);
-            when(sessionMappingBizService.restoreSession(anyString(), anyBoolean(), any(HttpServletRequest.class))).thenReturn(null);
 
             // Act
-            RedirectView redirectView = controller.login(USERNAME, PASSWORD, session, redirectAttributes, null, request);
+            RedirectView redirectView = controller.login(USERNAME, PASSWORD, CSRF_TOKEN, session, redirectAttributes, null, request);
 
             // Assert
             assertThat(redirectView.getUrl()).isEqualTo(REDIRECT_URI);
@@ -175,14 +180,14 @@ class UserLoginControllerTest {
         @DisplayName("Should login successfully and redirect to parameter redirect URI")
         void shouldLoginSuccessfullyAndRedirectToParameterRedirectUri() throws Exception {
             // Arrange
+            setupCsrfToken();
             when(userRegistry.authenticate(USERNAME, PASSWORD)).thenReturn(SUBJECT);
             when(userRegistry.getName(USERNAME)).thenReturn(NAME);
             when(userRegistry.getEmail(USERNAME)).thenReturn(EMAIL);
             when(session.getAttribute(SessionAttributes.REDIRECT_URI.getKey())).thenReturn(null);
-            when(sessionMappingBizService.restoreSession(anyString(), anyBoolean(), any(HttpServletRequest.class))).thenReturn(null);
 
             // Act
-            RedirectView redirectView = controller.login(USERNAME, PASSWORD, session, redirectAttributes, REDIRECT_URI, request);
+            RedirectView redirectView = controller.login(USERNAME, PASSWORD, CSRF_TOKEN, session, redirectAttributes, REDIRECT_URI, request);
 
             // Assert
             assertThat(redirectView.getUrl()).isEqualTo(REDIRECT_URI);
@@ -193,14 +198,14 @@ class UserLoginControllerTest {
         @DisplayName("Should login successfully and redirect to home page when no redirect URI")
         void shouldLoginSuccessfullyAndRedirectToHomePageWhenNoRedirectUri() throws Exception {
             // Arrange
+            setupCsrfToken();
             when(userRegistry.authenticate(USERNAME, PASSWORD)).thenReturn(SUBJECT);
             when(userRegistry.getName(USERNAME)).thenReturn(NAME);
             when(userRegistry.getEmail(USERNAME)).thenReturn(EMAIL);
             when(session.getAttribute(SessionAttributes.REDIRECT_URI.getKey())).thenReturn(null);
-            when(sessionMappingBizService.restoreSession(anyString(), anyBoolean(), any(HttpServletRequest.class))).thenReturn(null);
 
             // Act
-            RedirectView redirectView = controller.login(USERNAME, PASSWORD, session, redirectAttributes, null, request);
+            RedirectView redirectView = controller.login(USERNAME, PASSWORD, CSRF_TOKEN, session, redirectAttributes, null, request);
 
             // Assert
             assertThat(redirectView.getUrl()).isEqualTo("/");
@@ -208,53 +213,62 @@ class UserLoginControllerTest {
         }
 
         @Test
-        @DisplayName("Should restore original session and use its redirect URI")
-        void shouldRestoreOriginalSessionAndUseItsRedirectUri() throws Exception {
-            // Arrange
-            String originalRedirectUri = "/oauth2/authorize?client_id=original";
-            when(userRegistry.authenticate(USERNAME, PASSWORD)).thenReturn(SUBJECT);
-            when(userRegistry.getName(USERNAME)).thenReturn(NAME);
-            when(userRegistry.getEmail(USERNAME)).thenReturn(EMAIL);
-            when(sessionMappingBizService.restoreSession(anyString(), eq(false), any(HttpServletRequest.class))).thenReturn(originalSession);
-            when(originalSession.getAttribute(SessionAttributes.REDIRECT_URI.getKey())).thenReturn(originalRedirectUri);
-
-            // Act
-            RedirectView redirectView = controller.login(USERNAME, PASSWORD, session, redirectAttributes, null, request);
-
-            // Assert
-            assertThat(redirectView.getUrl()).isEqualTo(originalRedirectUri);
-            verify(originalSession).setAttribute(SessionAttributes.AUTHENTICATED_USER.getKey(), SUBJECT);
-            verify(originalSession).removeAttribute(SessionAttributes.REDIRECT_URI.getKey());
-            verify(sessionMappingBizService).removeSession(anyString());
-        }
-
-        @Test
         @DisplayName("Should fail login with invalid credentials")
         void shouldFailLoginWithInvalidCredentials() throws Exception {
             // Arrange
+            setupCsrfToken();
             when(userRegistry.authenticate(USERNAME, PASSWORD)).thenThrow(new RuntimeException("Invalid credentials"));
 
             // Act
-            RedirectView redirectView = controller.login(USERNAME, PASSWORD, session, redirectAttributes, null, request);
+            RedirectView redirectView = controller.login(USERNAME, PASSWORD, CSRF_TOKEN, session, redirectAttributes, null, request);
 
             // Assert
             assertThat(redirectView.getUrl()).isEqualTo("/login");
             verify(redirectAttributes).addFlashAttribute("error", "Invalid username or password");
-            verify(session, never()).setAttribute(anyString(), any());
         }
 
         @Test
         @DisplayName("Should handle authentication exception gracefully")
         void shouldHandleAuthenticationExceptionGracefully() throws Exception {
             // Arrange
+            setupCsrfToken();
             when(userRegistry.authenticate(USERNAME, PASSWORD)).thenThrow(new RuntimeException("Authentication failed"));
 
             // Act
-            RedirectView redirectView = controller.login(USERNAME, PASSWORD, session, redirectAttributes, null, request);
+            RedirectView redirectView = controller.login(USERNAME, PASSWORD, CSRF_TOKEN, session, redirectAttributes, null, request);
 
             // Assert
             assertThat(redirectView.getUrl()).isEqualTo("/login");
             verify(redirectAttributes).addFlashAttribute("error", "Invalid username or password");
+        }
+
+        @Test
+        @DisplayName("Should reject login with invalid CSRF token")
+        void shouldRejectLoginWithInvalidCsrfToken() throws Exception {
+            // Arrange
+            setupCsrfToken();
+
+            // Act
+            RedirectView redirectView = controller.login(USERNAME, PASSWORD, "wrong-csrf-token", session, redirectAttributes, null, request);
+
+            // Assert
+            assertThat(redirectView.getUrl()).isEqualTo("/login");
+            redirectAttributes.addFlashAttribute("error", "Invalid request. Please try again.");
+            verify(userRegistry, never()).authenticate(anyString(), anyString());
+        }
+
+        @Test
+        @DisplayName("Should reject login with null CSRF token")
+        void shouldRejectLoginWithNullCsrfToken() throws Exception {
+            // Arrange
+            setupCsrfToken();
+
+            // Act
+            RedirectView redirectView = controller.login(USERNAME, PASSWORD, null, session, redirectAttributes, null, request);
+
+            // Assert
+            assertThat(redirectView.getUrl()).isEqualTo("/login");
+            verify(userRegistry, never()).authenticate(anyString(), anyString());
         }
     }
 
@@ -330,14 +344,14 @@ class UserLoginControllerTest {
         @DisplayName("Should store user information in session after successful login")
         void shouldStoreUserInformationInSessionAfterSuccessfulLogin() throws Exception {
             // Arrange
+            setupCsrfToken();
             when(userRegistry.authenticate(USERNAME, PASSWORD)).thenReturn(SUBJECT);
             when(userRegistry.getName(USERNAME)).thenReturn(NAME);
             when(userRegistry.getEmail(USERNAME)).thenReturn(EMAIL);
             when(session.getAttribute(SessionAttributes.REDIRECT_URI.getKey())).thenReturn(null);
-            when(sessionMappingBizService.restoreSession(anyString(), anyBoolean(), any(HttpServletRequest.class))).thenReturn(null);
 
             // Act
-            controller.login(USERNAME, PASSWORD, session, redirectAttributes, null, request);
+            controller.login(USERNAME, PASSWORD, CSRF_TOKEN, session, redirectAttributes, null, request);
 
             // Assert
             verify(session).setAttribute(SessionAttributes.AUTHENTICATED_USER.getKey(), SUBJECT);
@@ -347,14 +361,14 @@ class UserLoginControllerTest {
         @DisplayName("Should not store password in session")
         void shouldNotStorePasswordInSession() throws Exception {
             // Arrange
+            setupCsrfToken();
             when(userRegistry.authenticate(USERNAME, PASSWORD)).thenReturn(SUBJECT);
             when(userRegistry.getName(USERNAME)).thenReturn(NAME);
             when(userRegistry.getEmail(USERNAME)).thenReturn(EMAIL);
             when(session.getAttribute(SessionAttributes.REDIRECT_URI.getKey())).thenReturn(null);
-            when(sessionMappingBizService.restoreSession(anyString(), anyBoolean(), any(HttpServletRequest.class))).thenReturn(null);
 
             // Act
-            controller.login(USERNAME, PASSWORD, session, redirectAttributes, null, request);
+            controller.login(USERNAME, PASSWORD, CSRF_TOKEN, session, redirectAttributes, null, request);
 
             // Assert
             verify(session).setAttribute(SessionAttributes.AUTHENTICATED_USER.getKey(), SUBJECT);

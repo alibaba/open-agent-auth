@@ -83,9 +83,9 @@ class OAuth2CallbackServiceTest {
 
     private static final String CLIENT_ID = "client-123";
     private static final String CODE = "auth-code-123";
-    private static final String STATE_USER_AUTH = "user:uuid:session-user-123";
-    private static final String STATE_AGENT_AUTH = "agent:uuid:session-agent-456";
-    private static final String STATE_DEFAULT = "unknown:uuid:session-default-789";
+    private static final String STATE_USER_AUTH = "user:uuid";
+    private static final String STATE_AGENT_AUTH = "agent:uuid";
+    private static final String STATE_DEFAULT = "unknown:uuid";
     private static final String REDIRECT_URI = "http://localhost:8080/callback";
     // Valid JWT token with subject claim
     private static final String ID_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsImlhdCI6MTYwOTQ1OTIwMH0.fake-signature";
@@ -107,8 +107,6 @@ class OAuth2CallbackServiceTest {
         when(mockHttpRequest.getSession(false)).thenReturn(mockHttpSession);
         when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
         when(mockHttpRequest.getSession(anyBoolean())).thenReturn(mockRequestSession);
-        when(mockRequestSession.getId()).thenReturn("request-session-id");
-        when(mockRestoredSession.getId()).thenReturn(SESSION_ID);
     }
 
     @Nested
@@ -220,7 +218,8 @@ class OAuth2CallbackServiceTest {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_USER_AUTH, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -230,7 +229,8 @@ class OAuth2CallbackServiceTest {
             assertThat(result.isSuccess()).isTrue();
             assertThat(result.getStatusCode()).isEqualTo(302);
             assertThat(result.getRedirectUrl()).isEqualTo("/");
-            verify(mockSessionMappingBizService).removeSession("session-user-123");
+            // Verify authentication status is set directly on request session
+            verify(mockRequestSession).setAttribute(eq("id_token"), eq(ID_TOKEN));
         }
 
         @Test
@@ -239,9 +239,10 @@ class OAuth2CallbackServiceTest {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_USER_AUTH, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
-            // Set pending redirect URI in the restored session
-            when(mockRestoredSession.getAttribute("open_agent_auth_redirect_uri")).thenReturn(PENDING_REDIRECT_URI);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
+            // Set pending redirect URI in the request session
+            when(mockRequestSession.getAttribute("open_agent_auth_redirect_uri")).thenReturn(PENDING_REDIRECT_URI);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -257,7 +258,8 @@ class OAuth2CallbackServiceTest {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_USER_AUTH, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
             callbackService.handleCallback(request, CLIENT_ID);
@@ -274,13 +276,11 @@ class OAuth2CallbackServiceTest {
         }
 
         @Test
-        @DisplayName("Should handle user authentication flow with session not found")
-        void shouldHandleUserAuthenticationFlowWithSessionNotFound() throws Exception {
+        @DisplayName("Should handle user authentication flow with session creation")
+        void shouldHandleUserAuthenticationFlowWithSessionCreation() throws Exception {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_USER_AUTH, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            // When restoreSession returns null, the code uses the request session instead
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), eq(false), eq(mockHttpRequest))).thenReturn(mockRequestSession);
             // handleFlow first calls getSession(false), which returns null, then getSession(true) is called
             when(mockHttpRequest.getSession(false)).thenReturn(null);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
@@ -290,8 +290,11 @@ class OAuth2CallbackServiceTest {
 
             // Assert
             assertThat(result.isSuccess()).isTrue();
-            // When restored session is found, removeSession is called
-            verify(mockSessionMappingBizService).removeSession("session-user-123");
+            // Verify session was created
+            verify(mockHttpRequest).getSession(false);
+            verify(mockHttpRequest).getSession(true);
+            // Verify authentication status is set on request session
+            verify(mockRequestSession).setAttribute(eq("id_token"), eq(ID_TOKEN));
         }
     }
 
@@ -307,9 +310,8 @@ class OAuth2CallbackServiceTest {
             setupAgentTokenExchangeSuccess();
             // Return null for getSession(false) to trigger getSession(true) in handleFlow
             when(mockHttpRequest.getSession(false)).thenReturn(null);
-            when(mockSessionMappingBizService.restoreSession(eq("session-agent-456"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
-            // Mock ID_TOKEN attribute for restored session
-            // Use a valid JWT with subject "user-123"
+            // sessionId is null (state format is "agent:uuid" without sessionId),
+            // so restoreOrCreateSession will create a new session via request.getSession(true)
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
@@ -319,7 +321,8 @@ class OAuth2CallbackServiceTest {
             assertThat(result.isSuccess()).isTrue();
             assertThat(result.getRedirectUrl()).isEqualTo("/");
 
-            verify(mockSessionMappingBizService).removeSession("session-agent-456");
+            // sessionId is null after refactoring, so removeSession should NOT be called
+            verify(mockSessionMappingBizService, never()).removeSession(any());
             verify(mockAgent).handleAuthorizationCallback(any(AuthorizationResponse.class));
             verify(mockOAuth2TokenClient, never()).exchangeCodeForToken(any(ExchangeCodeForTokenRequest.class));
         }
@@ -332,7 +335,7 @@ class OAuth2CallbackServiceTest {
             setupAgentTokenExchangeSuccess();
             List<Object> conversationHistory = List.of("message1", "message2");
 
-            when(mockSessionMappingBizService.restoreSession(eq("session-agent-456"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockSessionMappingBizService.restoreSession(isNull(), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
@@ -348,7 +351,7 @@ class OAuth2CallbackServiceTest {
         @DisplayName("Should handle agent operation authorization flow with null session ID")
         void shouldHandleAgentOperationAuthorizationFlowWithNullSessionId() throws Exception {
             // Arrange
-            OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, "agent:uuid:", null, null, mockHttpRequest);
+            OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, "agent:uuid", null, null, mockHttpRequest);
             setupAgentTokenExchangeSuccess();
             when(mockSessionMappingBizService.restoreSession(isNull(), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
@@ -370,7 +373,7 @@ class OAuth2CallbackServiceTest {
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_AGENT_AUTH, null, null, mockHttpRequest);
             setupAgentTokenExchangeSuccess();
             when(mockHttpRequest.getSession(false)).thenReturn(null);
-            when(mockSessionMappingBizService.restoreSession(eq("session-agent-456"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockSessionMappingBizService.restoreSession(isNull(), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
@@ -407,7 +410,7 @@ class OAuth2CallbackServiceTest {
             lenient().when(mockHttpSession.getAttributeNames()).thenReturn(new java.util.Vector<String>().elements());
 
             when(mockHttpRequest.getSession(false)).thenReturn(null);
-            when(mockSessionMappingBizService.restoreSession(eq("session-agent-456"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockSessionMappingBizService.restoreSession(isNull(), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
@@ -430,7 +433,8 @@ class OAuth2CallbackServiceTest {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_DEFAULT, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            when(mockSessionMappingBizService.restoreSession(anyString(), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRequestSession);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -446,7 +450,6 @@ class OAuth2CallbackServiceTest {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_DEFAULT, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            when(mockSessionMappingBizService.restoreSession(isNull(), anyBoolean(), eq(mockHttpRequest))).thenReturn(null);
             // handleFlow first calls getSession(false), then getSession(true) if session is null
             when(mockHttpRequest.getSession(false)).thenReturn(null);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
@@ -456,7 +459,7 @@ class OAuth2CallbackServiceTest {
 
             // Assert
             assertThat(result.isSuccess()).isTrue();
-            // When restoreSession returns null, the code creates a new session via request.getSession(true)
+            // When session is null, the code creates a new session via request.getSession(true)
             verify(mockHttpRequest).getSession(false);
             verify(mockHttpRequest).getSession(true);
         }
@@ -592,13 +595,11 @@ class OAuth2CallbackServiceTest {
     class SessionRestoreFailures {
 
         @Test
-        @DisplayName("Should handle user authentication flow with session restore failure")
-        void shouldHandleUserAuthenticationFlowWithSessionRestoreFailure() throws Exception {
+        @DisplayName("Should handle user authentication flow with session creation")
+        void shouldHandleUserAuthenticationFlowWithSessionCreation() throws Exception {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_USER_AUTH, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            // When restoreSession returns null, the code uses the request session instead
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), eq(false), eq(mockHttpRequest))).thenReturn(mockRequestSession);
             // handleFlow first calls getSession(false), which returns null, then getSession(true) is called
             when(mockHttpRequest.getSession(false)).thenReturn(null);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
@@ -608,16 +609,17 @@ class OAuth2CallbackServiceTest {
 
             // Assert
             assertThat(result.isSuccess()).isTrue();
+            // Verify session was created
+            verify(mockHttpRequest).getSession(false);
+            verify(mockHttpRequest).getSession(true);
         }
 
         @Test
-        @DisplayName("Should handle agent authorization flow with session restore failure")
-        void shouldHandleAgentAuthorizationFlowWithSessionRestoreFailure() throws Exception {
+        @DisplayName("Should handle agent authorization flow with session creation")
+        void shouldHandleAgentAuthorizationFlowWithSessionCreation() throws Exception {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_AGENT_AUTH, null, null, mockHttpRequest);
             setupAgentTokenExchangeSuccess();
-            // When restoreSession returns null, the code uses the request session instead
-            when(mockSessionMappingBizService.restoreSession(eq("session-agent-456"), eq(true), eq(mockHttpRequest))).thenReturn(mockRequestSession);
             // handleFlow first calls getSession(false), which returns null, then getSession(true) is called
             when(mockHttpRequest.getSession(false)).thenReturn(null);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
@@ -627,10 +629,10 @@ class OAuth2CallbackServiceTest {
 
             // Assert
             assertThat(result.isSuccess()).isTrue();
-            // When restored session is null, the code creates a new session via request.getSession(true)
-            // and proceeds with the agent authorization flow
+            // When session is null, the code creates a new session via request.getSession(true)
+            // in both restoreOrCreateSession and handleAgentOperationAuthorizationFlow
             verify(mockHttpRequest).getSession(false);
-            verify(mockHttpRequest).getSession(true);
+            verify(mockHttpRequest, atLeast(1)).getSession(true);
         }
     }
 
@@ -660,12 +662,13 @@ class OAuth2CallbackServiceTest {
         }
 
         @Test
-        @DisplayName("Should handle null session ID in state parameter")
-        void shouldHandleNullSessionIdInStateParameter() throws Exception {
+        @DisplayName("Should handle state parameter with only flow type")
+        void shouldHandleStateParameterWithOnlyFlowType() throws Exception {
             // Arrange
-            OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, "user:uuid:", null, null, mockHttpRequest);
+            OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, "user:uuid", null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            when(mockSessionMappingBizService.restoreSession(isNull(), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -675,14 +678,13 @@ class OAuth2CallbackServiceTest {
         }
 
         @Test
-        @DisplayName("Should handle current session matching restored session")
-        void shouldHandleCurrentSessionMatchingRestoredSession() throws Exception {
+        @DisplayName("Should handle user authentication flow successfully")
+        void shouldHandleUserAuthenticationFlowSuccessfully() throws Exception {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_USER_AUTH, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            when(mockHttpSession.getId()).thenReturn("session-user-123");
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
-            when(mockRestoredSession.getId()).thenReturn("session-user-123");
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -701,7 +703,8 @@ class OAuth2CallbackServiceTest {
             when(mockHttpRequest.getServerName()).thenReturn("example.com");
             when(mockHttpRequest.getServerPort()).thenReturn(8080);
             when(mockHttpRequest.getContextPath()).thenReturn("/app");
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -724,7 +727,8 @@ class OAuth2CallbackServiceTest {
             setupTokenExchangeSuccess();
             when(mockHttpRequest.getScheme()).thenReturn("https");
             when(mockHttpRequest.getServerPort()).thenReturn(443);
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -747,7 +751,8 @@ class OAuth2CallbackServiceTest {
             setupTokenExchangeSuccess();
             when(mockHttpRequest.getScheme()).thenReturn("http");
             when(mockHttpRequest.getServerPort()).thenReturn(80);
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -768,9 +773,10 @@ class OAuth2CallbackServiceTest {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_USER_AUTH, null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
-            when(mockSessionMappingBizService.restoreSession(eq("session-user-123"), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
-            // Set pending redirect URI in the restored session
-            when(mockRestoredSession.getAttribute("open_agent_auth_redirect_uri")).thenReturn(PENDING_REDIRECT_URI);
+            when(mockHttpRequest.getSession(false)).thenReturn(null);
+            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
+            // Set pending redirect URI in the request session
+            when(mockRequestSession.getAttribute("open_agent_auth_redirect_uri")).thenReturn(PENDING_REDIRECT_URI);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);

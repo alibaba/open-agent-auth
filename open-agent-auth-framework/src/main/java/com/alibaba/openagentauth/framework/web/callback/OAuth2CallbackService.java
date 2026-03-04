@@ -182,6 +182,16 @@ public class OAuth2CallbackService {
     
     /**
      * Handle user authentication flow.
+     * <p>
+     * Sets authentication state on the current request session using the ID Token
+     * received from the User IDP. Session management is handled through standard
+     * HTTP session cookies — no session restoration from the state parameter is needed.
+     * </p>
+     * <p>
+     * This follows the approach used by mainstream OAuth2/OIDC implementations
+     * (Spring Authorization Server, Keycloak) where the state parameter is used
+     * solely for CSRF protection and flow routing.
+     * </p>
      */
     private OAuth2CallbackResult handleUserAuthenticationFlow(OAuth2StateHandler.StateInfo stateInfo,
                                                         TokenResponse tokenResponse,
@@ -189,37 +199,20 @@ public class OAuth2CallbackService {
                                                         HttpServletRequest request) {
         logger.info("User authentication flow: setting session authentication state");
 
-        // Get or create request session
+        // Use the current request session for authentication state.
+        // If session cookie names are correctly configured (unique per service),
+        // this session should be the same one that stored REDIRECT_URI before the IDP redirect.
         HttpSession requestSession = request.getSession(true);
+        logger.debug("User auth callback using session: {}, isNew: {}", requestSession.getId(), requestSession.isNew());
 
-        // Restore or create session
-        HttpSession restoredSession = restoreOrCreateSession(
-            session, 
-            stateInfo.getSessionId(), 
-            false, 
-            request
-        );
-        
-        // If original session not found, use request session for authentication flow
-        if (restoredSession == null) {
-            logger.warn("Original session not found, using request session for authentication flow");
-            restoredSession = requestSession;
-        } else {
-            // Set authentication state
-            setAuthenticationStateFromToken(restoredSession, tokenResponse.getAccessToken());
-            
-            // Sync session attributes
-            syncSessionAttributes(restoredSession, requestSession);
-            
-            // Clean up state
-            SessionManager.removeAttribute(restoredSession, SessionAttributes.OAUTH_STATE);
-            
-            // Remove session mapping
-            sessionMappingBizService.removeSession(stateInfo.getSessionId());
-        }
-        
-        // Check for pending authorization request
-        return handlePendingAuthorizationRequest(restoredSession, requestSession);
+        // Set authentication state from the ID Token
+        setAuthenticationStateFromToken(requestSession, tokenResponse.getAccessToken());
+
+        // Clean up OAuth state from session
+        SessionManager.removeAttribute(requestSession, SessionAttributes.OAUTH_STATE);
+
+        // Check for pending authorization request (stored in session before redirect)
+        return handlePendingAuthorizationRequest(requestSession, requestSession);
     }
     
     /**
@@ -275,33 +268,28 @@ public class OAuth2CallbackService {
     }
     
     /**
-     * Handle default flow.
+     * Handle default flow — treated as user authentication using the current request session.
      */
     private OAuth2CallbackResult handleDefaultFlow(TokenResponse tokenResponse,
                                              HttpSession session,
                                              HttpServletRequest request) {
         logger.info("Default flow: treating as user authentication");
-        
-        // Create new session
-        HttpSession restoredSession = restoreOrCreateSession(session, null, true, request);
-        
-        if (restoredSession != null) {
-            SessionManager.setAttribute(restoredSession, SessionAttributes.ID_TOKEN, tokenResponse.getAccessToken());
-            
-            // Extract user ID
-            String userId = extractUserIdFromIdToken(tokenResponse.getAccessToken());
-            if (userId != null) {
-                SessionManager.setAttribute(restoredSession, SessionAttributes.AUTHENTICATED_USER, userId);
-            } else {
-                SessionManager.setAttribute(restoredSession, SessionAttributes.AUTHENTICATED_USER, "authenticated");
-            }
-        }
-        
+
+        HttpSession requestSession = request.getSession(true);
+        setAuthenticationStateFromToken(requestSession, tokenResponse.getAccessToken());
+
         return OAuth2CallbackResult.redirect("/");
     }
     
     /**
      * Handle pending authorization request.
+     * <p>
+     * Checks both the restored session and the current request session for a stored
+     * {@code REDIRECT_URI}. If found, redirects to that URL. If not found, logs a warning
+     * and redirects to the admin dashboard ({@code /admin}) as a safe fallback, since
+     * the root path ({@code /}) may not have a handler on all service roles (e.g.,
+     * Authorization Server has no root page).
+     * </p>
      */
     private OAuth2CallbackResult handlePendingAuthorizationRequest(HttpSession restoredSession, 
                                                              HttpSession requestSession) {
@@ -320,6 +308,10 @@ public class OAuth2CallbackService {
             return OAuth2CallbackResult.redirect(pendingUrl);
         }
         
+        logger.warn("No pending authorization request found in session after user authentication. "
+                + "This may indicate a session cookie collision between services on the same domain. "
+                + "Ensure each service has a unique session cookie name configured via "
+                + "'open-agent-auth.security.session-cookie.name'.");
         return OAuth2CallbackResult.redirect("/");
     }
 

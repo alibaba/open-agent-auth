@@ -84,7 +84,20 @@ public final class SessionAttributes {
      * Key for storing the redirect URI in session during OAuth flow.
      */
     public static final SessionAttribute<String> REDIRECT_URI = new SessionAttribute<>("open_agent_auth_redirect_uri", String.class);
-    
+
+    // ==================== Security ====================
+
+    /**
+     * Key for storing the CSRF token in session.
+     * <p>
+     * The CSRF token is generated when the login page is rendered and validated
+     * when the login form is submitted. This provides protection against
+     * Cross-Site Request Forgery attacks on the login endpoint.
+     * </p>
+     */
+    public static final SessionAttribute<String> CSRF_TOKEN =
+            new SessionAttribute<>("open_agent_auth_csrf_token", String.class);
+
     // ==================== Conversation Context ====================
     
     /**

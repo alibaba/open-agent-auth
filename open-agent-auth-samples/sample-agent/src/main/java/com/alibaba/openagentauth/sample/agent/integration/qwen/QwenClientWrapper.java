@@ -244,13 +244,17 @@ public class QwenClientWrapper implements LLMClient {
             LLMChatResponse response = new LLMChatResponse();
             response.setNeedToolCall(needToolCall.get());
             
-            // If no content was received, provide a default message about the tool result
-            String finalContent = content.get();
+            // Final sanitization pass on the content to catch any remaining ChatML tokens.
+            // Even though onText already sanitizes each fragment, the model may produce
+            // tokens that span across multiple text fragments or appear in edge cases.
+            // Trim the final output since sanitizeTextContent preserves internal whitespace
+            // for correct fragment accumulation.
+            String finalContent = sanitizeTextContent(content.get());
+            if (finalContent != null) {
+                finalContent = finalContent.trim();
+            }
             if (ValidationUtils.isNullOrEmpty(finalContent)) {
                 if (needToolCall.get()) {
-                    // This is the second call after tool execution
-                    // LLM should have generated a response based on tool results
-                    // If no content, it might be a bug in the callback or LLM behavior
                     log.warn("Tool result was fed to LLM but no response content was received");
                     finalContent = "I've processed the tool results. Please check the tool output for details.";
                 } else {
@@ -295,11 +299,12 @@ public class QwenClientWrapper implements LLMClient {
     private String buildPromptWithToolDefinitions(List<Map<String, String>> messages, List<ToolDefinition> tools) {
         StringBuilder prompt = new StringBuilder();
         
-        // Build comprehensive system message using standard ChatML format
-        // Qwen3 models expect <|im_start|>role\ncontent<|im_end|> delimiters.
-        // Using non-standard delimiters (e.g., "role\n...content...</s>") causes the model
-        // to leak role markers like "<|im_start|>user" into generated text.
-        prompt.append("<|im_start|>system\n");
+        // Build system message using plain-text role markers.
+        // IMPORTANT: Do NOT use ChatML special tokens (<|im_start|>, <|im_end|>, </s>) here.
+        // The Qwen Code SDK (QwenCodeCli.simpleQuery) internally wraps the prompt with
+        // ChatML delimiters. Adding them manually causes double-wrapping, which makes the
+        // model leak tokens like "<|im_end|>" or "<|im_start|>user" into generated text.
+        prompt.append("[SYSTEM]\n");
         
         // === Optimized System Prompt ===
         prompt.append("You are an intelligent AI assistant that can use tools to complete tasks.\n\n");
@@ -388,26 +393,25 @@ public class QwenClientWrapper implements LLMClient {
         }
         
         // === End System Message ===
-        prompt.append("<|im_end|>\n");
+        prompt.append("[/SYSTEM]\n\n");
         
-        // Append conversation history using standard ChatML delimiters
+        // Append conversation history using plain-text role markers
         for (Map<String, String> message : messages) {
             String role = message.get("role");
             String content = message.get("content");
             
             if (!ValidationUtils.isNullOrEmpty(content)) {
                 if ("user".equals(role)) {
-                    prompt.append("<|im_start|>user\n").append(content).append("<|im_end|>\n");
+                    prompt.append("[USER]\n").append(content).append("\n[/USER]\n\n");
                 } else if ("assistant".equals(role)) {
-                    prompt.append("<|im_start|>assistant\n").append(content).append("<|im_end|>\n");
+                    prompt.append("[ASSISTANT]\n").append(content).append("\n[/ASSISTANT]\n\n");
                 } else if ("tool".equals(role)) {
-                    // Tool results are presented as user input with clear marker
-                    prompt.append("<|im_start|>user\n[Tool Result]\n").append(content).append("<|im_end|>\n");
+                    prompt.append("[TOOL_RESULT]\n").append(content).append("\n[/TOOL_RESULT]\n\n");
                 }
             }
         }
         
-        prompt.append("<|im_start|>assistant\n");
+        prompt.append("[ASSISTANT]\n");
         return prompt.toString();
     }
     
@@ -466,12 +470,28 @@ public class QwenClientWrapper implements LLMClient {
             return null;
         }
 
+        // Remove ChatML special tokens that may leak from the model output.
+        // The Qwen Code SDK wraps prompts with ChatML internally, and the model
+        // sometimes echoes these tokens back in its generated text.
+        String cleaned = text
+                .replace("<|im_start|>", "")
+                .replace("<|im_end|>", "")
+                .replace("</s>", "");
+
+        // Remove residual role markers that may appear after stripping ChatML tokens
+        // e.g., after removing "<|im_start|>" the text may contain bare "user", "assistant", "system"
+        // at line boundaries that are artifacts, not real content
+        cleaned = cleaned.replaceAll("(?m)^(user|assistant|system)\\s*$", "");
+
         // Remove control characters that might cause display issues
-        // Keep only printable ASCII characters plus common whitespace
-        return text.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "")
-                   // Handle specific Unicode characters that can cause issues
-                   .replace("\u2028", "")  // Line separator
-                   .replace("\u2029", ""); // Paragraph separator
+        cleaned = cleaned.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "")
+                .replace("\u2028", "")  // Line separator
+                .replace("\u2029", ""); // Paragraph separator
+
+        // Do NOT trim here — streaming text fragments may have meaningful leading/trailing
+        // whitespace (e.g., "Once upon a time, " + "there was..."). Trimming is done at
+        // the final output stage in chatWithTools() instead.
+        return cleaned;
     }
 
     /**

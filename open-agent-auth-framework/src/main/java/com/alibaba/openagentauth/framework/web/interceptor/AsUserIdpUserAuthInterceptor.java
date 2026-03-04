@@ -15,7 +15,6 @@
  */
 package com.alibaba.openagentauth.framework.web.interceptor;
 
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,20 +101,18 @@ public class AsUserIdpUserAuthInterceptor extends UserAuthenticationInterceptor 
     /**
      * Constructs a new AsUserIdpUserAuthInterceptor.
      *
-     * @param sessionMappingBizService the session mapping business service
      * @param excludedPaths the list of paths to exclude from authentication
      * @param issuer the AS User IDP issuer URL
      * @param clientId the OAuth 2.0 client ID
      * @param callbackUrl the callback URL for OAuth 2.0 flow
      */
     public AsUserIdpUserAuthInterceptor(
-            SessionMappingBizService sessionMappingBizService,
             List<String> excludedPaths,
             String issuer,
             String clientId,
             String callbackUrl
     ) {
-        super(sessionMappingBizService, excludedPaths);
+        super(excludedPaths);
         this.issuer = issuer;
         this.clientId = clientId;
         this.callbackUrl = callbackUrl;

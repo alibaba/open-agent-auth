@@ -16,7 +16,6 @@
 package com.alibaba.openagentauth.framework.web;
 
 import com.alibaba.openagentauth.framework.web.interceptor.AsUserIdpUserAuthInterceptor;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,9 +39,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AsUserIdpUserAuthInterceptorTest {
 
     @Mock
-    private SessionMappingBizService sessionMappingBizService;
-
-    @Mock
     private HttpServletRequest request;
 
     private AsUserIdpUserAuthInterceptor interceptor;
@@ -63,7 +59,6 @@ class AsUserIdpUserAuthInterceptorTest {
         void shouldCreateInterceptorWithNullExcludedPaths() {
             // Act
             AsUserIdpUserAuthInterceptor interceptor = new AsUserIdpUserAuthInterceptor(
-                sessionMappingBizService,
                 null,
                 "https://as-idp.example.com",
                 "test-client-id",
@@ -99,7 +94,6 @@ class AsUserIdpUserAuthInterceptorTest {
         void shouldUrlEncodeCallbackUrl() {
             // Arrange
             TestableAsUserIdpUserAuthInterceptor testInterceptor = new TestableAsUserIdpUserAuthInterceptor(
-                sessionMappingBizService,
                 List.of("/login"),
                 "https://as-idp.example.com",
                 "test-client-id",
@@ -170,12 +164,11 @@ class AsUserIdpUserAuthInterceptorTest {
      */
     private static class TestableAsUserIdpUserAuthInterceptor extends AsUserIdpUserAuthInterceptor {
         public TestableAsUserIdpUserAuthInterceptor(
-                SessionMappingBizService sessionMappingBizService,
                 List<String> excludedPaths,
                 String issuer,
                 String clientId,
                 String callbackUrl) {
-            super(sessionMappingBizService, excludedPaths, issuer, clientId, callbackUrl);
+            super(excludedPaths, issuer, clientId, callbackUrl);
         }
 
         public String testBuildAuthorizationUrl(HttpServletRequest request, String state) {
@@ -192,7 +185,6 @@ class AsUserIdpUserAuthInterceptorTest {
     @BeforeEach
     void setUp() {
         testableInterceptor = new TestableAsUserIdpUserAuthInterceptor(
-            sessionMappingBizService,
             List.of("/login", "/callback"),
             "https://as-idp.example.com",
             "test-client-id",

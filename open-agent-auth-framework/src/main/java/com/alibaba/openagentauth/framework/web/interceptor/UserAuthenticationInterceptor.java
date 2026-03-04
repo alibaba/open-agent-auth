@@ -17,7 +17,6 @@ package com.alibaba.openagentauth.framework.web.interceptor;
 
 import com.alibaba.openagentauth.framework.web.manager.SessionAttributes;
 import com.alibaba.openagentauth.framework.web.manager.SessionManager;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -53,8 +52,7 @@ import java.util.UUID;
  *   <li>If not authenticated:
  *     <ul>
  *       <li>Create/get session</li>
- *       <li>Store session mapping</li>
- *       <li>Generate state parameter (format: "user:state:sessionId")</li>
+ *       <li>Generate state parameter (format: "user:{random}") for CSRF protection</li>
  *       <li>Build authorization URL</li>
  *       <li>Redirect to User IDP (Interceptor mode) or return URL (Provider mode)</li>
  *     </ul>
@@ -104,9 +102,9 @@ public class UserAuthenticationInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(UserAuthenticationInterceptor.class);
 
     /**
-     * The session mapping business service.
+     * Prefix for the state parameter format: {@code user:{random}}.
      */
-    private final SessionMappingBizService sessionMappingBizService;
+    private static final String STATE_PREFIX = "user:";
 
     /**
      * The list of paths to exclude from authentication.
@@ -116,14 +114,9 @@ public class UserAuthenticationInterceptor {
     /**
      * Constructs a new UserAuthenticationInterceptor.
      *
-     * @param sessionMappingBizService the session mapping business service
      * @param excludedPaths the list of paths to exclude from authentication
      */
-    public UserAuthenticationInterceptor(
-            SessionMappingBizService sessionMappingBizService,
-            List<String> excludedPaths
-    ) {
-        this.sessionMappingBizService = sessionMappingBizService;
+    public UserAuthenticationInterceptor(List<String> excludedPaths) {
         this.excludedPaths = excludedPaths != null ? excludedPaths : new ArrayList<>();
         logger.info("UserAuthenticationInterceptor initialized with excluded paths: {}", this.excludedPaths);
     }
@@ -174,35 +167,24 @@ public class UserAuthenticationInterceptor {
     /**
      * Authenticates the user by checking the session.
      * <p>
-     * This method can be used by UserAuthenticationProvider implementations.
+     * This method checks the current session for an authenticated user.
+     * Authentication state is maintained through standard HTTP session cookies.
      * </p>
      *
      * @param request the HTTP request
      * @return the authenticated user subject, or null if not authenticated
      */
     public String authenticate(HttpServletRequest request) {
-
         if (request == null) {
             return null;
         }
 
-        // Get the current session
         HttpSession session = request.getSession(false);
         if (session == null) {
             logger.debug("No session found in request");
             return null;
         }
 
-        // Try to restore session attributes from the mapping store
-        String sessionId = session.getId();
-        HttpSession restoredSession = sessionMappingBizService.restoreSession(sessionId, false, request);
-        if (restoredSession != null && !restoredSession.getId().equals(session.getId())) {
-            // Sync attributes from restored session to current session
-            sessionMappingBizService.syncSessionAttributes(restoredSession, session);
-            logger.debug("Session attributes synced from mapping store: {}", sessionId);
-        }
-
-        // Get authenticated user using SessionManager
         String subject = SessionManager.getAttribute(session, SessionAttributes.AUTHENTICATED_USER);
         if (subject != null) {
             logger.debug("User authenticated: {}", subject);
@@ -216,31 +198,23 @@ public class UserAuthenticationInterceptor {
     /**
      * Gets the login URL for unauthenticated users.
      * <p>
-     * This method can be used by UserAuthenticationProvider implementations.
+     * Generates a login URL with a state parameter for CSRF protection and flow routing.
+     * The state format is: {@code user:{random}}. Session management is handled through
+     * standard HTTP session cookies, following the approach used by mainstream OAuth2/OIDC
+     * implementations (Spring Authorization Server, Keycloak).
      * </p>
      *
      * @param request the HTTP request
      * @return the login URL, or null if not available
      */
     public String getLoginUrl(HttpServletRequest request) {
-        // Get or create session
         HttpSession session = request.getSession(true);
-        
-        // Generate state parameter with session ID
-        String originalSessionId = session.getId();
-        String state = "user:" + generateState() + ":" + originalSessionId;
+
+        String state = STATE_PREFIX + generateState();
         SessionManager.setAttribute(session, SessionAttributes.OAUTH_STATE, state);
-        
-        logger.debug("Generated state parameter for User IDP login: {}", state);
-        logger.debug("Embedded session ID in state: {}", originalSessionId);
-        
-        // Store session mapping
-        sessionMappingBizService.storeSession(session.getId(), session);
-        logger.debug("Session stored in mapping: {}", session.getId());
-        
-        // Build authorization URL
+
         String authorizationUrl = buildAuthorizationUrl(request, state);
-        
+
         logger.info("Generated login URL redirecting to User IDP");
         return authorizationUrl;
     }

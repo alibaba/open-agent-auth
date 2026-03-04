@@ -945,7 +945,6 @@ public class AgentAutoConfiguration {
          * Creates the framework-level Agent authentication interceptor bean.
          *
          * @param agentAapExecutor         the AgentAapExecutor bean
-         * @param sessionMappingBizService the SessionMappingBizService bean
          * @param openAgentAuthProperties  the global configuration properties
          * @return the AgentAuthenticationInterceptor bean
          */
@@ -953,14 +952,13 @@ public class AgentAutoConfiguration {
         @ConditionalOnMissingBean
         public AgentAuthenticationInterceptor agentAuthenticationInterceptor(
                 AgentAapExecutor agentAapExecutor,
-                SessionMappingBizService sessionMappingBizService,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
             logger.info("Creating AgentAuthenticationInterceptor bean");
             var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
             List<String> excludedPaths = oauth2ClientProps.getAuthentication().getExcludePaths();
             logger.info("Configured excluded paths: {}", excludedPaths);
-            return new AgentAuthenticationInterceptor(agentAapExecutor, sessionMappingBizService, excludedPaths);
+            return new AgentAuthenticationInterceptor(agentAapExecutor, excludedPaths);
         }
 
         /**
