@@ -691,18 +691,23 @@ allow {
 
         function displayPolicy(policy) {
             const resultsSection = document.getElementById('resultsSection');
-            const expirationTime = policy.expirationTime 
-                ? new Date(policy.expirationTime).toLocaleString() 
+            const policyId = policy.policy_id || '';
+            const description = policy.description || 'No description';
+            const regoPolicy = policy.rego_policy || '';
+            const createdBy = policy.metadata?.created_by || 'Unknown';
+            const expirationTimeRaw = policy.metadata?.expiration_time;
+            const expirationTime = expirationTimeRaw 
+                ? new Date(expirationTimeRaw).toLocaleString() 
                 : 'Never';
             
             resultsSection.innerHTML = `
                 <div class="policy-card">
                     <div class="policy-header">
                         <div>
-                            <div class="policy-id">${escapeHtml(policy.policyId)}</div>
-                            <div class="policy-description">${escapeHtml(policy.description || 'No description')}</div>
+                            <div class="policy-id">${escapeHtml(policyId)}</div>
+                            <div class="policy-description">${escapeHtml(description)}</div>
                         </div>
-                        <button class="btn btn-danger" onclick="deletePolicy('${escapeHtml(policy.policyId)}')">
+                        <button class="btn btn-danger" onclick="deletePolicy('${escapeHtml(policyId)}')">
                             <i class="bi bi-trash"></i>
                             Delete
                         </button>
@@ -710,7 +715,7 @@ allow {
                     <div class="policy-meta">
                         <span>
                             <i class="bi bi-person"></i>
-                            Created by: ${escapeHtml(policy.createdBy || 'Unknown')}
+                            Created by: ${escapeHtml(createdBy)}
                         </span>
                         <span>
                             <i class="bi bi-clock"></i>
@@ -718,7 +723,7 @@ allow {
                         </span>
                     </div>
                     <div class="policy-code">
-                        <pre><code>${escapeHtml(policy.regoPolicy || '')}</code></pre>
+                        <pre><code>${escapeHtml(regoPolicy)}</code></pre>
                     </div>
                 </div>
             `;
@@ -856,12 +861,18 @@ allow {
 
             const countHtml = `<div class="list-count">Showing <strong>${policies.length}</strong> of <strong>${totalItems}</strong> policies (Page <strong>${page}</strong>/<strong>${totalPages}</strong>)</div>`;
             const listHtml = policies.map((policy, index) => {
-                const truncatedDesc = policy.description && policy.description.length > 80 
-                    ? policy.description.substring(0, 80) + '...' 
-                    : policy.description || 'No description';
+                const policyId = policy.policy_id || '';
+                const description = policy.description || 'No description';
+                const regoPolicy = policy.rego_policy || '';
+                const createdBy = policy.metadata?.created_by || 'Unknown';
+                const expirationTimeRaw = policy.metadata?.expiration_time;
 
-                const expirationTime = policy.expirationTime 
-                    ? new Date(policy.expirationTime).toLocaleString() 
+                const truncatedDesc = description.length > 80 
+                    ? description.substring(0, 80) + '...' 
+                    : description;
+
+                const expirationTime = expirationTimeRaw 
+                    ? new Date(expirationTimeRaw).toLocaleString() 
                     : 'Never';
 
                 return `
@@ -869,9 +880,9 @@ allow {
                         <div class="policy-list-header" onclick="togglePolicyDetail(${index})">
                             <i class="bi bi-chevron-right policy-chevron"></i>
                             <div class="policy-list-summary">
-                                <span class="policy-summary-id" title="${escapeHtml(policy.policyId || '')}">${escapeHtml(policy.policyId || 'N/A')}</span>
+                                <span class="policy-summary-id" title="${escapeHtml(policyId)}">${escapeHtml(policyId || 'N/A')}</span>
                                 <span class="policy-summary-value">${escapeHtml(truncatedDesc)}</span>
-                                <span class="policy-summary-value">${escapeHtml(policy.createdBy || 'Unknown')}</span>
+                                <span class="policy-summary-value">${escapeHtml(createdBy)}</span>
                             </div>
                         </div>
                         <div class="policy-list-detail">
@@ -879,20 +890,20 @@ allow {
                                 <div class="policy-detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Policy ID</span>
-                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body); font-family: 'JetBrains Mono', monospace;">${escapeHtml(policy.policyId || 'N/A')}</span>
+                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body); font-family: 'JetBrains Mono', monospace;">${escapeHtml(policyId || 'N/A')}</span>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Created By</span>
-                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body);">${escapeHtml(policy.createdBy || 'Unknown')}</span>
+                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body);">${escapeHtml(createdBy)}</span>
                                     </div>
                                     <div class="detail-item policy-detail-full">
                                         <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Description</span>
-                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body);">${escapeHtml(policy.description || 'No description')}</span>
+                                        <span class="detail-value" style="font-size: 14px; color: var(--text-body);">${escapeHtml(description)}</span>
                                     </div>
                                     <div class="detail-item policy-detail-full">
                                         <span class="detail-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Rego Policy</span>
                                         <div class="policy-code">
-                                            <pre><code>${escapeHtml(policy.regoPolicy || '')}</code></pre>
+                                            <pre><code>${escapeHtml(regoPolicy)}</code></pre>
                                         </div>
                                     </div>
                                     <div class="detail-item">
@@ -901,7 +912,7 @@ allow {
                                     </div>
                                 </div>
                                 <div class="policy-detail-actions">
-                                    <button class="btn btn-danger" onclick="event.stopPropagation(); deletePolicy('${escapeHtml(policy.policyId || '')}')">
+                                    <button class="btn btn-danger" onclick="event.stopPropagation(); deletePolicy('${escapeHtml(policyId)}')">
                                         <i class="bi bi-trash"></i>
                                         Delete
                                     </button>

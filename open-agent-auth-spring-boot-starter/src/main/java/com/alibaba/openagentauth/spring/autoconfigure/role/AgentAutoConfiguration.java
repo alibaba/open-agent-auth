@@ -15,6 +15,12 @@
  */
 package com.alibaba.openagentauth.spring.autoconfigure.role;
 
+import com.alibaba.openagentauth.core.audit.api.AuditService;
+import com.alibaba.openagentauth.core.audit.impl.RemoteAuditService;
+import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
+import com.alibaba.openagentauth.core.binding.RemoteBindingInstanceStore;
+import com.alibaba.openagentauth.core.protocol.wimse.workload.store.RemoteWorkloadRegistry;
+import com.alibaba.openagentauth.core.protocol.wimse.workload.store.WorkloadRegistry;
 import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
 import com.alibaba.openagentauth.core.exception.crypto.KeyManagementException;
@@ -210,6 +216,60 @@ public class AgentAutoConfiguration {
             serviceProperties.setConsumers(consumers);
 
             return new DefaultServiceEndpointResolver(serviceProperties);
+        }
+
+        /**
+         * Creates a RemoteBindingInstanceStore bean for querying binding instances
+         * from the Authorization Server.
+         * <p>
+         * This enables the Agent to view its related authorization bindings
+         * through the admin dashboard by remotely querying the Authorization Server.
+         * </p>
+         *
+         * @param serviceEndpointResolver the service endpoint resolver
+         * @return the RemoteBindingInstanceStore
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public BindingInstanceStore bindingInstanceStore(ServiceEndpointResolver serviceEndpointResolver) {
+            logger.info("Creating RemoteBindingInstanceStore bean for Agent role");
+            return new RemoteBindingInstanceStore(serviceEndpointResolver);
+        }
+
+        /**
+         * Creates a RemoteAuditService bean for querying audit events
+         * from the Authorization Server.
+         * <p>
+         * This enables the Agent to view its related audit records
+         * through the admin dashboard by remotely querying the Authorization Server.
+         * </p>
+         *
+         * @param serviceEndpointResolver the service endpoint resolver
+         * @return the RemoteAuditService
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public AuditService auditService(ServiceEndpointResolver serviceEndpointResolver) {
+            logger.info("Creating RemoteAuditService bean for Agent role");
+            return new RemoteAuditService(serviceEndpointResolver);
+        }
+
+        /**
+         * Creates a RemoteWorkloadRegistry bean for querying workload identities
+         * from the Agent IDP.
+         * <p>
+         * This enables the Agent to view its related workload identity information
+         * through the admin dashboard by remotely querying the Agent IDP.
+         * </p>
+         *
+         * @param serviceEndpointResolver the service endpoint resolver
+         * @return the RemoteWorkloadRegistry
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public WorkloadRegistry workloadRegistry(ServiceEndpointResolver serviceEndpointResolver) {
+            logger.info("Creating RemoteWorkloadRegistry bean for Agent role");
+            return new RemoteWorkloadRegistry(serviceEndpointResolver);
         }
     }
 

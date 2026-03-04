@@ -16,40 +16,61 @@
 
 package com.alibaba.openagentauth.spring.web.controller;
 
+import com.alibaba.openagentauth.core.protocol.wimse.workload.store.WorkloadRegistry;
 import com.alibaba.openagentauth.framework.actor.AgentIdentityProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+
+import java.util.Optional;
 
 /**
  * Admin UI controller for Workload Identity management.
  * <p>
  * Provides a web-based management interface for viewing workload identities,
  * issuing Workload Identity Tokens (WIT), and revoking workloads.
- * This controller is only enabled when {@link AgentIdentityProvider}
+ * This controller is enabled when either {@link AgentIdentityProvider} (Agent IDP role,
+ * full read-write access) or {@link WorkloadRegistry} (Agent role, read-only access)
  * is available in the application context.
  * </p>
  *
  * @see AgentIdentityProvider
+ * @see WorkloadRegistry
  * @see WorkloadController
  * @since 1.0
  */
 @Controller
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnBean(AgentIdentityProvider.class)
+@ConditionalOnBean({WorkloadRegistry.class})
 public class WorkloadAdminController {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkloadAdminController.class);
 
-    public WorkloadAdminController() {
-        logger.info("WorkloadAdminController initialized - workload management UI is available at /admin/workloads");
+    private final boolean readOnly;
+
+    /**
+     * Creates a new WorkloadAdminController.
+     * <p>
+     * When AgentIdentityProvider is present (Agent IDP role), the page operates in
+     * full read-write mode. When only WorkloadRegistry is present (Agent role with
+     * RemoteWorkloadRegistry), the page operates in read-only mode.
+     * </p>
+     *
+     * @param agentIdentityProvider the agent identity provider (optional)
+     */
+    public WorkloadAdminController(Optional<AgentIdentityProvider> agentIdentityProvider) {
+        this.readOnly = agentIdentityProvider.isEmpty();
+        String mode = readOnly ? "read-only" : "read-write";
+        logger.info("WorkloadAdminController initialized in {} mode - workload management UI is available at /admin/workloads", mode);
     }
 
     @GetMapping("${open-agent-auth.admin.endpoints.workloads:/admin/workloads}")
-    public String workloadsPage() {
+    public String workloadsPage(Model model) {
+        model.addAttribute("readOnly", readOnly);
         return "admin/workloads";
     }
 }

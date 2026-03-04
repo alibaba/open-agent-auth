@@ -253,17 +253,40 @@ public class InMemoryWorkloadRegistry implements WorkloadRegistry {
     }
 
     @Override
-    public List<WorkloadInfo> listAll() {
-        Instant now = Instant.now();
-        List<WorkloadInfo> activeWorkloads = new ArrayList<>();
-        
-        for (WorkloadInfo workload : store.values()) {
-            if (!workload.getExpiresAt().isBefore(now)) {
-                activeWorkloads.add(workload);
-            }
+    public void revoke(String workloadId) {
+        if (ValidationUtils.isNullOrEmpty(workloadId)) {
+            throw new IllegalArgumentException("Workload ID cannot be null or empty");
         }
-        
-        logger.debug("Listed {} active workloads out of {} total", activeWorkloads.size(), store.size());
-        return activeWorkloads;
+
+        WorkloadInfo existing = store.get(workloadId);
+        if (existing == null) {
+            logger.warn("Workload not found for revocation: {}", workloadId);
+            return;
+        }
+
+        // Create a new WorkloadInfo with "revoked" status (WorkloadInfo is immutable)
+        WorkloadInfo revokedWorkload = new WorkloadInfo(
+                existing.getWorkloadId(),
+                existing.getUserId(),
+                existing.getTrustDomain(),
+                existing.getIssuer(),
+                existing.getPublicKey(),
+                null,
+                existing.getCreatedAt(),
+                existing.getExpiresAt(),
+                "revoked",
+                existing.getContext(),
+                existing.getMetadata()
+        );
+
+        store.put(workloadId, revokedWorkload);
+        logger.debug("Revoked workload: {}", workloadId);
+    }
+
+    @Override
+    public List<WorkloadInfo> listAll() {
+        List<WorkloadInfo> allWorkloads = new ArrayList<>(store.values());
+        logger.debug("Listed {} workloads (total in store)", allWorkloads.size());
+        return allWorkloads;
     }
 }

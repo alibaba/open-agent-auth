@@ -132,13 +132,26 @@ public interface WorkloadRegistry {
     Optional<WorkloadInfo> findByWorkloadUniqueKey(String workloadUniqueKey);
 
     /**
-     * Lists all active (non-expired) workloads.
+     * Revokes a workload by marking its status as "revoked".
      * <p>
-     * This method returns all workloads that have not expired.
-     * Expired workloads are automatically filtered out.
+     * Unlike {@link #delete(String)}, this method preserves the workload record
+     * for audit and administrative purposes. The workload will remain visible
+     * in {@link #listAll()} but with a "revoked" status.
      * </p>
      *
-     * @return a list of all active workloads
+     * @param workloadId the workload ID to revoke
+     * @throws IllegalArgumentException if workloadId is null or empty
+     */
+    void revoke(String workloadId);
+
+    /**
+     * Lists all workloads including active, revoked, and expired ones.
+     * <p>
+     * This method returns all workloads regardless of their status,
+     * providing a complete view for administrative and audit purposes.
+     * </p>
+     *
+     * @return a list of all workloads
      */
     java.util.List<WorkloadInfo> listAll();
 }

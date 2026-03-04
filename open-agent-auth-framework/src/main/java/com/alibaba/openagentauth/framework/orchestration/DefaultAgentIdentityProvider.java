@@ -230,7 +230,7 @@ public class DefaultAgentIdentityProvider implements AgentIdentityProvider {
             throw new WorkloadNotFoundException("Agent workload not found: " + agentWorkloadId);
         }
         
-        workloadRegistry.delete(agentWorkloadId);
+        workloadRegistry.revoke(agentWorkloadId);
 
         logger.info("Agent workload revoked: {}", agentWorkloadId);
     }

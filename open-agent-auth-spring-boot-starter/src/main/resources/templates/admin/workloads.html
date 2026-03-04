@@ -87,6 +87,7 @@
         .action-bar {
             display: flex;
             justify-content: flex-end;
+            gap: 12px;
             margin-bottom: 24px;
             animation: fadeInUp 0.6s ease-out 0.1s backwards;
         }
@@ -209,6 +210,7 @@
         .badge {
             display: inline-flex;
             align-items: center;
+            gap: 6px;
             padding: 6px 12px;
             border-radius: var(--radius-button);
             font-size: 12px;
@@ -254,11 +256,11 @@
             border-radius: var(--radius-section);
             font-family: 'JetBrains Mono', monospace;
             font-size: 12px;
+            line-height: 1.6;
             color: var(--text-secondary);
             overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            max-height: 200px;
+            white-space: pre;
+            max-height: 240px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
         }
@@ -266,6 +268,31 @@
         .public-key.collapsed {
             max-height: 80px;
             overflow: hidden;
+        }
+
+        .public-key .json-key {
+            color: #6F42C1;
+        }
+
+        .public-key .json-string {
+            color: #22863A;
+        }
+
+        .public-key .json-number {
+            color: #005CC5;
+        }
+
+        .public-key .json-boolean {
+            color: #D73A49;
+        }
+
+        .public-key .json-null {
+            color: #999999;
+            font-style: italic;
+        }
+
+        .public-key .json-bracket {
+            color: var(--text-secondary);
         }
         
         .toggle-btn {
@@ -653,13 +680,13 @@
                 <i class="bi bi-arrow-clockwise"></i>
                 Refresh
             </button>
-            <button class="btn btn-primary" onclick="openIssueModal()">
+            <button class="btn btn-primary" onclick="openIssueModal()" th:unless="${readOnly}">
                 <i class="bi bi-plus-circle"></i>
                 Issue WIT
             </button>
         </div>
         
-        <div class="search-section">
+        <div class="search-section" th:unless="${readOnly}">
             <input type="text" class="search-input" id="workloadIdInput" placeholder="Enter Workload ID...">
             <button class="btn btn-primary" onclick="searchWorkload()">
                 <i class="bi bi-search"></i>
@@ -702,7 +729,7 @@
                 </div>
             </div>
             
-            <div class="result-section" id="revokeSection">
+            <div class="result-section" id="revokeSection" th:unless="${readOnly}">
                 <button class="btn btn-danger" onclick="revokeWorkload()">
                     <i class="bi bi-x-circle"></i>
                     Revoke Workload
@@ -720,7 +747,7 @@
         </div>
     </div>
     
-    <div class="modal-overlay" id="issueModal">
+    <div class="modal-overlay" id="issueModal" th:unless="${readOnly}">
         <div class="modal">
             <button class="close-btn" onclick="closeIssueModal()">&times;</button>
             <div class="modal-header">
@@ -755,7 +782,7 @@
         </div>
     </div>
     
-    <script>
+    <script th:inline="javascript">
         // Pagination state
         let currentPage = 1;
         const pageSize = 20;
@@ -772,6 +799,9 @@
                 }
             }
         })();
+
+        // Read-only mode flag from server-side rendering
+        const isReadOnly = /*[[${readOnly}]]*/ false;
 
         let currentWorkloadId = null;
         let isPublicKeyCollapsed = true;
@@ -808,10 +838,42 @@
             });
         }
         
+        function formatJsonWithSyntaxHighlight(jsonInput) {
+            if (!jsonInput || jsonInput === 'N/A') return 'N/A';
+            try {
+                const parsed = typeof jsonInput === 'string' ? JSON.parse(jsonInput) : jsonInput;
+                const formatted = JSON.stringify(parsed, null, 2);
+                return formatted.replace(
+                    /("(?:\\.|[^"\\])*")\s*:/g,
+                    '<span class="json-key">$1</span>:'
+                ).replace(
+                    /:\s*("(?:\\.|[^"\\])*")/g,
+                    ': <span class="json-string">$1</span>'
+                ).replace(
+                    /:\s*(\d+(?:\.\d+)?)/g,
+                    ': <span class="json-number">$1</span>'
+                ).replace(
+                    /:\s*(true|false)/g,
+                    ': <span class="json-boolean">$1</span>'
+                ).replace(
+                    /:\s*(null)/g,
+                    ': <span class="json-null">$1</span>'
+                );
+            } catch (e) {
+                return escapeHtml(String(jsonInput));
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         function displayWorkload(data) {
             document.getElementById('workloadId').textContent = data.workloadId;
             document.getElementById('userId').textContent = data.userId || 'N/A';
-            document.getElementById('publicKey').textContent = data.publicKey || 'N/A';
+            document.getElementById('publicKey').innerHTML = formatJsonWithSyntaxHighlight(data.publicKey);
             document.getElementById('createdAt').textContent = formatDate(data.createdAt);
             document.getElementById('expiresAt').textContent = formatDate(data.expiresAt);
             
@@ -887,12 +949,18 @@
         }
         
         function openIssueModal() {
-            document.getElementById('issueModal').classList.add('active');
-            document.getElementById('responseArea').classList.remove('active');
+            const modal = document.getElementById('issueModal');
+            if (modal) {
+                modal.classList.add('active');
+                document.getElementById('responseArea').classList.remove('active');
+            }
         }
         
         function closeIssueModal() {
-            document.getElementById('issueModal').classList.remove('active');
+            const modal = document.getElementById('issueModal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
         }
         
         function submitIssueWIT() {
@@ -970,11 +1038,14 @@
             }, 3000);
         }
         
-        document.getElementById('workloadIdInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchWorkload();
-            }
-        });
+        const workloadIdInputElement = document.getElementById('workloadIdInput');
+        if (workloadIdInputElement) {
+            workloadIdInputElement.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchWorkload();
+                }
+            });
+        }
 
         // Load workload list on page load
         async function loadWorkloadList() {
@@ -1045,7 +1116,7 @@
                             <div class="workload-detail-row">
                                 <div class="workload-detail-label">Public Key</div>
                                 <div class="public-key-container">
-                                    <div class="public-key collapsed" id="public-key-list-${index}">${workload.publicKey || 'N/A'}</div>
+                                    <div class="public-key collapsed" id="public-key-list-${index}">${formatJsonWithSyntaxHighlight(workload.publicKey)}</div>
                                     <button class="toggle-btn" onclick="togglePublicKeyList(${index})" id="toggle-btn-list-${index}">Show more</button>
                                 </div>
                             </div>
@@ -1061,7 +1132,7 @@
                                 <div class="workload-detail-label">Status</div>
                                 ${statusBadge}
                             </div>
-                            ${workload.status === 'ACTIVE' ? `
+                            ${(!isReadOnly && workload.status === 'ACTIVE') ? `
                                 <div class="workload-detail-actions">
                                     <button class="btn btn-danger" onclick="revokeWorkloadById('${workload.workloadId}')">
                                         <i class="bi bi-x-circle"></i>

@@ -76,6 +76,9 @@ class WorkloadControllerTest {
     @Mock
     private AgentIdentityProvider agentIdentityProvider;
 
+    @Mock
+    private WorkloadRegistry workloadRegistry;
+
     private WorkloadController controller;
 
     private static final String WORKLOAD_ID = "workload-123";
@@ -86,7 +89,7 @@ class WorkloadControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new WorkloadController(agentIdentityProvider, Optional.empty());
+        controller = new WorkloadController(workloadRegistry, Optional.of(agentIdentityProvider));
     }
 
     private WorkloadInfo createTestWorkloadInfo() {
@@ -338,16 +341,6 @@ class WorkloadControllerTest {
     @DisplayName("List Workloads with Pagination Tests")
     class ListWorkloadsWithPaginationTests {
 
-        @Mock
-        private WorkloadRegistry workloadRegistry;
-
-        private WorkloadController controllerWithRegistry;
-
-        @BeforeEach
-        void setUp() {
-            controllerWithRegistry = new WorkloadController(agentIdentityProvider, Optional.of(workloadRegistry));
-        }
-
         @Test
         @DisplayName("Should return paginated workloads")
         void shouldReturnPaginatedWorkloads() {
@@ -374,27 +367,13 @@ class WorkloadControllerTest {
             PageRequest pageRequest = new PageRequest(1, 2);
 
             // When
-            ResponseEntity<PageResponse<WorkloadResponse>> response = controllerWithRegistry.listWorkloads(pageRequest);
+            ResponseEntity<PageResponse<WorkloadResponse>> response = controller.listWorkloads(pageRequest);
 
             // Then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().getItems()).hasSize(2);
             assertThat(response.getBody().getTotalItems()).isEqualTo(3);
-        }
-
-        @Test
-        @DisplayName("Should return SERVICE_UNAVAILABLE when registry is null")
-        void shouldReturnServiceUnavailableWhenRegistryIsNull() {
-            // Given
-            WorkloadController controllerWithoutRegistry = new WorkloadController(agentIdentityProvider, Optional.empty());
-            PageRequest pageRequest = new PageRequest(1, 10);
-
-            // When
-            ResponseEntity<PageResponse<WorkloadResponse>> response = controllerWithoutRegistry.listWorkloads(pageRequest);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         }
 
         @Test
@@ -405,7 +384,7 @@ class WorkloadControllerTest {
             PageRequest pageRequest = new PageRequest(1, 10);
 
             // When
-            ResponseEntity<PageResponse<WorkloadResponse>> response = controllerWithRegistry.listWorkloads(pageRequest);
+            ResponseEntity<PageResponse<WorkloadResponse>> response = controller.listWorkloads(pageRequest);
 
             // Then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -421,10 +400,99 @@ class WorkloadControllerTest {
             PageRequest pageRequest = new PageRequest(1, 10);
 
             // When
-            ResponseEntity<PageResponse<WorkloadResponse>> response = controllerWithRegistry.listWorkloads(pageRequest);
+            ResponseEntity<PageResponse<WorkloadResponse>> response = controller.listWorkloads(pageRequest);
 
             // Then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Nested
+    @DisplayName("Read-Only Mode Tests (Agent role without AgentIdentityProvider)")
+    class ReadOnlyModeTests {
+
+        private WorkloadController readOnlyController;
+
+        @BeforeEach
+        void setUp() {
+            readOnlyController = new WorkloadController(workloadRegistry, Optional.empty());
+        }
+
+        @Test
+        @DisplayName("Should return METHOD_NOT_ALLOWED for issue in read-only mode")
+        void shouldReturnMethodNotAllowedForIssueInReadOnlyMode() {
+            // Given
+            OperationRequestContext.AgentContext agentContext = OperationRequestContext.AgentContext.builder()
+                    .instance("agent-123")
+                    .platform("web")
+                    .client("client-123")
+                    .build();
+            OperationRequestContext context = OperationRequestContext.builder()
+                    .channel("web")
+                    .agent(agentContext)
+                    .build();
+            AgentUserBindingProposal proposal = AgentUserBindingProposal.builder()
+                    .userIdentityToken(ID_TOKEN)
+                    .build();
+            IssueWitRequest request = IssueWitRequest.builder()
+                    .context(context)
+                    .proposal(proposal)
+                    .oauthClientId("client-123")
+                    .build();
+
+            // When
+            ResponseEntity<IssueWitResponse> response = readOnlyController.issue(request);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getError()).contains("read-only");
+        }
+
+        @Test
+        @DisplayName("Should return METHOD_NOT_ALLOWED for revoke in read-only mode")
+        void shouldReturnMethodNotAllowedForRevokeInReadOnlyMode() {
+            // Given
+            RevokeWorkloadRequest request = RevokeWorkloadRequest.builder()
+                    .workloadId(WORKLOAD_ID)
+                    .build();
+
+            // When
+            ResponseEntity<Void> response = readOnlyController.revoke(request);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        }
+
+        @Test
+        @DisplayName("Should return METHOD_NOT_ALLOWED for get in read-only mode")
+        void shouldReturnMethodNotAllowedForGetInReadOnlyMode() {
+            // Given
+            GetWorkloadRequest request = GetWorkloadRequest.builder()
+                    .workloadId(WORKLOAD_ID)
+                    .build();
+
+            // When
+            ResponseEntity<WorkloadResponse> response = readOnlyController.get(request);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        }
+
+        @Test
+        @DisplayName("Should still allow list in read-only mode")
+        void shouldStillAllowListInReadOnlyMode() {
+            // Given
+            when(workloadRegistry.listAll()).thenReturn(Collections.emptyList());
+            PageRequest pageRequest = new PageRequest(1, 10);
+
+            // When
+            ResponseEntity<PageResponse<WorkloadResponse>> response = readOnlyController.listWorkloads(pageRequest);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getItems()).isEmpty();
         }
     }
 }

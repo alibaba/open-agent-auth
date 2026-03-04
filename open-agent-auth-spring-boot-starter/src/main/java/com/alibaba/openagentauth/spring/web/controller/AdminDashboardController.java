@@ -19,6 +19,7 @@ package com.alibaba.openagentauth.spring.web.controller;
 import com.alibaba.openagentauth.core.audit.api.AuditService;
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
 import com.alibaba.openagentauth.core.policy.api.PolicyRegistry;
+import com.alibaba.openagentauth.core.protocol.wimse.workload.store.WorkloadRegistry;
 import com.alibaba.openagentauth.framework.actor.AgentIdentityProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +47,7 @@ import java.util.Optional;
  *   <li>{@link BindingInstanceStore} → Binding Instances management</li>
  *   <li>{@link PolicyRegistry} → Policy Registry management</li>
  *   <li>{@link AuditService} → Audit Events viewer</li>
- *   <li>{@link AgentIdentityProvider} → Workload Identity management</li>
+ *   <li>{@link AgentIdentityProvider} or {@link WorkloadRegistry} → Workload Identity management</li>
  * </ul>
  *
  * @since 1.0
@@ -61,24 +62,28 @@ public class AdminDashboardController {
     private final Optional<PolicyRegistry> policyRegistry;
     private final Optional<AuditService> auditService;
     private final Optional<AgentIdentityProvider> agentIdentityProvider;
+    private final Optional<WorkloadRegistry> workloadRegistry;
 
     /**
      * Creates a new AdminDashboardController with optional capability beans.
      *
-     * @param bindingInstanceStore the binding instance store (optional)
-     * @param policyRegistry       the policy registry (optional)
-     * @param auditService         the audit service (optional)
+     * @param bindingInstanceStore  the binding instance store (optional)
+     * @param policyRegistry        the policy registry (optional)
+     * @param auditService          the audit service (optional)
      * @param agentIdentityProvider the agent identity provider (optional)
+     * @param workloadRegistry      the workload registry (optional)
      */
     public AdminDashboardController(
             Optional<BindingInstanceStore> bindingInstanceStore,
             Optional<PolicyRegistry> policyRegistry,
             Optional<AuditService> auditService,
-            Optional<AgentIdentityProvider> agentIdentityProvider) {
+            Optional<AgentIdentityProvider> agentIdentityProvider,
+            Optional<WorkloadRegistry> workloadRegistry) {
         this.bindingInstanceStore = bindingInstanceStore;
         this.policyRegistry = policyRegistry;
         this.auditService = auditService;
         this.agentIdentityProvider = agentIdentityProvider;
+        this.workloadRegistry = workloadRegistry;
         logger.info("AdminDashboardController initialized - admin dashboard is available at /admin");
     }
 
@@ -111,8 +116,9 @@ public class AdminDashboardController {
         auditService.ifPresent(service ->
                 items.add(new NavItem("audit", "Audit Events", "bi-journal-text", "/admin/audit")));
 
-        agentIdentityProvider.ifPresent(provider ->
-                items.add(new NavItem("workloads", "Workload Identity", "bi-cpu", "/admin/workloads")));
+        if (agentIdentityProvider.isPresent() || workloadRegistry.isPresent()) {
+            items.add(new NavItem("workloads", "Workload Identity", "bi-cpu", "/admin/workloads"));
+        }
 
         return items;
     }
