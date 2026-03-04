@@ -96,8 +96,12 @@
   background: #080d0b;
 }
 
-.VPSidebarItem .indicator {
+.VPSidebarItem.is-active > .item > .indicator {
   background: var(--vp-c-brand-1) !important;
+}
+
+.VPSidebarItem:not(.is-active) > .item > .indicator {
+  background: transparent !important;
 }
 
 /* ─── Nav ─── */
