@@ -668,8 +668,8 @@ log.info("Tool executed with authorization: server={}, tool={}", serverName, too
 - [Framework Layer Overview](00-api-overview.md)
 - [Actor Interfaces Guide](01-role-actor.md)
 - [Spring Boot Controllers Guide](03-spring-boot-starter.md)
-- [User Guide](../guide/start/00-user-guide.md)
-- [Configuration Guide](../guide/configuration/)
+- [User Guide](../guide/01-quick-start.md)
+- [Configuration Guide](../guide/04-configuration.md)
 
 ---
 

@@ -768,8 +768,8 @@ public class SecurityLoggingAspect {
 - [Framework Layer Overview](00-api-overview.md)
 - [Actor Interfaces Guide](01-role-actor.md)
 - [Executor Interfaces Guide](02-aap-executor.md)
-- [User Guide](../guide/start/00-user-guide.md)
-- [Configuration Guide](../guide/configuration/)
+- [User Guide](../guide/01-quick-start.md)
+- [Configuration Guide](../guide/04-configuration.md)
 
 ---
 

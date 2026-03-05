@@ -47,9 +47,8 @@ graph LR
 
 ## Related Documentation
 
-- [API Documentation](../api/) — API reference and usage guide
-- [User Guides](../guide/) — Tutorials and getting started
-- [Standards](../standard/) — Protocol standards and specifications
+- [API Documentation](../api/00-api-overview) — API reference and usage guide
+- [User Guides](../guide/01-quick-start) — Tutorials and getting started
 
 ---
 
