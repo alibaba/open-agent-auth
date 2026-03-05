@@ -9,6 +9,8 @@ export default withMermaid(defineConfig({
   srcDir: '.',
   outDir: '.vitepress/dist',
 
+  ignoreDeadLinks: [/^https?:\/\/localhost/],
+
   srcExclude: [
     'README.md',
     'README.zh-CN.md',

@@ -84,4 +84,4 @@ We follow [Semantic Versioning](https://semver.org/):
 
 ---
 
-For more information, see our [README](README.md).
+For more information, see our [README](https://github.com/alibaba/open-agent-auth#readme).

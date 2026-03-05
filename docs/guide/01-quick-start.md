@@ -759,12 +759,12 @@ open target/site/jacoco-aggregate/index.html
 
 - **Report Issues**: [GitHub Issues](https://github.com/alibaba/open-agent-auth/issues)
 - **Submit Code**: [Pull Request](https://github.com/alibaba/open-agent-auth/pulls)
-- **Contributing Guide**: [CONTRIBUTING.md](../../CONTRIBUTING.md)
+- **Contributing Guide**: [CONTRIBUTING.md](https://github.com/alibaba/open-agent-auth/blob/main/CONTRIBUTING.md)
 
 ### Get Help
 
-- **Documentation**: [Complete Documentation](../../../README.md)
-- **Examples**: [Sample Project](../../open-agent-auth-samples/)
+- **Documentation**: [Complete Documentation](https://github.com/alibaba/open-agent-auth#readme)
+- **Examples**: [Sample Project](https://github.com/alibaba/open-agent-auth/tree/main/open-agent-auth-samples)
 - **Community**: [GitHub Discussions](https://github.com/alibaba/open-agent-auth/discussions)
 - **Email**: open-agent-auth@alibaba-inc.com
 

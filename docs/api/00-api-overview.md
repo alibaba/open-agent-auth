@@ -31,9 +31,9 @@ Framework Layer (Developer Interface)
 ## 🔗 Related Resources
 
 - [Quick Start Guide](../guide/01-quick-start.md) — Get started with Open Agent Auth in 5 minutes
-- [User Guide](../guide/02-user-guide.md) — Comprehensive user guide and best practices
-- [Configuration Guide](../guide/03-configuration.md) — Detailed configuration options
-- [Architecture Documentation](../architecture/README.md) — System architecture and design principles
+- [User Guide](../guide/01-quick-start.md) — Comprehensive user guide and best practices
+- [Configuration Guide](../guide/04-configuration.md) — Detailed configuration options
+- [Architecture Documentation](../architecture/) — System architecture and design principles
 
 ---
 
