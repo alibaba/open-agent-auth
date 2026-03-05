@@ -50,7 +50,7 @@ export default withMermaid(defineConfig({
   },
 
   themeConfig: {
-    logo: '/logo.png',
+    logo: '/public/logo.png',
     siteTitle: 'Open Agent Auth',
 
     nav: [
