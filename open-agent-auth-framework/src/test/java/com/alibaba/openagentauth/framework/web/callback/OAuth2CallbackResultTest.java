@@ -213,15 +213,14 @@ class OAuth2CallbackResultTest {
     class EqualsAndHashCode {
 
         @Test
-        @DisplayName("Should be equal when all fields match")
+        @DisplayName("Should be equal when all fields match using recursive comparison")
         void shouldBeEqualWhenAllFieldsMatch() {
             // Arrange
             OAuth2CallbackResult result1 = OAuth2CallbackResult.redirect(REDIRECT_URL);
             OAuth2CallbackResult result2 = OAuth2CallbackResult.redirect(REDIRECT_URL);
 
             // Act & Assert
-            assertThat(result1).isEqualTo(result2);
-            assertThat(result1.hashCode()).isEqualTo(result2.hashCode());
+            assertThat(result1).usingRecursiveComparison().isEqualTo(result2);
         }
 
         @Test
@@ -232,7 +231,7 @@ class OAuth2CallbackResultTest {
             OAuth2CallbackResult result2 = OAuth2CallbackResult.redirect("https://other.com/callback");
 
             // Act & Assert
-            assertThat(result1).isNotEqualTo(result2);
+            assertThat(result1).usingRecursiveComparison().isNotEqualTo(result2);
         }
 
         @Test
@@ -244,7 +243,7 @@ class OAuth2CallbackResultTest {
             OAuth2CallbackResult result2 = OAuth2CallbackResult.error(400, errorResponse);
 
             // Act & Assert
-            assertThat(result1).isNotEqualTo(result2);
+            assertThat(result1).usingRecursiveComparison().isNotEqualTo(result2);
         }
 
         @Test

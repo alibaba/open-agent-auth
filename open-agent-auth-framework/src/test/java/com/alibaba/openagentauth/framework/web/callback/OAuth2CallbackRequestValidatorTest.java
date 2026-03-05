@@ -75,7 +75,6 @@ class OAuth2CallbackRequestValidatorTest {
         void shouldReturnErrorWhenCallbackHasError() {
             // Arrange
             when(mockRequest.hasError()).thenReturn(true);
-            when(mockRequest.getError()).thenReturn("access_denied");
             when(mockRequest.getErrorDescription()).thenReturn("User denied access");
 
             // Act
@@ -166,7 +165,6 @@ class OAuth2CallbackRequestValidatorTest {
         void shouldReturnDefaultErrorDescriptionWhenErrorCallbackHasNoDescription() {
             // Arrange
             when(mockRequest.hasError()).thenReturn(true);
-            when(mockRequest.getError()).thenReturn("access_denied");
             when(mockRequest.getErrorDescription()).thenReturn(null);
 
             // Act

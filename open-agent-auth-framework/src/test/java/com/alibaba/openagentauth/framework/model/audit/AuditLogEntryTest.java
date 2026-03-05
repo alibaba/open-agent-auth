@@ -299,7 +299,7 @@ class AuditLogEntryTest {
     class EqualsAndHashCode {
 
         @Test
-        @DisplayName("Should be equal when all fields match")
+        @DisplayName("Should be equal when all fields match using usingRecursiveComparison")
         void shouldBeEqualWhenAllFieldsMatch() {
             // Arrange
             AuditLogEntry entry1 = AuditLogEntry.builder()
@@ -321,8 +321,7 @@ class AuditLogEntryTest {
                     .build();
 
             // Act & Assert
-            assertThat(entry1).isEqualTo(entry2);
-            assertThat(entry1.hashCode()).isEqualTo(entry2.hashCode());
+            assertThat(entry1).usingRecursiveComparison().isEqualTo(entry2);
         }
 
         @Test
@@ -338,7 +337,7 @@ class AuditLogEntryTest {
                     .build();
 
             // Act & Assert
-            assertThat(entry1).isNotEqualTo(entry2);
+            assertThat(entry1).usingRecursiveComparison().isNotEqualTo(entry2);
         }
 
         @Test

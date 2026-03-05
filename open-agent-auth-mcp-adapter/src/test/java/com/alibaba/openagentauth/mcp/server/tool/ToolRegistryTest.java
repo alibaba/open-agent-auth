@@ -435,12 +435,11 @@ class ToolRegistryTest {
      */
     private McpTool createMockTool(String name, String description) {
         McpTool mockTool = mock(McpTool.class);
-        McpSchema.Tool definition = mock(McpSchema.Tool.class);
-        
+        McpSchema.Tool definition = new McpSchema.Tool(name, null, description, null, null, null, null);
+
         when(mockTool.getName()).thenReturn(name);
         when(mockTool.getDefinition()).thenReturn(definition);
-        when(definition.description()).thenReturn(description);
-        
+
         return mockTool;
     }
 }

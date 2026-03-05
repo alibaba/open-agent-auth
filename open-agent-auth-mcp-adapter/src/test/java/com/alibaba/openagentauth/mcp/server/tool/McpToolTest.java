@@ -245,41 +245,28 @@ class McpToolTest {
 
         @Override
         public McpSchema.Tool getDefinition() {
-            McpSchema.Tool definition = mock(McpSchema.Tool.class);
-            when(definition.name()).thenReturn(TOOL_NAME);
-            when(definition.description()).thenReturn(TOOL_DESCRIPTION);
-            return definition;
+            return new McpSchema.Tool(TOOL_NAME, null, TOOL_DESCRIPTION, null, null, null, null);
         }
 
         @Override
         public McpSchema.CallToolResult execute(Map<String, Object> arguments) {
             if (arguments != null && arguments.containsKey("invalid_param")) {
-                McpSchema.CallToolResult errorResult = mock(McpSchema.CallToolResult.class);
-                when(errorResult.isError()).thenReturn(true);
-                return errorResult;
+                return new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("Invalid parameter")), true);
             }
 
             if (arguments != null && arguments.containsKey("trigger_error")) {
-                McpSchema.CallToolResult errorResult = mock(McpSchema.CallToolResult.class);
-                when(errorResult.isError()).thenReturn(true);
-                return errorResult;
+                return new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("Error triggered")), true);
             }
 
-            McpSchema.CallToolResult successResult = mock(McpSchema.CallToolResult.class);
-            when(successResult.isError()).thenReturn(false);
-            return successResult;
+            return new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("Success")), false);
         }
 
         public McpSchema.CallToolResult executeWithRequiredParam(Map<String, Object> arguments) {
             if (arguments == null || !arguments.containsKey("required_param")) {
-                McpSchema.CallToolResult errorResult = mock(McpSchema.CallToolResult.class);
-                when(errorResult.isError()).thenReturn(true);
-                return errorResult;
+                return new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("Missing required param")), true);
             }
 
-            McpSchema.CallToolResult successResult = mock(McpSchema.CallToolResult.class);
-            when(successResult.isError()).thenReturn(false);
-            return successResult;
+            return new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("Success")), false);
         }
 
         @Override
