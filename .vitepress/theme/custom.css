@@ -190,6 +190,19 @@
   color: var(--vp-c-brand-1);
 }
 
+/* ─── Feature Cards Grid Enhancement ─── */
+.VPFeatures .VPFeature .icon {
+  font-size: 1.5rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vp-c-brand-soft);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+}
+
 /* ─── Footer ─── */
 .VPFooter {
   border-top: 1px solid var(--vp-c-divider);
