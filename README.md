@@ -96,7 +96,7 @@ cd open-agent-auth-samples
 open http://localhost:8081
 ```
 
-> **Note**: The Mock LLM uses keyword-based matching. For available products and matching rules, see [Mock LLM Guide](docs/guide/start/mock-llm-guide.md).
+> **Note**: The Mock LLM uses keyword-based matching. For available products and matching rules, see [Mock LLM Guide](docs/guide/02-mock-llm-guide.md).
 
 #### Option 2: Using QwenCode (Deep Experience)
 
@@ -208,11 +208,11 @@ Add the dependency to your `pom.xml`:
 
 #### Basic Configuration
 
-Configure JWKS endpoints and other settings. For complete configuration options, see [Configuration Guide](docs/guide/configuration/00-configuration-overview.md).
+Configure JWKS endpoints and other settings. For complete configuration options, see [Configuration Guide](docs/guide/04-configuration.md).
 
 #### Advanced Integration
 
-For detailed integration instructions and advanced usage, see [Integration Guide](docs/guide/start/02-integration-guide.md).
+For detailed integration instructions and advanced usage, see [Integration Guide](docs/guide/03-integration-guide.md).
 
 ---
 
@@ -233,7 +233,7 @@ The architecture consists of:
 
 ### Multi-Layer Verification
 
-The Resource Server implements a comprehensive multi-layer security verification mechanism aligned with industry standards. For detailed information about the verification layers, see [Multi-Layer Verification](docs/architecture/authorization/five-layer-verification.md).
+The Resource Server implements a comprehensive multi-layer security verification mechanism aligned with industry standards. For detailed information about the verification layers, see [Multi-Layer Verification](docs/architecture/03-authorization.md).
 
 ### Authorization Flow
 
@@ -292,7 +292,7 @@ Each user request operates in an isolated virtual workload environment with temp
 
 #### Semantic Audit Trail
 
-W3C VC-based verifiable credentials record complete context from user input to resource operation, enabling transparent and auditable agent operations. For detailed information about the audit trail components, see [Audit and Compliance](docs/architecture/security/audit-and-compliance.md).
+W3C VC-based verifiable credentials record complete context from user input to resource operation, enabling transparent and auditable agent operations. For detailed information about the audit trail components, see [Audit and Compliance](docs/architecture/04-security.md).
 
 ## Security
 
@@ -304,7 +304,7 @@ Open Agent Auth implements comprehensive security measures across all layers:
 - **Audit & Compliance**: W3C VC-based verifiable audit trails for regulatory compliance and forensic analysis
 - **Secure Key Management**: Proper key lifecycle management for JWKS endpoints and temporary credentials
 
-For detailed security architecture, see [Security Documentation](docs/architecture/security/README.md).
+For detailed security architecture, see [Security Documentation](docs/architecture/04-security.md).
 
 ---
 
@@ -312,17 +312,17 @@ For detailed security architecture, see [Security Documentation](docs/architectu
 
 ### Guides
 
-- [Quick Start Guide](docs/guide/start/01-quick-start.md) - Get started in 5 minutes
-- [Configuration Guide](docs/guide/configuration/00-configuration-overview.md) - Detailed configuration options
-- [User Guide](docs/guide/start/00-user-guide.md) - Complete user documentation
-- [Integration Testing Guide](docs/guide/test/integration-testing-guide.md) - Integration testing guide
+- [Quick Start Guide](docs/guide/01-quick-start.md) - Get started in 5 minutes
+- [Configuration Guide](docs/guide/04-configuration.md) - Detailed configuration options
+- [Integration Guide](docs/guide/03-integration-guide.md) - Complete integration documentation
+- [Integration Testing Guide](docs/guide/07-integration-testing.md) - Integration testing guide
 
 ### Architecture
 
-- [Architecture Overview](docs/architecture/README.md)
-- [Identity & Workload Management](docs/architecture/identity/README.md)
-- [Security & Audit](docs/architecture/security/README.md)
-- [Spring Boot Integration](docs/architecture/integration/spring-boot-integration.md)
+- [Architecture Overview](docs/architecture/index.md)
+- [Identity & Workload Management](docs/architecture/02-identity.md)
+- [Security & Audit](docs/architecture/04-security.md)
+- [Spring Boot Integration](docs/architecture/07-spring-boot-integration.md)
 
 ### Standards
 

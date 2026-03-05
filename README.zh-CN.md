@@ -96,7 +96,7 @@ cd open-agent-auth-samples
 open http://localhost:8081
 ```
 
-> **注意**：模拟 LLM 使用关键词匹配。关于可用产品和匹配规则，请参阅 [模拟 LLM 使用指南](docs/guide/start/mock-llm-guide.md)。
+> **注意**：模拟 LLM 使用关键词匹配。关于可用产品和匹配规则，请参阅 [模拟 LLM 使用指南](docs/guide/02-mock-llm-guide.md)。
 
 #### 方式二：使用 QwenCode（深度体验）
 
@@ -208,11 +208,11 @@ open http://localhost:8081
 
 #### 基础配置
 
-配置 JWKS 端点及其他相关参数。完整的配置选项请参阅 [配置指南](docs/guide/configuration/00-configuration-overview.md)。
+配置 JWKS 端点及其他相关参数。完整的配置选项请参阅 [配置指南](docs/guide/04-configuration.md)。
 
 #### 高级集成
 
-详细的集成说明与高级用法，请参阅 [集成指南](docs/guide/start/02-integration-guide.md)。
+详细的集成说明与高级用法，请参阅 [集成指南](docs/guide/03-integration-guide.md)。
 
 ---
 
@@ -233,7 +233,7 @@ Open Agent Auth 实现了零信任安全架构，包含四个核心层级：
 
 ### 多层验证机制
 
-资源服务器实现了符合行业标准的多层安全验证机制。验证层的详细信息请参阅 [多层验证](docs/architecture/authorization/five-layer-verification.md)。
+资源服务器实现了符合行业标准的多层安全验证机制。验证层的详细信息请参阅 [多层验证](docs/architecture/03-authorization.md)。
 
 ### 授权流程
 
@@ -292,7 +292,7 @@ sequenceDiagram
 
 #### 语义审计追踪
 
-基于 W3C VC 可验证凭证，记录从用户输入到资源操作的完整上下文，实现透明且可审计的智能体操作。审计追踪组件的详细信息请参阅 [审计与合规](docs/architecture/security/audit-and-compliance.md)。
+基于 W3C VC 可验证凭证，记录从用户输入到资源操作的完整上下文，实现透明且可审计的智能体操作。审计追踪组件的详细信息请参阅 [审计与合规](docs/architecture/04-security.md)。
 
 ## 安全机制
 
@@ -304,7 +304,7 @@ Open Agent Auth 在所有层级实施全面的安全措施：
 - **审计与合规**：基于 W3C VC 的可验证审计追踪，用于监管合规与取证分析
 - **安全密钥管理**：JWKS 端点与临时凭证的密钥生命周期管理
 
-详细的安全架构请参阅 [安全文档](docs/architecture/security/README.md)。
+详细的安全架构请参阅 [安全文档](docs/architecture/04-security.md)。
 
 ---
 
@@ -312,17 +312,17 @@ Open Agent Auth 在所有层级实施全面的安全措施：
 
 ### 使用指南
 
-- [快速开始指南](docs/guide/start/01-quick-start.md) - 5 分钟快速上手
-- [配置指南](docs/guide/configuration/00-configuration-overview.md) - 详细配置选项
-- [用户指南](docs/guide/start/00-user-guide.md) - 完整用户文档
-- [集成测试指南](docs/guide/test/integration-testing-guide.md) - 集成测试指南
+- [快速开始指南](docs/guide/01-quick-start.md) - 5 分钟快速上手
+- [配置指南](docs/guide/04-configuration.md) - 详细配置选项
+- [集成指南](docs/guide/03-integration-guide.md) - 完整集成文档
+- [集成测试指南](docs/guide/07-integration-testing.md) - 集成测试指南
 
 ### 架构文档
 
-- [架构概览](docs/architecture/README.md)
-- [身份与工作负载管理](docs/architecture/identity/README.md)
-- [安全与审计](docs/architecture/security/README.md)
-- [Spring Boot 集成](docs/architecture/integration/spring-boot-integration.md)
+- [架构概览](docs/architecture/index.md)
+- [身份与工作负载管理](docs/architecture/02-identity.md)
+- [安全与审计](docs/architecture/04-security.md)
+- [Spring Boot 集成](docs/architecture/07-spring-boot-integration.md)
 
 ### 标准规范
 
