@@ -66,6 +66,12 @@ open-agent-auth:
         require-user-interaction: false
         expiration-seconds: 3600
   
+  # Admin console configuration (enabled for sample/demo purposes)
+  admin:
+    enabled: true
+    access-control:
+      enabled: false
+
   # Roles configuration
   roles:
     agent:

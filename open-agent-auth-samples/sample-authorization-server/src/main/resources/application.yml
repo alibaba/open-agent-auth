@@ -71,6 +71,12 @@ open-agent-auth:
       enabled: true
       provider: logging
   
+  # Admin console configuration (enabled for sample/demo purposes)
+  admin:
+    enabled: true
+    access-control:
+      enabled: false
+
   # Roles configuration
   roles:
     authorization-server:

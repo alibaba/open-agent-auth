@@ -151,6 +151,17 @@ public class OpenAgentAuthProperties implements InitializingBean {
     private MonitoringProperties monitoring = new MonitoringProperties();
 
     /**
+     * Admin console configuration.
+     * <p>
+     * Controls whether the admin UI is enabled and how access to admin endpoints
+     * is protected. The admin console is disabled by default to follow the
+     * principle of least privilege.
+     * </p>
+     */
+    @NestedConfigurationProperty
+    private AdminProperties admin = new AdminProperties();
+
+    /**
      * Called by Spring after all properties have been bound.
      * <p>
      * Triggers role-aware configuration inference to fill in missing infrastructure
@@ -340,6 +351,28 @@ public class OpenAgentAuthProperties implements InitializingBean {
      */
     public void setMonitoring(MonitoringProperties monitoring) {
         this.monitoring = monitoring;
+    }
+
+    /**
+     * Gets the admin console configuration.
+     * <p>
+     * This configuration controls whether the admin UI is enabled and how
+     * access to admin endpoints is protected.
+     * </p>
+     *
+     * @return the admin properties
+     */
+    public AdminProperties getAdmin() {
+        return admin;
+    }
+
+    /**
+     * Sets the admin console configuration.
+     *
+     * @param admin the admin properties to set
+     */
+    public void setAdmin(AdminProperties admin) {
+        this.admin = admin;
     }
 
     // ========== Convenience Accessors ==========

@@ -29,6 +29,10 @@ com.alibaba.openagentauth.spring.config.OAuth2AuthorizationConfiguration
 # Layer 3: Configuration Validator (validates role-capability consistency)
 com.alibaba.openagentauth.spring.autoconfigure.ConfigurationValidator
 
+# Admin Console configuration (loaded after role configs, before SpringWeb)
+# Registers AdminAccessInterceptor and user authentication interceptor for admin endpoints
+com.alibaba.openagentauth.spring.autoconfigure.AdminAutoConfiguration
+
 # Spring Web configuration (loaded last - scans for REST controllers with @ConditionalOnBean)
 # Must be loaded after all role and config classes so that @ConditionalOnBean can detect registered beans
 com.alibaba.openagentauth.spring.autoconfigure.SpringWebAutoConfiguration

@@ -10,7 +10,7 @@
   ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
   ![Java](https://img.shields.io/badge/Java-17+-orange.svg)
   ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3+-green.svg)
-  ![Code Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)
+  ![Code Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)
   ![Build Status](https://github.com/alibaba/open-agent-auth/actions/workflows/ci.yml/badge.svg)
   ![Version](https://img.shields.io/badge/version-v0.1.0--beta.1-blue)
 
@@ -362,30 +362,30 @@ Open Agent Auth v0.1.0-beta.1 处于公开 Beta 测试阶段 — 功能完整、
 计划在后续版本中提供以下增强功能：
 
 **授权发现**
-- 支持从资源服务器响应中动态发现授权服务器
-- 支持授权服务器地址协商与路由
-- 基于资源提供方授权要求的灵活授权流程
+- [ ] 支持从资源服务器响应中动态发现授权服务器
+- [ ] 支持授权服务器地址协商与路由
+- [ ] 基于资源提供方授权要求的灵活授权流程
 
 **智能体到智能体授权**
-- 在多个 AI 智能体之间实现安全授权
-- 支持智能体委托与链式授权流程
-- 跨智能体身份验证与信任建立
+- [ ] 在多个 AI 智能体之间实现安全授权
+- [ ] 支持智能体委托与链式授权流程
+- [ ] 跨智能体身份验证与信任建立
 
 **OpenAPI 适配器**
-- 用于 Web 应用程序的 REST API 集成适配器
-- 基于 OpenAPI 规范自动生成策略
-- 用于集中授权的 API 网关集成
+- [ ] 用于 Web 应用程序的 REST API 集成适配器
+- [ ] 基于 OpenAPI 规范自动生成策略
+- [ ] 用于集中授权的 API 网关集成
 
 **提示安全传输**
-- 带加密的安全提示传递机制
-- 防止注入与篡改的提示保护
-- 安全提示处理的参考实现
+- [ ] 带加密的安全提示传递机制
+- [ ] 防止注入与篡改的提示保护
+- [ ] 安全提示处理的参考实现
 
 **增强审计与合规**
-- 全面的审计日志增强
-- 监管合规报告（SOC2、GDPR 等）
-- 实时审计监控与告警
-- 审计数据保留与归档策略
+- [ ] 全面的审计日志增强
+- [ ] 监管合规报告（SOC2、GDPR 等）
+- [ ] 实时审计监控与告警
+- [ ] 审计数据保留与归档策略
 
 ---
 

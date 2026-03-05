@@ -152,6 +152,12 @@ public class UserAuthenticationInterceptor {
 
         logger.info("User not authenticated, redirecting to User IDP");
 
+        // Save the original request URL in session so we can redirect back after login
+        HttpSession redirectSession = request.getSession(true);
+        String originalUrl = UrlBuilder.buildCurrentRequestUrl(request);
+        SessionManager.setAttribute(redirectSession, SessionAttributes.REDIRECT_URI, originalUrl);
+        logger.debug("Saved original request URL for post-login redirect: {}", originalUrl);
+
         // Get login URL and redirect
         String loginUrl = getLoginUrl(request);
         if (loginUrl == null) {

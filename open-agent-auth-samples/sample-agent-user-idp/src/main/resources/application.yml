@@ -42,6 +42,20 @@ open-agent-auth:
               - openid
               - profile
               - email
+          - client-name: sample-agent-idp
+            client-id: sample-agent-idp
+            client-secret: sample-agent-idp-secret
+            redirect-uris:
+              - http://localhost:8082/callback
+            grant-types:
+              - authorization_code
+            response-types:
+              - code
+            token-endpoint-auth-method: client_secret_basic
+            scopes:
+              - openid
+              - profile
+              - email
 
     user-authentication:
       enabled: true

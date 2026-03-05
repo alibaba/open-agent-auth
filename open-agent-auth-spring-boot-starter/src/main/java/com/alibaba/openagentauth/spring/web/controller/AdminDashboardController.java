@@ -23,6 +23,7 @@ import com.alibaba.openagentauth.core.protocol.wimse.workload.store.WorkloadRegi
 import com.alibaba.openagentauth.framework.actor.AgentIdentityProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -54,6 +55,7 @@ import java.util.Optional;
  */
 @Controller
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@ConditionalOnProperty(prefix = "open-agent-auth.admin", name = "enabled", havingValue = "true")
 public class AdminDashboardController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminDashboardController.class);

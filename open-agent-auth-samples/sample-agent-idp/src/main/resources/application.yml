@@ -19,10 +19,23 @@ open-agent-auth:
     agent-user-idp:
       issuer: http://localhost:8083
 
+  # Admin console configuration (enabled for sample/demo purposes)
+  admin:
+    enabled: true
+    access-control:
+      enabled: false
+
   # Capabilities configuration
   capabilities:
     workload-identity:
       enabled: true
+    oauth2-client:
+      enabled: true
+      client-id: sample-agent-idp
+      client-secret: sample-agent-idp-secret
+      callback:
+        enabled: true
+        endpoint: /callback
 
 logging:
   level:

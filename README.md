@@ -10,7 +10,7 @@
   ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
   ![Java](https://img.shields.io/badge/Java-17+-orange.svg)
   ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3+-green.svg)
-  ![Code Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)
+  ![Code Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)
   ![Build Status](https://github.com/alibaba/open-agent-auth/actions/workflows/ci.yml/badge.svg)
   ![Version](https://img.shields.io/badge/version-v0.1.0--beta.1-blue)
 
@@ -362,30 +362,30 @@ Open Agent Auth v0.1.0-beta.1 is in public beta — feature-complete, actively e
 The following enhancements are planned for upcoming releases:
 
 **Authorization Discovery**
-- Enable dynamic authorization server discovery from resource server responses
-- Support for authorization server address negotiation and routing
-- Flexible authorization flow based on resource provider's authorization requirements
+- [ ] Enable dynamic authorization server discovery from resource server responses
+- [ ] Support for authorization server address negotiation and routing
+- [ ] Flexible authorization flow based on resource provider's authorization requirements
 
 **Agent-to-Agent Authorization**
-- Enable secure authorization between multiple AI agents
-- Support for agent delegation and chained authorization flows
-- Cross-agent identity verification and trust establishment
+- [ ] Enable secure authorization between multiple AI agents
+- [ ] Support for agent delegation and chained authorization flows
+- [ ] Cross-agent identity verification and trust establishment
 
 **OpenAPI Adapter**
-- REST API integration adapter for web applications
-- Automatic policy generation from OpenAPI specifications
-- API gateway integration for centralized authorization
+- [ ] REST API integration adapter for web applications
+- [ ] Automatic policy generation from OpenAPI specifications
+- [ ] API gateway integration for centralized authorization
 
 **Prompt Security Transmission**
-- Secure prompt passing mechanism with encryption
-- Prompt protection against injection and tampering
-- Reference implementation for secure prompt handling
+- [ ] Secure prompt passing mechanism with encryption
+- [ ] Prompt protection against injection and tampering
+- [ ] Reference implementation for secure prompt handling
 
 **Enhanced Audit & Compliance**
-- Comprehensive audit log enrichment
-- Regulatory compliance reporting (SOC2, GDPR, etc.)
-- Real-time audit monitoring and alerting
-- Audit data retention and archival policies
+- [ ] Comprehensive audit log enrichment
+- [ ] Regulatory compliance reporting (SOC2, GDPR, etc.)
+- [ ] Real-time audit monitoring and alerting
+- [ ] Audit data retention and archival policies
 
 ---
 

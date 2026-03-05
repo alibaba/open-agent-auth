@@ -153,6 +153,11 @@ class UserAuthenticationInterceptorTest {
             when(request.getRequestURI()).thenReturn("/protected");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
+            when(request.getScheme()).thenReturn("http");
+            when(request.getServerName()).thenReturn("localhost");
+            when(request.getServerPort()).thenReturn(8080);
+            when(request.getRequestURI()).thenReturn("/protected");
+            when(request.getQueryString()).thenReturn(null);
 
             // Create a test interceptor that returns a login URL
             UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(
@@ -170,6 +175,37 @@ class UserAuthenticationInterceptorTest {
             // Assert
             assertThat(result).isFalse();
             verify(response).sendRedirect(any());
+        }
+
+        @Test
+        @DisplayName("Should save original request URL to session before redirecting")
+        void shouldSaveOriginalRequestUrlToSessionBeforeRedirecting() throws IOException {
+            // Arrange
+            when(request.getRequestURI()).thenReturn("/admin");
+            when(request.getSession(false)).thenReturn(null);
+            when(request.getSession(true)).thenReturn(session);
+            when(request.getScheme()).thenReturn("http");
+            when(request.getServerName()).thenReturn("localhost");
+            when(request.getServerPort()).thenReturn(8080);
+            when(request.getQueryString()).thenReturn(null);
+
+            UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(
+                List.of("/login")
+            ) {
+                @Override
+                protected String buildAuthorizationUrl(HttpServletRequest request, String state) {
+                    return "https://idp.example.com/login?state=" + state;
+                }
+            };
+
+            // Act
+            try (MockedStatic<SessionManager> mockedSessionManager = mockStatic(SessionManager.class)) {
+                testInterceptor.preHandle(request, response);
+
+                // Assert - verify REDIRECT_URI was saved to session
+                mockedSessionManager.verify(() ->
+                        SessionManager.setAttribute(eq(session), eq(SessionAttributes.REDIRECT_URI), any(String.class)));
+            }
         }
 
         @Test
@@ -195,6 +231,10 @@ class UserAuthenticationInterceptorTest {
             when(request.getRequestURI()).thenReturn("/protected");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
+            when(request.getScheme()).thenReturn("http");
+            when(request.getServerName()).thenReturn("localhost");
+            when(request.getServerPort()).thenReturn(8080);
+            when(request.getQueryString()).thenReturn(null);
 
             // Create a test interceptor that returns null for login URL
             UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(

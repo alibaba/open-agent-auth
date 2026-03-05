@@ -29,6 +29,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.mockito.Mockito.atLeast;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -193,7 +195,7 @@ class AgentAuthenticationInterceptorTest {
 
             // Assert
             assertThat(result).isFalse();
-            verify(request).getSession(true);
+            verify(request, atLeast(1)).getSession(true);
             verify(response).sendRedirect(AUTHORIZATION_URL);
         }
 
