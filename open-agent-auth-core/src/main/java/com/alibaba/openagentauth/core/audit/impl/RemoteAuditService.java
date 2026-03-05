@@ -54,10 +54,10 @@ import java.util.Map;
  * <b>Architecture:</b></p>
  * <pre>
  * ┌─────────────────┐         HTTP          ┌──────────────────────┐
- * │     Agent /      │ ────────────────────▶ │ Authorization Server │
- * │ Resource Server  │   POST /api/v1/       │   (Local InMemory    │
- * │ (RemoteAudit     │   audit/events/list   │    AuditService)     │
- * │  Service)        │                       │                      │
+ * │     Agent /     │ ────────────────────▶ │ Authorization Server │
+ * │ Resource Server │   POST /api/v1/       │   (Local InMemory    │
+ * │ (RemoteAudit    │   audit/events/list   │    AuditService)     │
+ * │  Service)       │                       │                      │
  * └─────────────────┘                       └──────────────────────┘
  * </pre>
  * <p>
@@ -72,6 +72,14 @@ import java.util.Map;
 public class RemoteAuditService implements AuditService {
 
     private static final Logger logger = LoggerFactory.getLogger(RemoteAuditService.class);
+
+    /**
+     * Maximum page size used when fetching events from the remote Authorization Server.
+     * Since {@link #getEventsByTimeRange} returns a full {@code List} (not a page),
+     * we request a large page to retrieve all matching events in a single round-trip,
+     * avoiding double-pagination when the caller applies its own paging.
+     */
+    private static final int MAX_REMOTE_PAGE_SIZE = 10000;
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -179,6 +187,9 @@ public class RemoteAuditService implements AuditService {
             Map<String, Object> requestMap = new HashMap<>();
             requestMap.put("startTime", startTime);
             requestMap.put("endTime", endTime);
+            // Request all matching events from the remote server to avoid double-pagination.
+            // The caller (AuditController) will apply its own pagination on the returned list.
+            requestMap.put("size", MAX_REMOTE_PAGE_SIZE);
             String requestBody = objectMapper.writeValueAsString(requestMap);
 
             HttpRequest request = HttpRequest.newBuilder()

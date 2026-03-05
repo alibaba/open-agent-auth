@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo-banner.png" alt="Open Agent Auth Logo" style="border-radius: 10px;"> 
+  <img src="public/logo-banner.png" alt="Open Agent Auth Logo" style="border-radius: 10px;"> 
 
   # Open Agent Auth
 
