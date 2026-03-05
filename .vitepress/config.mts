@@ -125,6 +125,20 @@ export default withMermaid(defineConfig({
                 { text: 'Troubleshooting', link: '/docs/guide/07-integration-testing#troubleshooting-test-failures' },
               ],
             },
+            {
+              text: 'Admin Dashboard',
+              link: '/docs/guide/08-admin-dashboard',
+              collapsed: false,
+              items: [
+                { text: 'Enabling the Dashboard', link: '/docs/guide/08-admin-dashboard#enabling-the-admin-dashboard' },
+                { text: 'Access Control', link: '/docs/guide/08-admin-dashboard#access-control' },
+                { text: 'Dashboard Pages', link: '/docs/guide/08-admin-dashboard#dashboard-pages' },
+                { text: 'Customizing Endpoints', link: '/docs/guide/08-admin-dashboard#customizing-endpoint-paths' },
+                { text: 'Configuration Reference', link: '/docs/guide/08-admin-dashboard#complete-configuration-reference' },
+                { text: 'Architecture', link: '/docs/guide/08-admin-dashboard#architecture' },
+                { text: 'Troubleshooting', link: '/docs/guide/08-admin-dashboard#troubleshooting' },
+              ],
+            },
           ],
         },
         {
