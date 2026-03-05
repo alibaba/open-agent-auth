@@ -16,6 +16,8 @@
 package com.alibaba.openagentauth.core.model.audit;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -51,6 +53,7 @@ import java.util.UUID;
  * @see AuditTrail
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonDeserialize(builder = AuditEvent.Builder.class)
 public class AuditEvent {
 
     /**
@@ -258,6 +261,7 @@ public class AuditEvent {
     /**
      * Builder for {@link AuditEvent}.
      */
+    @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
 
         private String eventId;

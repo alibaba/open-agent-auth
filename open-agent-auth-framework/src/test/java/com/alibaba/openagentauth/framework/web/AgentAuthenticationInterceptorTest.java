@@ -17,7 +17,6 @@ package com.alibaba.openagentauth.framework.web;
 
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.web.interceptor.AgentAuthenticationInterceptor;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,9 +47,6 @@ class AgentAuthenticationInterceptorTest {
     private AgentAapExecutor agentAapExecutor;
 
     @Mock
-    private SessionMappingBizService sessionMappingBizService;
-
-    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -62,7 +58,6 @@ class AgentAuthenticationInterceptorTest {
     void setUp() {
         interceptor = new AgentAuthenticationInterceptor(
             agentAapExecutor,
-            sessionMappingBizService,
             List.of("/login", "/callback", "/public/**")
         );
     }
@@ -84,7 +79,6 @@ class AgentAuthenticationInterceptorTest {
             // Act
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
                 agentAapExecutor,
-                sessionMappingBizService,
                 null
             );
 

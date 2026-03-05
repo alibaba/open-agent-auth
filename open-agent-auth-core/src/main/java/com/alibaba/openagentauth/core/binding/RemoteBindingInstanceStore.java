@@ -214,8 +214,71 @@ public class RemoteBindingInstanceStore implements BindingInstanceStore {
 
     @Override
     public java.util.List<BindingInstance> listAll() {
-        logger.warn("Remote binding instance listing is not supported.");
-        return java.util.List.of();
+        logger.debug("Listing all binding instances from remote server");
+
+        try {
+            String url = serviceEndpointResolver.resolveConsumer("authorization-server", "binding.list");
+            if (url == null) {
+                logger.error("Failed to resolve endpoint: binding.list for service authorization-server");
+                return java.util.List.of();
+            }
+
+            String requestBody = objectMapper.writeValueAsString(
+                    java.util.Map.of("page", 1, "size", 100));
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .timeout(Duration.ofSeconds(30))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            logger.debug("Sending POST request to: {}", url);
+
+            HttpResponse<String> response = httpClient.send(
+                    request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                logger.debug("Successfully retrieved binding instances from remote server");
+                return parseBindingInstanceListResponse(response.body());
+            }
+
+            logger.error("Failed to list binding instances: HTTP {} - {}",
+                    response.statusCode(), response.body());
+            return java.util.List.of();
+        } catch (Exception e) {
+            logger.error("Failed to list binding instances from remote server", e);
+            return java.util.List.of();
+        }
+    }
+
+    /**
+     * Parses the binding instance list response from the Authorization Server.
+     * <p>
+     * The response is expected to be a PageResponse containing an "items" field
+     * with the list of binding instances.
+     * </p>
+     *
+     * @param responseBody the JSON response body
+     * @return the list of binding instances
+     */
+    private java.util.List<BindingInstance> parseBindingInstanceListResponse(String responseBody) {
+        try {
+            com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>> mapType =
+                    new com.fasterxml.jackson.core.type.TypeReference<>() {};
+            java.util.Map<String, Object> pageResponse = objectMapper.readValue(responseBody, mapType);
+            Object itemsObj = pageResponse.get("items");
+            if (itemsObj == null) {
+                return java.util.List.of();
+            }
+            String itemsJson = objectMapper.writeValueAsString(itemsObj);
+            com.fasterxml.jackson.core.type.TypeReference<java.util.List<BindingInstance>> listType =
+                    new com.fasterxml.jackson.core.type.TypeReference<>() {};
+            return objectMapper.readValue(itemsJson, listType);
+        } catch (Exception e) {
+            logger.error("Failed to parse binding instance list response", e);
+            return java.util.List.of();
+        }
     }
 
     /**

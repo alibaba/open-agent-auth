@@ -134,58 +134,51 @@ The policy evaluation result is a boolean decision (allow or deny) along with an
 
 The policy evaluation layer provides the flexibility to implement fine-grained, context-aware access control that goes beyond simple scope-based authorization. Policies can consider factors such as the user's role, the resource's sensitivity, the time of day, the user's location, and the data being accessed to make nuanced authorization decisions.
 
-```plantuml
-@startuml Five-Layer Verification Flow
-!theme plain
-skinparam backgroundColor #FEFEFE
-skinparam handwritten false
-skinparam sequenceMessageAlign center
+```mermaid
+sequenceDiagram
+    participant Client as MCP Client
+    participant Server as MCP Server
+    participant WitV as WitValidator
+    participant WptV as WptValidator
+    participant AoatV as AoatValidator
+    participant ICC as IdentityConsistencyChecker
+    participant PE as PolicyEvaluator
 
-actor "MCP Client" as Client
-participant "MCP Server" as Server
-participant "WitValidator" as WitV
-participant "WptValidator" as WptV
-participant "AoatValidator" as AoatV
-participant "IdentityConsistencyChecker" as ICC
-participant "PolicyEvaluator" as PE
+    Client->>Server: Resource Request<br/>(WIT + WPT + Agent OA Token)
+    activate Server
 
-Client -> Server: Resource Request\n(WIT + WPT + Agent OA Token)
-activate Server
+    Server->>WitV: Validate WIT
+    activate WitV
+    Note right of WitV: Verify signature<br/>Check expiration<br/>Extract workload ID
+    WitV-->>Server: WIT valid
+    deactivate WitV
 
-Server -> WitV: Validate WIT
-activate WitV
-WitV -> WitV: Verify signature\nCheck expiration\nExtract workload ID
-WitV --> Server: WIT valid
-deactivate WitV
+    Server->>WptV: Validate WPT
+    activate WptV
+    Note right of WptV: Verify signature<br/>Check timestamp<br/>Verify request binding
+    WptV-->>Server: WPT valid
+    deactivate WptV
 
-Server -> WptV: Validate WPT
-activate WptV
-WptV -> WptV: Verify signature\nCheck timestamp\nVerify request binding
-WptV --> Server: WPT valid
-deactivate WptV
+    Server->>AoatV: Validate Agent OA Token
+    activate AoatV
+    Note right of AoatV: Verify signature<br/>Check expiration<br/>Extract user ID
+    AoatV-->>Server: Agent OA Token valid
+    deactivate AoatV
 
-Server -> AoatV: Validate Agent OA Token
-activate AoatV
-AoatV -> AoatV: Verify signature\nCheck expiration\nExtract user ID
-AoatV --> Server: Agent OA Token valid
-deactivate AoatV
+    Server->>ICC: Check identity consistency
+    activate ICC
+    Note right of ICC: Verify user identity:<br/>extractUserId(AOAT.agent_identity.issuedTo)<br/>== BindingInstance.userIdentity<br/><br/>Verify workload identity:<br/>WIT.sub == BindingInstance.workloadIdentity
+    ICC-->>Server: Identity consistent
+    deactivate ICC
 
-Server -> ICC: Check identity consistency
-activate ICC
-ICC -> ICC: Verify user identity:\nextractUserId(AOAT.agent_identity.issuedTo) ==\nBindingInstance.userIdentity\n\nVerify workload identity:\nWIT.sub == BindingInstance.workloadIdentity
-ICC --> Server: Identity consistent
-deactivate ICC
+    Server->>PE: Evaluate policy
+    activate PE
+    Note right of PE: Retrieve policy<br/>Construct evaluation context<br/>Evaluate Rego rules
+    PE-->>Server: Policy result: allow
+    deactivate PE
 
-Server -> PE: Evaluate policy
-activate PE
-PE -> PE: Retrieve policy\nConstruct evaluation context\nEvaluate Rego rules
-PE --> Server: Policy result: allow
-deactivate PE
-
-Server --> Client: Access granted\nReturn resource data
-deactivate Server
-
-@enduml
+    Server-->>Client: Access granted<br/>Return resource data
+    deactivate Server
 ```
 
 ## Implementation Details

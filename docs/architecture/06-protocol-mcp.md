@@ -64,81 +64,73 @@ If any layer of verification fails, the ResourceServer returns a ValidationResul
 
 If all verification layers pass, the ResourceServer returns a ValidationResult with isValid set to true, along with extracted identity and policy information. The interceptor allows the request to proceed to the underlying tool implementation, which executes the tool and returns the result. The interceptor also logs the successful tool invocation for audit purposes, recording the user identity, workload identity, tool name, input parameters, and execution result, enabling post-hoc analysis and compliance verification.
 
-```plantuml
-@startuml MCP Tool Invocation Flow
-!theme plain
-skinparam backgroundColor #FEFEFE
-skinparam handwritten false
-skinparam sequenceMessageAlign center
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent
+    participant Server as OpenAgentAuthMcpServer
+    participant Interceptor as McpAuthInterceptor
+    participant RS as ResourceServer
+    participant Verifier as FiveLayerVerifier
+    participant Tool as Tool Implementation
 
-actor "AI Agent" as Agent
-participant "OpenAgentAuthMcpServer" as Server
-participant "McpAuthInterceptor" as Interceptor
-participant "ResourceServer" as RS
-participant "FiveLayerVerifier" as Verifier
-participant "Tool Implementation" as Tool
+    Agent->>Server: tools/call request<br/>(Headers: Authorization, X-Workload-Identity, X-Workload-Proof)
+    activate Server
 
-Agent -> Server: tools/call request\n(Headers: Authorization, X-Workload-Identity, X-Workload-Proof)
-activate Server
+    Server->>Interceptor: Intercept request
+    activate Interceptor
 
-Server -> Interceptor: Intercept request
-activate Interceptor
+    Note right of Interceptor: Extract credentials<br/>- Agent OA Token<br/>- WIT<br/>- WPT
+    Interceptor->>Interceptor: Validate headers format
+    Interceptor->>Interceptor: Build ResourceRequest
 
-Interceptor -> Interceptor: Extract credentials\n- Agent OA Token\n- WIT\n- WPT
+    Interceptor->>RS: validateRequest(ResourceRequest)
+    activate RS
 
-Interceptor -> Interceptor: Validate headers format
-Interceptor -> Interceptor: Build ResourceRequest
+    RS->>Verifier: Verify WIT (Layer 1)
+    activate Verifier
+    Note right of Verifier: Verify signature<br/>Check expiration<br/>Extract workload ID
+    Verifier-->>RS: WIT valid
+    deactivate Verifier
 
-Interceptor -> RS: validateRequest(ResourceRequest)
-activate RS
+    RS->>Verifier: Verify WPT (Layer 2)
+    activate Verifier
+    Note right of Verifier: Verify signature<br/>Check timestamp<br/>Verify request binding
+    Verifier-->>RS: WPT valid
+    deactivate Verifier
 
-RS -> Verifier: Verify WIT (Layer 1)
-activate Verifier
-Verifier -> Verifier: Verify signature\nCheck expiration\nExtract workload ID
-Verifier --> RS: WIT valid
-deactivate Verifier
+    RS->>Verifier: Verify Agent OA Token (Layer 3)
+    activate Verifier
+    Note right of Verifier: Verify signature<br/>Check expiration<br/>Extract user ID
+    Verifier-->>RS: Agent OA Token valid
+    deactivate Verifier
 
-RS -> Verifier: Verify WPT (Layer 2)
-activate Verifier
-Verifier -> Verifier: Verify signature\nCheck timestamp\nVerify request binding
-Verifier --> RS: WPT valid
-deactivate Verifier
+    RS->>Verifier: Check identity consistency (Layer 4)
+    activate Verifier
+    Note right of Verifier: Verify:<br/>WIT.agent_identity.issuedTo ==<br/>Agent OA Token.sub<br/>WIT.sub == Agent OA Token.agent_identity.workloadId
+    Verifier-->>RS: Identity consistent
+    deactivate Verifier
 
-RS -> Verifier: Verify Agent OA Token (Layer 3)
-activate Verifier
-Verifier -> Verifier: Verify signature\nCheck expiration\nExtract user ID
-Verifier --> RS: Agent OA Token valid
-deactivate Verifier
+    RS->>Verifier: Evaluate policy (Layer 5)
+    activate Verifier
+    Note right of Verifier: Retrieve policy<br/>Construct evaluation context<br/>Evaluate Rego rules
+    Verifier-->>RS: Policy result: allow
+    deactivate Verifier
 
-RS -> Verifier: Check identity consistency (Layer 4)
-activate Verifier
-Verifier -> Verifier: Verify:\nWIT.agent_identity.issuedTo ==\nAgent OA Token.sub\nWIT.sub == Agent OA Token.agent_identity.workloadId
-Verifier --> RS: Identity consistent
-deactivate Verifier
+    RS-->>Interceptor: ValidationResult(valid=true)
+    deactivate RS
 
-RS -> Verifier: Evaluate policy (Layer 4)
-activate Verifier
-Verifier -> Verifier: Retrieve policy\nConstruct evaluation context\nEvaluate Rego rules
-Verifier --> RS: Policy result: allow
-deactivate Verifier
+    Interceptor->>Interceptor: Log successful authorization
+    Interceptor->>Tool: Execute tool
+    activate Tool
+    Tool-->>Interceptor: Tool result
+    deactivate Tool
 
-RS --> Interceptor: ValidationResult(valid=true)
-deactivate RS
+    Interceptor->>Interceptor: Log tool execution
+    Interceptor-->>Server: Return tool result
+    deactivate Interceptor
 
-Interceptor -> Interceptor: Log successful authorization
-Interceptor -> Tool: Execute tool
-activate Tool
-Tool --> Interceptor: Tool result
-deactivate Tool
-
-Interceptor -> Interceptor: Log tool execution
-Interceptor --> Server: Return tool result
-deactivate Interceptor
-
-Server --> Agent: tools/call response
-deactivate Server
-
-@enduml
+    Server-->>Agent: tools/call response
+    deactivate Server
 ```
 
 ## Error Handling and Response

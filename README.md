@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="public/logo-banner.png" alt="Open Agent Auth Logo" style="border-radius: 10px;"> 
 
   # Open Agent Auth
 
@@ -9,7 +10,7 @@
   ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
   ![Java](https://img.shields.io/badge/Java-17+-orange.svg)
   ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3+-green.svg)
-  ![Code Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)
+  ![Code Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)
   ![Build Status](https://github.com/alibaba/open-agent-auth/actions/workflows/ci.yml/badge.svg)
   ![Version](https://img.shields.io/badge/version-v0.1.0--beta.1-blue)
 
@@ -95,7 +96,7 @@ cd open-agent-auth-samples
 open http://localhost:8081
 ```
 
-> **Note**: The Mock LLM uses keyword-based matching. For available products and matching rules, see [Mock LLM Guide](docs/guide/start/mock-llm-guide.md).
+> **Note**: The Mock LLM uses keyword-based matching. For available products and matching rules, see [Mock LLM Guide](docs/guide/02-mock-llm-guide.md).
 
 #### Option 2: Using QwenCode (Deep Experience)
 
@@ -207,11 +208,11 @@ Add the dependency to your `pom.xml`:
 
 #### Basic Configuration
 
-Configure JWKS endpoints and other settings. For complete configuration options, see [Configuration Guide](docs/guide/configuration/00-configuration-overview.md).
+Configure JWKS endpoints and other settings. For complete configuration options, see [Configuration Guide](docs/guide/04-configuration.md).
 
 #### Advanced Integration
 
-For detailed integration instructions and advanced usage, see [Integration Guide](docs/guide/start/02-integration-guide.md).
+For detailed integration instructions and advanced usage, see [Integration Guide](docs/guide/03-integration-guide.md).
 
 ---
 
@@ -232,7 +233,7 @@ The architecture consists of:
 
 ### Multi-Layer Verification
 
-The Resource Server implements a comprehensive multi-layer security verification mechanism aligned with industry standards. For detailed information about the verification layers, see [Multi-Layer Verification](docs/architecture/authorization/five-layer-verification.md).
+The Resource Server implements a comprehensive multi-layer security verification mechanism aligned with industry standards. For detailed information about the verification layers, see [Multi-Layer Verification](docs/architecture/03-authorization.md).
 
 ### Authorization Flow
 
@@ -241,13 +242,17 @@ sequenceDiagram
     participant User
     participant Agent
     participant AgentIDP
+    participant AgentUserIDP
     participant AuthServer
     participant ResourceServer
 
     User->>Agent: Natural Language Request
+    Agent->>User: Should Execute User Login
+    User->>AgentUserIDP: User Login
+    AgentUserIDP-->>Agent: ID Token (After Login)
     Agent->>AgentIDP: Create Virtual Workload
     AgentIDP-->>Agent: WIT (Workload Identity Token)
-    Agent->>AuthServer: PAR Request (with Operation Proposal JWT)
+    Agent->>AuthServer: PAR Request (with Operation Proposal JWT, contains ID Token and WIT)
     AuthServer-->>Agent: request_uri
     Agent->>User: Redirect to /authorize?request_uri=...
     User->>AuthServer: Approve Authorization
@@ -287,7 +292,7 @@ Each user request operates in an isolated virtual workload environment with temp
 
 #### Semantic Audit Trail
 
-W3C VC-based verifiable credentials record complete context from user input to resource operation, enabling transparent and auditable agent operations. For detailed information about the audit trail components, see [Audit and Compliance](docs/architecture/security/audit-and-compliance.md).
+W3C VC-based verifiable credentials record complete context from user input to resource operation, enabling transparent and auditable agent operations. For detailed information about the audit trail components, see [Audit and Compliance](docs/architecture/04-security.md).
 
 ## Security
 
@@ -299,7 +304,7 @@ Open Agent Auth implements comprehensive security measures across all layers:
 - **Audit & Compliance**: W3C VC-based verifiable audit trails for regulatory compliance and forensic analysis
 - **Secure Key Management**: Proper key lifecycle management for JWKS endpoints and temporary credentials
 
-For detailed security architecture, see [Security Documentation](docs/architecture/security/README.md).
+For detailed security architecture, see [Security Documentation](docs/architecture/04-security.md).
 
 ---
 
@@ -307,17 +312,17 @@ For detailed security architecture, see [Security Documentation](docs/architectu
 
 ### Guides
 
-- [Quick Start Guide](docs/guide/start/01-quick-start.md) - Get started in 5 minutes
-- [Configuration Guide](docs/guide/configuration/00-configuration-overview.md) - Detailed configuration options
-- [User Guide](docs/guide/start/00-user-guide.md) - Complete user documentation
-- [Integration Testing Guide](docs/guide/test/integration-testing-guide.md) - Integration testing guide
+- [Quick Start Guide](docs/guide/01-quick-start.md) - Get started in 5 minutes
+- [Configuration Guide](docs/guide/04-configuration.md) - Detailed configuration options
+- [Integration Guide](docs/guide/03-integration-guide.md) - Complete integration documentation
+- [Integration Testing Guide](docs/guide/07-integration-testing.md) - Integration testing guide
 
 ### Architecture
 
-- [Architecture Overview](docs/architecture/README.md)
-- [Identity & Workload Management](docs/architecture/identity/README.md)
-- [Security & Audit](docs/architecture/security/README.md)
-- [Spring Boot Integration](docs/architecture/integration/spring-boot-integration.md)
+- [Architecture Overview](docs/architecture/index.md)
+- [Identity & Workload Management](docs/architecture/02-identity.md)
+- [Security & Audit](docs/architecture/04-security.md)
+- [Spring Boot Integration](docs/architecture/07-spring-boot-integration.md)
 
 ### Standards
 
@@ -357,30 +362,30 @@ Open Agent Auth v0.1.0-beta.1 is in public beta — feature-complete, actively e
 The following enhancements are planned for upcoming releases:
 
 **Authorization Discovery**
-- Enable dynamic authorization server discovery from resource server responses
-- Support for authorization server address negotiation and routing
-- Flexible authorization flow based on resource provider's authorization requirements
+- [ ] Enable dynamic authorization server discovery from resource server responses
+- [ ] Support for authorization server address negotiation and routing
+- [ ] Flexible authorization flow based on resource provider's authorization requirements
 
 **Agent-to-Agent Authorization**
-- Enable secure authorization between multiple AI agents
-- Support for agent delegation and chained authorization flows
-- Cross-agent identity verification and trust establishment
+- [ ] Enable secure authorization between multiple AI agents
+- [ ] Support for agent delegation and chained authorization flows
+- [ ] Cross-agent identity verification and trust establishment
 
 **OpenAPI Adapter**
-- REST API integration adapter for web applications
-- Automatic policy generation from OpenAPI specifications
-- API gateway integration for centralized authorization
+- [ ] REST API integration adapter for web applications
+- [ ] Automatic policy generation from OpenAPI specifications
+- [ ] API gateway integration for centralized authorization
 
 **Prompt Security Transmission**
-- Secure prompt passing mechanism with encryption
-- Prompt protection against injection and tampering
-- Reference implementation for secure prompt handling
+- [ ] Secure prompt passing mechanism with encryption
+- [ ] Prompt protection against injection and tampering
+- [ ] Reference implementation for secure prompt handling
 
 **Enhanced Audit & Compliance**
-- Comprehensive audit log enrichment
-- Regulatory compliance reporting (SOC2, GDPR, etc.)
-- Real-time audit monitoring and alerting
-- Audit data retention and archival policies
+- [ ] Comprehensive audit log enrichment
+- [ ] Regulatory compliance reporting (SOC2, GDPR, etc.)
+- [ ] Real-time audit monitoring and alerting
+- [ ] Audit data retention and archival policies
 
 ---
 

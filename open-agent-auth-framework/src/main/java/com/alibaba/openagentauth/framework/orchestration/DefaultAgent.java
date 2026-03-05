@@ -69,6 +69,7 @@ import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Default orchestration implementation for AI Agent.
@@ -778,7 +779,7 @@ public class DefaultAgent implements Agent {
      * @return the generated key ID as a UUID-based URI
      */
     private String generateKeyId() {
-        return "urn:uuid:" + java.util.UUID.randomUUID();
+        return "urn:uuid:" + UUID.randomUUID();
     }
 
     /**

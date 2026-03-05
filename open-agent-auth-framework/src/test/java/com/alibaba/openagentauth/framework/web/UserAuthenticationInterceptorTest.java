@@ -18,7 +18,6 @@ package com.alibaba.openagentauth.framework.web;
 import com.alibaba.openagentauth.framework.web.interceptor.UserAuthenticationInterceptor;
 import com.alibaba.openagentauth.framework.web.manager.SessionAttributes;
 import com.alibaba.openagentauth.framework.web.manager.SessionManager;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -52,9 +51,6 @@ import static org.mockito.Mockito.when;
 class UserAuthenticationInterceptorTest {
 
     @Mock
-    private SessionMappingBizService sessionMappingBizService;
-
-    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -68,7 +64,6 @@ class UserAuthenticationInterceptorTest {
     @BeforeEach
     void setUp() {
         interceptor = new TestableUserAuthenticationInterceptor(
-            sessionMappingBizService,
             List.of("/login", "/callback", "/public/**")
         );
     }
@@ -76,11 +71,10 @@ class UserAuthenticationInterceptorTest {
     /**
      * Testable subclass that exposes protected methods for testing.
      */
-    private static class TestableUserAuthenticationInterceptor extends UserAuthenticationInterceptor {
-        public TestableUserAuthenticationInterceptor(
-                SessionMappingBizService sessionMappingBizService,
-                List<String> excludedPaths) {
-            super(sessionMappingBizService, excludedPaths);
+    static class TestableUserAuthenticationInterceptor extends UserAuthenticationInterceptor {
+
+        public TestableUserAuthenticationInterceptor(List<String> excludedPaths) {
+            super(excludedPaths);
         }
 
         @Override
@@ -113,10 +107,7 @@ class UserAuthenticationInterceptorTest {
         @DisplayName("Should create interceptor with null excluded paths")
         void shouldCreateInterceptorWithNullExcludedPaths() {
             // Act
-            UserAuthenticationInterceptor interceptor = new UserAuthenticationInterceptor(
-                sessionMappingBizService,
-                null
-            );
+            UserAuthenticationInterceptor interceptor = new UserAuthenticationInterceptor(null);
 
             // Assert
             assertThat(interceptor).isNotNull();
@@ -162,11 +153,14 @@ class UserAuthenticationInterceptorTest {
             when(request.getRequestURI()).thenReturn("/protected");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
+            when(request.getScheme()).thenReturn("http");
+            when(request.getServerName()).thenReturn("localhost");
+            when(request.getServerPort()).thenReturn(8080);
+            when(request.getRequestURI()).thenReturn("/protected");
+            when(request.getQueryString()).thenReturn(null);
 
             // Create a test interceptor that returns a login URL
             UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(
-                sessionMappingBizService,
                 List.of("/login")
             ) {
                 @Override
@@ -184,14 +178,43 @@ class UserAuthenticationInterceptorTest {
         }
 
         @Test
+        @DisplayName("Should save original request URL to session before redirecting")
+        void shouldSaveOriginalRequestUrlToSessionBeforeRedirecting() throws IOException {
+            // Arrange
+            when(request.getRequestURI()).thenReturn("/admin");
+            when(request.getSession(false)).thenReturn(null);
+            when(request.getSession(true)).thenReturn(session);
+            when(request.getScheme()).thenReturn("http");
+            when(request.getServerName()).thenReturn("localhost");
+            when(request.getServerPort()).thenReturn(8080);
+            when(request.getQueryString()).thenReturn(null);
+
+            UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(
+                List.of("/login")
+            ) {
+                @Override
+                protected String buildAuthorizationUrl(HttpServletRequest request, String state) {
+                    return "https://idp.example.com/login?state=" + state;
+                }
+            };
+
+            // Act
+            try (MockedStatic<SessionManager> mockedSessionManager = mockStatic(SessionManager.class)) {
+                testInterceptor.preHandle(request, response);
+
+                // Assert - verify REDIRECT_URI was saved to session
+                mockedSessionManager.verify(() ->
+                        SessionManager.setAttribute(eq(session), eq(SessionAttributes.REDIRECT_URI), any(String.class)));
+            }
+        }
+
+        @Test
         @DisplayName("Should allow access for authenticated user")
         void shouldAllowAccessForAuthenticatedUser() throws IOException {
             // Arrange
             when(request.getRequestURI()).thenReturn("/protected");
             when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
-            when(SessionManager.getAttribute(session, SessionAttributes.AUTHENTICATED_USER))
-                .thenReturn("user123");
+            when(session.getAttribute("authenticated_user")).thenReturn("user123");
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -208,11 +231,13 @@ class UserAuthenticationInterceptorTest {
             when(request.getRequestURI()).thenReturn("/protected");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
+            when(request.getScheme()).thenReturn("http");
+            when(request.getServerName()).thenReturn("localhost");
+            when(request.getServerPort()).thenReturn(8080);
+            when(request.getQueryString()).thenReturn(null);
 
             // Create a test interceptor that returns null for login URL
             UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(
-                sessionMappingBizService,
                 List.of("/login")
             ) {
                 @Override
@@ -262,9 +287,7 @@ class UserAuthenticationInterceptorTest {
         void shouldReturnAuthenticatedUserFromSession() {
             // Arrange
             when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
-            when(SessionManager.getAttribute(session, SessionAttributes.AUTHENTICATED_USER))
-                .thenReturn("user123");
+            when(session.getAttribute("authenticated_user")).thenReturn("user123");
 
             // Act
             String result = interceptor.authenticate(request);
@@ -278,9 +301,7 @@ class UserAuthenticationInterceptorTest {
         void shouldReturnNullWhenUserNotAuthenticated() {
             // Arrange
             when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
-            when(SessionManager.getAttribute(session, SessionAttributes.AUTHENTICATED_USER))
-                .thenReturn(null);
+            when(session.getAttribute("authenticated_user")).thenReturn(null);
 
             // Act
             String result = interceptor.authenticate(request);
@@ -290,23 +311,17 @@ class UserAuthenticationInterceptorTest {
         }
 
         @Test
-        @DisplayName("Should restore session attributes from mapping store")
-        void shouldRestoreSessionAttributesFromMappingStore() {
+        @DisplayName("Should return null when session has no authenticated user attribute")
+        void shouldReturnNullWhenSessionHasNoAuthenticatedUserAttribute() {
             // Arrange
-            HttpSession restoredSession = session;
             when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
-            when(sessionMappingBizService.restoreSession("session123", false, request))
-                .thenReturn(restoredSession);
-            when(SessionManager.getAttribute(session, SessionAttributes.AUTHENTICATED_USER))
-                .thenReturn("user123");
+            when(session.getAttribute("authenticated_user")).thenReturn(null);
 
             // Act
             String result = interceptor.authenticate(request);
 
             // Assert
-            assertThat(result).isEqualTo("user123");
-            verify(sessionMappingBizService).restoreSession("session123", false, request);
+            assertThat(result).isNull();
         }
     }
 
@@ -319,11 +334,9 @@ class UserAuthenticationInterceptorTest {
         void shouldGenerateLoginUrlWithStateParameter() {
             // Arrange
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
 
             // Create a test interceptor that returns a login URL
             UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(
-                sessionMappingBizService,
                 List.of("/login")
             ) {
                 @Override
@@ -338,32 +351,8 @@ class UserAuthenticationInterceptorTest {
             // Assert
             assertThat(loginUrl).isNotNull();
             assertThat(loginUrl).contains("state=user:");
-            assertThat(loginUrl).contains("session123");
-        }
-
-        @Test
-        @DisplayName("Should store session mapping")
-        void shouldStoreSessionMapping() {
-            // Arrange
-            when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
-
-            // Create a test interceptor
-            UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(
-                sessionMappingBizService,
-                List.of("/login")
-            ) {
-                @Override
-                protected String buildAuthorizationUrl(HttpServletRequest request, String state) {
-                    return "https://idp.example.com/login";
-                }
-            };
-
-            // Act
-            testInterceptor.getLoginUrl(request);
-
-            // Assert
-            verify(sessionMappingBizService).storeSession("session123", session);
+            // State format is now "user:{random}" without sessionId
+            assertThat(loginUrl).doesNotContain("session123");
         }
 
         @Test
@@ -371,11 +360,9 @@ class UserAuthenticationInterceptorTest {
         void shouldSetOAuthStateInSession() {
             // Arrange
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
 
             // Create a test interceptor
             UserAuthenticationInterceptor testInterceptor = new UserAuthenticationInterceptor(
-                sessionMappingBizService,
                 List.of("/login")
             ) {
                 @Override

@@ -76,65 +76,39 @@ These verification steps collectively prevent identity spoofing and authorizatio
 
 The framework implements this verification through specialized validator components that parse and validate each token type. The WitValidator checks the WIT signature using the Agent IDP's public key obtained from the JWKS endpoint, verifies the token's expiration, and extracts the agent_identity claims. The AoatValidator performs similar validation for Agent OA Tokens using the authorization server's public key. These validators work together to ensure identity consistency across the entire authorization flow.
 
-```plantuml
-@startuml Identity Binding Flow
-!theme plain
-skinparam backgroundColor #FEFEFE
-skinparam handwritten false
-skinparam sequenceMessageAlign center
+```mermaid
+sequenceDiagram
+    actor User
+    participant Agent as AI Agent
+    participant AgentUserIdp as Agent User IDP
+    participant AgentIdp as Agent IDP
+    participant AS as Authorization Server
 
-actor User as "User"
-participant "AI Agent" as Agent
-participant "Agent User IDP" as AgentUserIdp
-participant "Agent IDP" as AgentIdp
-participant "Authorization Server" as AS
+    User->>Agent: "I want to buy winter clothes"
+    Agent->>AgentUserIdp: Redirect to login
+    AgentUserIdp->>User: Show login page
+    User->>AgentUserIdp: Submit credentials
+    AgentUserIdp->>AgentUserIdp: Validate credentials
+    AgentUserIdp->>Agent: Return ID Token (sub: user123)
 
-User -> Agent: "I want to buy winter clothes"
-Agent -> AgentUserIdp: Redirect to login
-AgentUserIdp -> User: Show login page
-User -> AgentUserIdp: Submit credentials
-AgentUserIdp -> AgentUserIdp: Validate credentials
-AgentUserIdp -> Agent: Return ID Token\n(sub: user123)
+    Note right of Agent: ID Token contains:<br/>- sub: user123<br/>- iss: agent-user-idp<br/>- aud: agent
 
-note right of Agent
-  <b>ID Token contains:</b>
-  - sub: user123
-  - iss: agent-user-idp
-  - aud: agent
-end note
+    Agent->>Agent: Generate workload key pair
+    Agent->>AgentIdp: Create Workload Request<br/>(ID Token + public key)
+    AgentIdp->>AgentIdp: Validate ID Token<br/>Extract sub: user123
+    AgentIdp->>AgentIdp: Create WIT<br/>(agent_identity.issuedTo = user123)
+    AgentIdp->>Agent: Return WIT
 
-Agent -> Agent: Generate workload key pair
-Agent -> AgentIdp: Create Workload Request\n(ID Token + public key)
-AgentIdp -> AgentIdp: Validate ID Token\nExtract sub: user123
-AgentIdp -> AgentIdp: Create WIT\n(agent_identity.issuedTo = user123)
-AgentIdp -> Agent: Return WIT
+    Note right of AgentIdp: WIT contains:<br/>- sub: workload_abc123<br/>- iss: agent-idp<br/>- agent_identity.issuedTo: user123<br/>Cryptographic binding:<br/>WIT is bound to user123
 
-note right of AgentIdp
-  <b>WIT contains:</b>
-  - sub: workload_abc123
-  - iss: agent-idp
-  - agent_identity.issuedTo: user123
-  <b>Cryptographic binding:</b>
-  WIT is bound to user123
-end note
+    Agent->>AS: Submit PAR Request<br/>(ID Token + WIT)
+    AS->>AS: Validate ID Token<br/>Extract sub: user123
+    AS->>AS: Validate WIT<br/>Extract agent_identity.issuedTo
+    AS->>AS: Verify consistency:<br/>ID Token.sub == WIT.agent_identity.issuedTo
+    AS->>AS: Create Agent OA Token<br/>(sub: user123, agent_identity.issuedTo: user123)
+    AS->>Agent: Return Agent OA Token
 
-Agent -> AS: Submit PAR Request\n(ID Token + WIT)
-AS -> AS: Validate ID Token\nExtract sub: user123
-AS -> AS: Validate WIT\nExtract agent_identity.issuedTo
-AS -> AS: Verify consistency:\nID Token.sub == WIT.agent_identity.issuedTo
-AS -> AS: Create Agent OA Token\n(sub: user123, agent_identity.issuedTo: user123)
-AS -> Agent: Return Agent OA Token
-
-note right of AS
-  <b>Agent OA Token contains:</b>
-  - sub: user123
-  - iss: authorization-server
-  - agent_identity.issuedTo: user123
-  <b>Three-way binding:</b>
-  ID Token.sub == WIT.agent_identity.issuedTo\n  == Agent OA Token.sub
-end note
-
-@enduml
+    Note right of AS: Agent OA Token contains:<br/>- sub: user123<br/>- iss: authorization-server<br/>- agent_identity.issuedTo: user123<br/>Three-way binding:<br/>ID Token.sub == WIT.agent_identity.issuedTo<br/>== Agent OA Token.sub
 ```
 
 ## Workload Identity Token (WIT) Structure

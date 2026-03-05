@@ -366,7 +366,6 @@ class AuthorizationOrchestratorTest {
             when(userAuthenticationInterceptor.authenticate(request)).thenReturn(null);
             when(userAuthenticationInterceptor.getLoginUrl(request)).thenReturn(LOGIN_URL);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn("session_123");
 
             // When
             AuthorizationResult result = orchestrator.processAuthorization(request);
@@ -374,7 +373,7 @@ class AuthorizationOrchestratorTest {
             // Then
             assertThat(result.getType()).isEqualTo(AuthorizationResult.ResultType.REDIRECT);
             assertThat(result.getRedirectUri()).isEqualTo(LOGIN_URL);
-            verify(sessionMappingBizService).storeSession("session_123", session);
+            verify(userAuthenticationInterceptor).getLoginUrl(request);
         }
 
         @Test
@@ -385,7 +384,9 @@ class AuthorizationOrchestratorTest {
             when(request.getParameter("action")).thenReturn(null);
             when(strategy.supports(request)).thenReturn(true);
             when(strategy.parseRequest(request)).thenReturn(context);
+            when(request.getRequestURI()).thenReturn("/oauth2/authorize");
             when(userAuthenticationInterceptor.authenticate(request)).thenReturn(null);
+            when(request.getSession(true)).thenReturn(session);
             when(userAuthenticationInterceptor.getLoginUrl(request)).thenReturn(null);
 
             // When
@@ -798,7 +799,6 @@ class AuthorizationOrchestratorTest {
             when(strategy.supports(request)).thenReturn(true);
             when(strategy.parseRequest(request)).thenReturn(context);
             when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session_123");
             when(request.getRemoteAddr()).thenReturn("192.168.1.1");
             when(request.getHeader("User-Agent")).thenReturn("TestAgent/1.0");
             when(userAuthenticationInterceptor.authenticate(request)).thenReturn(SUBJECT);
@@ -824,7 +824,7 @@ class AuthorizationOrchestratorTest {
             assertThat(event.getSeverity()).isEqualTo(AuditSeverity.INFO);
             assertThat(event.getMessage()).isEqualTo("Authorization code granted successfully");
             assertThat(event.getContext().getUserId()).isEqualTo(SUBJECT);
-            assertThat(event.getContext().getSessionId()).isEqualTo("session_123");
+            assertThat(event.getContext().getSessionId()).isNull();
             assertThat(event.getContext().getRequestId()).isEqualTo(AUTHORIZATION_CODE);
             assertThat(event.getContext().getClientIpAddress()).isEqualTo("192.168.1.1");
             assertThat(event.getContext().getUserAgent()).isEqualTo("TestAgent/1.0");
@@ -843,7 +843,6 @@ class AuthorizationOrchestratorTest {
             when(strategy.supports(request)).thenReturn(true);
             when(strategy.parseRequest(request)).thenReturn(context);
             when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session_123");
             when(request.getRemoteAddr()).thenReturn("192.168.1.1");
             when(request.getHeader("User-Agent")).thenReturn("TestAgent/1.0");
             when(userAuthenticationInterceptor.authenticate(request)).thenReturn(SUBJECT);
@@ -868,7 +867,7 @@ class AuthorizationOrchestratorTest {
             assertThat(event.getSeverity()).isEqualTo(AuditSeverity.LOW);
             assertThat(event.getMessage()).isEqualTo("User denied authorization request");
             assertThat(event.getContext().getUserId()).isEqualTo(SUBJECT);
-            assertThat(event.getContext().getSessionId()).isEqualTo("session_123");
+            assertThat(event.getContext().getSessionId()).isNull();
             assertThat(event.getContext().getClientIpAddress()).isEqualTo("192.168.1.1");
             assertThat(event.getContext().getUserAgent()).isEqualTo("TestAgent/1.0");
             assertThat(event.getData().get("client_id")).isEqualTo(CLIENT_ID);
@@ -917,7 +916,6 @@ class AuthorizationOrchestratorTest {
             when(strategy.supports(request)).thenReturn(true);
             when(strategy.parseRequest(request)).thenReturn(context);
             when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session_123");
             when(request.getRemoteAddr()).thenReturn("192.168.1.1");
             when(request.getHeader("User-Agent")).thenReturn("TestAgent/1.0");
             when(userAuthenticationInterceptor.authenticate(request)).thenReturn(SUBJECT);

@@ -93,6 +93,7 @@ public final class DefaultEndpoints {
         endpoints.put("workload.issue", "/api/v1/workloads/token/issue");
         endpoints.put("workload.revoke", "/api/v1/workloads/revoke");
         endpoints.put("workload.retrieve", "/api/v1/workloads/get");
+        endpoints.put("workload.list", "/api/v1/workloads/list");
         return endpoints;
     }
 
@@ -120,6 +121,7 @@ public final class DefaultEndpoints {
         endpoints.put("binding.registry", "/api/v1/bindings/register");
         endpoints.put("binding.retrieve", "/api/v1/bindings/get");
         endpoints.put("binding.delete", "/api/v1/bindings/delete");
+        endpoints.put("binding.list", "/api/v1/bindings/list");
         return endpoints;
     }
 

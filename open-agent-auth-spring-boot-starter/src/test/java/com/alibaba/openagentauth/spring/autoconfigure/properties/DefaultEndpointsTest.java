@@ -80,10 +80,11 @@ class DefaultEndpointsTest {
             Map<String, String> workloadEndpoints = DefaultEndpoints.WORKLOAD;
 
             // Assert
-            assertThat(workloadEndpoints).hasSize(3);
+            assertThat(workloadEndpoints).hasSize(4);
             assertThat(workloadEndpoints).containsKey("workload.issue");
             assertThat(workloadEndpoints).containsKey("workload.revoke");
             assertThat(workloadEndpoints).containsKey("workload.retrieve");
+            assertThat(workloadEndpoints).containsKey("workload.list");
         }
 
         @Test
@@ -96,6 +97,7 @@ class DefaultEndpointsTest {
             assertThat(workloadEndpoints.get("workload.issue")).isEqualTo("/api/v1/workloads/token/issue");
             assertThat(workloadEndpoints.get("workload.revoke")).isEqualTo("/api/v1/workloads/revoke");
             assertThat(workloadEndpoints.get("workload.retrieve")).isEqualTo("/api/v1/workloads/get");
+            assertThat(workloadEndpoints.get("workload.list")).isEqualTo("/api/v1/workloads/list");
         }
     }
 
@@ -175,10 +177,11 @@ class DefaultEndpointsTest {
             Map<String, String> bindingEndpoints = DefaultEndpoints.BINDING;
 
             // Assert
-            assertThat(bindingEndpoints).hasSize(3);
+            assertThat(bindingEndpoints).hasSize(4);
             assertThat(bindingEndpoints).containsKey("binding.registry");
             assertThat(bindingEndpoints).containsKey("binding.retrieve");
             assertThat(bindingEndpoints).containsKey("binding.delete");
+            assertThat(bindingEndpoints).containsKey("binding.list");
         }
 
         @Test
@@ -191,6 +194,7 @@ class DefaultEndpointsTest {
             assertThat(bindingEndpoints.get("binding.registry")).isEqualTo("/api/v1/bindings/register");
             assertThat(bindingEndpoints.get("binding.retrieve")).isEqualTo("/api/v1/bindings/get");
             assertThat(bindingEndpoints.get("binding.delete")).isEqualTo("/api/v1/bindings/delete");
+            assertThat(bindingEndpoints.get("binding.list")).isEqualTo("/api/v1/bindings/list");
         }
     }
 

@@ -789,6 +789,34 @@
       "description": "Get recent audit events endpoint path. Retrieves the most recent audit events."
     },
     {
+      "name": "open-agent-auth.security.session-cookie",
+      "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.SessionCookieProperties",
+      "description": "Session cookie configuration. Controls the security attributes and naming of the HTTP session cookie."
+    },
+    {
+      "name": "open-agent-auth.security.session-cookie.name",
+      "type": "java.lang.String",
+      "description": "Custom name for the session cookie. When multiple services run on the same domain (e.g., localhost with different ports), they share the same cookie namespace. Using the default JSESSIONID for all services causes session cookie collisions. When not explicitly set, the framework automatically derives a unique cookie name from the first enabled role (e.g., 'authorization-server' becomes 'AUTHORIZATION_SERVER_SESSION'). Set this property to override the auto-derived name."
+    },
+    {
+      "name": "open-agent-auth.security.session-cookie.http-only",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether the session cookie should be marked as HttpOnly. When true, the cookie is not accessible via JavaScript, mitigating XSS attacks."
+    },
+    {
+      "name": "open-agent-auth.security.session-cookie.secure",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "Whether the session cookie should be marked as Secure. When true, the cookie is only sent over HTTPS. Should be true in production."
+    },
+    {
+      "name": "open-agent-auth.security.session-cookie.same-site",
+      "type": "java.lang.String",
+      "defaultValue": "Lax",
+      "description": "The SameSite attribute for the session cookie. Valid values: Lax (default, recommended for OAuth flows), Strict (may cause session loss during OAuth redirects), None (requires secure=true, for cross-origin cookie access)."
+    },
+    {
       "name": "open-agent-auth.infrastructures",
       "type": "com.alibaba.openagentauth.spring.autoconfigure.properties.InfrastructureProperties",
       "description": "Infrastructure configuration properties for the Open Agent Auth framework. Defines the infrastructure-level configuration shared across all roles."

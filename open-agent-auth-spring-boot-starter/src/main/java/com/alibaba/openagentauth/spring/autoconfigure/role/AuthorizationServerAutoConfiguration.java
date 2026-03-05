@@ -551,7 +551,6 @@ public class AuthorizationServerAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         public UserAuthenticationInterceptor userAuthenticationInterceptor(
-                SessionMappingBizService sessionMappingBizService,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
             logger.info("Creating UserAuthenticationInterceptor bean with AsUserIdpUserAuthInterceptor");
@@ -572,7 +571,6 @@ public class AuthorizationServerAutoConfiguration {
             logger.debug("Using excluded paths: {}", excludedPaths);
             
             return new AsUserIdpUserAuthInterceptor(
-                    sessionMappingBizService,
                     excludedPaths,
                     asUserIdpIssuer,
                     clientId,

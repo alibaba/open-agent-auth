@@ -18,7 +18,6 @@ package com.alibaba.openagentauth.framework.web.interceptor;
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.model.request.InitiateAuthorizationRequest;
 import com.alibaba.openagentauth.framework.web.manager.SessionAttributes;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -29,6 +28,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.Mockito.atLeast;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,8 +72,7 @@ class AgentAuthenticationInterceptorTest {
 
     @Mock
     private AgentAapExecutor agentAapExecutor;
-    @Mock
-    private SessionMappingBizService sessionMappingBizService;
+
     @Mock
     private HttpServletRequest request;
     @Mock
@@ -92,7 +92,7 @@ class AgentAuthenticationInterceptorTest {
 
             // Act
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             // Assert
             assertThat(interceptor).isNotNull();
@@ -103,7 +103,7 @@ class AgentAuthenticationInterceptorTest {
         void shouldCreateInterceptorWithNullExcludedPaths() {
             // Act
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, null);
+                agentAapExecutor, null);
 
             // Assert
             assertThat(interceptor).isNotNull();
@@ -117,7 +117,7 @@ class AgentAuthenticationInterceptorTest {
 
             // Act
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             // Assert
             assertThat(interceptor).isNotNull();
@@ -134,11 +134,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(session);
-            when(session.getAttribute(SessionAttributes.AUTHENTICATED_USER.getKey())).thenReturn("test-user");
+            when(session.getAttribute(SessionAttributes.AUTHENTICATED_USER.getKey())).thenReturn("user-123");
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -154,12 +154,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -180,12 +179,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -197,7 +195,7 @@ class AgentAuthenticationInterceptorTest {
 
             // Assert
             assertThat(result).isFalse();
-            verify(request).getSession(true);
+            verify(request, atLeast(1)).getSession(true);
             verify(response).sendRedirect(AUTHORIZATION_URL);
         }
 
@@ -207,7 +205,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/callback");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/callback");
 
@@ -230,7 +228,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/callback");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/callback");
 
@@ -248,7 +246,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/public/**");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/public/css/style.css");
 
@@ -266,7 +264,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/api/*");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/api/v1");
 
@@ -284,7 +282,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/file?.txt");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/file1.txt");
 
@@ -302,12 +300,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/callback", "/public/**");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -333,17 +330,16 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("/app");
-            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
@@ -360,12 +356,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("http");
             when(request.getServerName()).thenReturn("localhost");
             when(request.getServerPort()).thenReturn(8080);
@@ -382,22 +377,21 @@ class AgentAuthenticationInterceptorTest {
         }
 
         @Test
-        @DisplayName("Should encode session ID in state parameter")
-        void shouldEncodeSessionIdInStateParameter() throws IOException {
+        @DisplayName("Should generate state parameter with user flow type")
+        void shouldGenerateStateParameterWithUserFlowType() throws IOException {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
@@ -407,7 +401,11 @@ class AgentAuthenticationInterceptorTest {
             verify(agentAapExecutor).initiateUserAuthentication(captor.capture());
             String state = captor.getValue().getState();
             assertThat(state).startsWith("user:");
-            assertThat(state).contains(SESSION_ID);
+            // State format is now simplified to "user:{random}" without sessionId
+            String[] parts = state.split(":");
+            assertThat(parts).hasSize(2);
+            assertThat(parts[0]).isEqualTo("user");
+            assertThat(parts[1]).isNotEmpty();
         }
 
         @Test
@@ -416,17 +414,16 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
+            when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
 
             // Act
             interceptor.preHandle(request, response);
@@ -436,34 +433,10 @@ class AgentAuthenticationInterceptorTest {
             verify(session).setAttribute(eq(SessionAttributes.OAUTH_STATE.getKey()), stateCaptor.capture());
             String storedState = stateCaptor.getValue();
             assertThat(storedState).isNotNull();
-            // The state parameter stored in session should start with "user:" and contain the session ID
+            // The state parameter stored in session should start with "user:" and contain only random value
             assertThat(storedState).startsWith("user:");
-            assertThat(storedState).contains(SESSION_ID);
-        }
-
-        @Test
-        @DisplayName("Should store session mapping for OAuth callback")
-        void shouldStoreSessionMappingForOAuthCallback() throws IOException {
-            // Arrange
-            List<String> excludedPaths = new ArrayList<>();
-            AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
-
-            when(request.getRequestURI()).thenReturn("/protected/resource");
-            when(request.getSession(false)).thenReturn(null);
-            when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
-            when(request.getScheme()).thenReturn("https");
-            when(request.getServerName()).thenReturn("example.com");
-            when(request.getServerPort()).thenReturn(443);
-            when(request.getContextPath()).thenReturn("");
-            lenient().when(agentAapExecutor.initiateUserAuthentication(any(InitiateAuthorizationRequest.class))).thenReturn(AUTHORIZATION_URL);
-
-            // Act
-            interceptor.preHandle(request, response);
-
-            // Assert
-            verify(sessionMappingBizService).storeSession(SESSION_ID, session);
+            String[] parts = storedState.split(":");
+            assertThat(parts).hasSize(2);
         }
     }
 
@@ -477,7 +450,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/callback");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/callback");
 
@@ -494,12 +467,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/callback");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/callback/other");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -519,7 +491,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/public/**");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/public/a/b/c");
 
@@ -536,7 +508,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/public/**");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/public");
 
@@ -553,7 +525,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/api/*");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/api/v1");
 
@@ -570,12 +542,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/api/*");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/api/v1/users");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -595,7 +566,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/file?.txt");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/file1.txt");
 
@@ -612,12 +583,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/file?.txt");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/file12.txt");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -637,7 +607,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/static/");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/static/css/style.css");
 
@@ -654,12 +624,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/static");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/static/css/style.css");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -684,12 +653,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -710,12 +678,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(null);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
@@ -727,7 +694,6 @@ class AgentAuthenticationInterceptorTest {
 
             // Assert
             assertThat(result).isFalse();
-            verify(sessionMappingBizService).storeSession(isNull(), eq(session));
         }
 
         @Test
@@ -736,7 +702,7 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = Arrays.asList("/callback", "/public/**", "/api/v1/*");
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/api/v1/users");
 
@@ -754,12 +720,11 @@ class AgentAuthenticationInterceptorTest {
             // Arrange
             List<String> excludedPaths = new ArrayList<>();
             AgentAuthenticationInterceptor interceptor = new AgentAuthenticationInterceptor(
-                agentAapExecutor, sessionMappingBizService, excludedPaths);
+                agentAapExecutor, excludedPaths);
 
             when(request.getRequestURI()).thenReturn("/protected/resource");
             when(request.getSession(false)).thenReturn(null);
             when(request.getSession(true)).thenReturn(session);
-            when(session.getId()).thenReturn(SESSION_ID);
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);

@@ -490,108 +490,122 @@ class FullAuthorizationFlowE2ETest {
     }
     
     /**
-     * Complete Authorization Server flow:
-     * 1. AS User IDP (8084) login
-     * 2. AS User IDP OIDC consent (for Authorization Server to access user info)
-     * 3. Redirect to Authorization Server (8085)
-     * 4. Agent operation authorization consent
-     * 5. Redirect back to Agent (8081)
+     * Complete Authorization Server flow.
+     * <p>
+     * The flow varies depending on whether the user has already authenticated
+     * with AS User IDP (8084) in a previous conversation. With session cookie
+     * isolation (each service has a unique cookie name), the AS User IDP session
+     * persists across conversations, so the login step is skipped on subsequent calls.
+     * </p>
+     * <p>
+     * <b>First conversation flow:</b>
+     * AS → AS User IDP login → OIDC consent → AS AOA consent → Agent
+     * </p>
+     * <p>
+     * <b>Subsequent conversation flow (session already exists):</b>
+     * AS → AS User IDP (auto-authenticated) → OIDC consent (may be skipped) → AS AOA consent → Agent
+     * </p>
      */
     private void completeAuthorizationServerFlow() {
-        String currentUrl = driver.getCurrentUrl();
-        System.out.println(getServicePrefix(currentUrl) + "Starting Authorization Server flow, current URL: " + currentUrl);
-        
-        // Step 1: Check if we need to login to AS User IDP (8084)
-        if (currentUrl.contains("8084") && currentUrl.contains("login")) {
-            System.out.println("[AsUserIDP:8084] Need to login to AS User IDP (8084)...");
-            WebElement usernameField = wait.until(ExpectedConditions.presenceOfElementLocated(
-                By.name("username")
-            ));
-            WebElement passwordField = driver.findElement(By.name("password"));
-            WebElement loginButton = driver.findElement(By.cssSelector("button[type='submit']"));
-            
-            usernameField.sendKeys("admin");
-            passwordField.sendKeys("admin123");
-            loginButton.click();
-            System.out.println("[AsUserIDP:8084] Submitted AS User IDP login form");
-            
-            // Wait for redirect to OIDC consent page
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            
-            currentUrl = driver.getCurrentUrl();
-            System.out.println("[AsUserIDP:8084] After AS User IDP login, current URL: " + currentUrl);
+        // Allow time for any redirects to settle
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
-        
-        // Step 2: Check if OIDC consent is required on AS User IDP (8084)
-        // This is the consent page that allows Authorization Server to access user info
-        if (currentUrl.contains("8084") && (currentUrl.contains("consent") || currentUrl.contains("authorize"))) {
+
+        // Iteratively handle each step until we're back on the Agent
+        int maxIterations = 10;
+        for (int iteration = 0; iteration < maxIterations; iteration++) {
+            String currentUrl = driver.getCurrentUrl();
             String pageTitle = driver.getTitle();
-            System.out.println("[AsUserIDP:8084] Current page title on 8084: " + pageTitle);
-            
-            // If this is the OIDC consent page (not Agent operation consent), complete it
-            if (pageTitle.contains("Consent") && !pageTitle.contains("Agent Operation")) {
-                System.out.println("[AsUserIDP:8084] Detected AS User IDP OIDC consent page, completing...");
+            System.out.println("[AuthFlow:" + iteration + "] URL: " + currentUrl);
+            System.out.println("[AuthFlow:" + iteration + "] Title: " + pageTitle);
+
+            // If we're already back on the Agent, we're done
+            if (currentUrl.contains("localhost:" + AGENT_PORT) && !currentUrl.contains("8084") && !currentUrl.contains("8085")) {
+                System.out.println("[Agent:8081] Successfully redirected back to Agent");
+                return;
+            }
+
+            // Handle AS User IDP (8084) login page
+            if (currentUrl.contains("8084") && currentUrl.contains("login")) {
+                System.out.println("[AsUserIDP:8084] Login page detected, submitting credentials...");
+                WebElement usernameField = wait.until(ExpectedConditions.presenceOfElementLocated(By.name("username")));
+                WebElement passwordField = driver.findElement(By.name("password"));
+                WebElement loginButton = driver.findElement(By.cssSelector("button[type='submit']"));
+                usernameField.sendKeys("admin");
+                passwordField.sendKeys("admin123");
+                loginButton.click();
+                System.out.println("[AsUserIDP:8084] Submitted login form");
+                waitForPageTransition();
+                continue;
+            }
+
+            // Handle OIDC consent on AS User IDP (8084)
+            if (currentUrl.contains("8084") && pageTitle.contains("Consent") && !pageTitle.contains("Agent Operation")) {
+                System.out.println("[AsUserIDP:8084] OIDC consent page detected, approving...");
                 completeOidcConsent();
-                
-                // Wait for redirect back to Authorization Server (8085)
-                try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                
-                currentUrl = driver.getCurrentUrl();
-                System.out.println("[AsUserIDP:8084] After OIDC consent, current URL: " + currentUrl);
+                waitForPageTransition();
+                continue;
             }
-        }
-        
-        // Step 3: Check if we're now on Authorization Server (8085) for Agent operation consent
-        currentUrl = driver.getCurrentUrl();
-        if (currentUrl.contains("8085") || currentUrl.contains("authorization")) {
-            System.out.println("[AuthServer:8085] Now on Authorization Server (8085), checking for Agent operation consent...");
-            
-            // Wait for page to load
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            
-            currentUrl = driver.getCurrentUrl();
-            String pageTitle = driver.getTitle();
-            System.out.println("[AuthServer:8085] Current page title on 8085: " + pageTitle);
-            
-            // Step 4: Check if Agent operation authorization consent is required
-            // This might be on aoa_consent.html or similar
-            if (currentUrl.contains("consent") || pageTitle.contains("Consent")) {
-                System.out.println("[AuthServer:8085] Detected Agent operation consent page, completing...");
-                
-                // Try multiple possible selectors for the approve button
+
+            // Handle Agent Operation Authorization consent on AS (8085)
+            // The URL may be /oauth2/authorize?request_uri=... (not containing "consent"),
+            // so we check the page title instead.
+            if (currentUrl.contains("8085") && pageTitle.contains("Agent Operation")) {
+                System.out.println("[AuthServer:8085] AOA consent page detected, approving...");
                 try {
                     WebElement approveButton = wait.until(ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[value='approve'], button.btn-approve, input[type='submit'][value='approve']")
+                        By.cssSelector("button[value='approve'], button.btn-approve")
                     ));
                     approveButton.click();
-                    System.out.println("[AuthServer:8085] Clicked Agent operation authorization approve button");
+                    System.out.println("[AuthServer:8085] Clicked AOA approve button");
                 } catch (TimeoutException e) {
-                    System.out.println("[AuthServer:8085] Could not find operation authorization approve button, might be auto-approved");
+                    System.out.println("[AuthServer:8085] Could not find AOA approve button");
                 }
+                waitForPageTransition();
+                continue;
             }
+
+            // Handle OIDC consent on AS (8085) — traditional OAuth consent
+            if (currentUrl.contains("8085") && pageTitle.contains("Consent") && !pageTitle.contains("Agent Operation")) {
+                System.out.println("[AuthServer:8085] OIDC consent page detected, approving...");
+                completeOidcConsent();
+                waitForPageTransition();
+                continue;
+            }
+
+            // If we're on 8084 or 8085 but no recognizable page, wait and retry
+            if (currentUrl.contains("8084") || currentUrl.contains("8085")) {
+                System.out.println("[AuthFlow:" + iteration + "] On auth service but no action needed, waiting for redirect...");
+                waitForPageTransition();
+                continue;
+            }
+
+            // Unknown state, wait briefly
+            waitForPageTransition();
         }
-        
-        // Step 5: Wait for redirect back to Agent (8081)
-        System.out.println("[AuthServer:8085] Waiting for redirect back to Agent (8081)...");
+
+        // Final check — if we're still not on Agent, fail with diagnostics
+        String finalUrl = driver.getCurrentUrl();
+        if (!finalUrl.contains("localhost:" + AGENT_PORT)) {
+            System.out.println("[AuthFlow] Failed to complete authorization flow after " + maxIterations + " iterations");
+            System.out.println("[AuthFlow] Final URL: " + finalUrl);
+            System.out.println("[AuthFlow] Final title: " + driver.getTitle());
+            throw new TimeoutException("Authorization flow did not redirect back to Agent. Final URL: " + finalUrl);
+        }
+        System.out.println("[Agent:8081] Successfully redirected back to Agent");
+    }
+
+    /**
+     * Wait for a page transition (redirect or page load) to complete.
+     */
+    private void waitForPageTransition() {
         try {
-            wait.until(ExpectedConditions.urlContains("localhost:" + AGENT_PORT));
-            System.out.println("[Agent:8081] Successfully redirected back to Agent");
-        } catch (TimeoutException e) {
-            System.out.println("[AuthServer:8085] Timeout waiting for redirect to Agent, current URL: " + driver.getCurrentUrl());
-            System.out.println("[AuthServer:8085] Page title: " + driver.getTitle());
-            throw e;
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

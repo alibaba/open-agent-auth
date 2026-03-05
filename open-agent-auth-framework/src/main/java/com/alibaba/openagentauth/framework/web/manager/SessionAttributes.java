@@ -57,26 +57,22 @@ public final class SessionAttributes {
     /**
      * Key for storing the authenticated user ID (subject) in session.
      */
-    public static final SessionAttribute<String> AUTHENTICATED_USER =
-            new SessionAttribute<>("authenticated_user", String.class);
+    public static final SessionAttribute<String> AUTHENTICATED_USER = new SessionAttribute<>("authenticated_user", String.class);
     
     /**
      * Key for storing the ID Token in session.
      */
-    public static final SessionAttribute<String> ID_TOKEN =
-            new SessionAttribute<>("id_token", String.class);
+    public static final SessionAttribute<String> ID_TOKEN = new SessionAttribute<>("id_token", String.class);
     
     /**
      * Key for storing the OAuth state parameter in session.
      */
-    public static final SessionAttribute<String> OAUTH_STATE =
-            new SessionAttribute<>("oauth_state", String.class);
+    public static final SessionAttribute<String> OAUTH_STATE = new SessionAttribute<>("oauth_state", String.class);
     
     /**
      * Key for storing the Agent Operation Authorization (OA) Token in session.
      */
-    public static final SessionAttribute<String> AGENT_OA_TOKEN =
-            new SessionAttribute<>("agent_oa_token", String.class);
+    public static final SessionAttribute<String> AGENT_OA_TOKEN = new SessionAttribute<>("agent_oa_token", String.class);
     
     // ==================== Session Mapping ====================
     
@@ -84,7 +80,19 @@ public final class SessionAttributes {
      * Key for storing the redirect URI in session during OAuth flow.
      */
     public static final SessionAttribute<String> REDIRECT_URI = new SessionAttribute<>("open_agent_auth_redirect_uri", String.class);
-    
+
+    // ==================== Security ====================
+
+    /**
+     * Key for storing the CSRF token in session.
+     * <p>
+     * The CSRF token is generated when the login page is rendered and validated
+     * when the login form is submitted. This provides protection against
+     * Cross-Site Request Forgery attacks on the login endpoint.
+     * </p>
+     */
+    public static final SessionAttribute<String> CSRF_TOKEN = new SessionAttribute<>("open_agent_auth_csrf_token", String.class);
+
     // ==================== Conversation Context ====================
     
     /**
@@ -93,14 +101,12 @@ public final class SessionAttributes {
      * Since ChatMessage is defined in sample module, we use raw List here.
      */
     @SuppressWarnings("rawtypes")
-    public static final SessionAttribute<List> CONVERSATION_HISTORY =
-            new SessionAttribute<>("conversation_history", List.class);
+    public static final SessionAttribute<List> CONVERSATION_HISTORY = new SessionAttribute<>("conversation_history", List.class);
     
     /**
      * Key for storing workload context in session.
      */
-    public static final SessionAttribute<WorkloadContext> WORKLOAD_CONTEXT =
-            new SessionAttribute<>("workloadContext", WorkloadContext.class);
+    public static final SessionAttribute<WorkloadContext> WORKLOAD_CONTEXT = new SessionAttribute<>("workloadContext", WorkloadContext.class);
     
     /**
      * Key for storing pending tool request in session.

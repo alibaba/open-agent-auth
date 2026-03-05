@@ -15,7 +15,6 @@
  */
 package com.alibaba.openagentauth.framework.web.interceptor;
 
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,14 +43,10 @@ public class LocalUserAuthenticationInterceptor extends UserAuthenticationInterc
     /**
      * Constructs a new LocalUserAuthenticationInterceptor.
      *
-     * @param sessionMappingBizService the session mapping business service
      * @param excludedPaths the list of paths to exclude from authentication
      */
-    public LocalUserAuthenticationInterceptor(
-            SessionMappingBizService sessionMappingBizService,
-            List<String> excludedPaths
-    ) {
-        super(sessionMappingBizService, excludedPaths);
+    public LocalUserAuthenticationInterceptor(List<String> excludedPaths) {
+        super(excludedPaths);
         logger.info("LocalUserAuthenticationInterceptor initialized");
     }
 

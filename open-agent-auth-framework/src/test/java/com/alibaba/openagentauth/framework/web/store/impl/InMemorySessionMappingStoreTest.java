@@ -24,6 +24,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.*;
 
 /**
@@ -261,6 +263,61 @@ class InMemorySessionMappingStoreTest {
             store.store(specialSessionId, mockSession1);
 
             assertThat(store.retrieve(specialSessionId)).isNotNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("TTL Expiration Tests")
+    class TtlExpirationTests {
+
+        @Test
+        @DisplayName("Should return null for expired session")
+        void shouldReturnNullForExpiredSession() throws InterruptedException {
+            InMemorySessionMappingStore ttlStore = new InMemorySessionMappingStore(
+                    Duration.ofMillis(100),
+                    Duration.ofMinutes(5)
+            );
+            ttlStore.store("session-1", mockSession1);
+
+            assertThat(ttlStore.retrieve("session-1")).isNotNull();
+
+            Thread.sleep(150);
+
+            HttpSession retrieved = ttlStore.retrieve("session-1");
+            assertThat(retrieved).isNull();
+        }
+
+        @Test
+        @DisplayName("Should return session before expiration")
+        void shouldReturnSessionBeforeExpiration() {
+            InMemorySessionMappingStore ttlStore = new InMemorySessionMappingStore(
+                    Duration.ofMillis(100),
+                    Duration.ofMinutes(5)
+            );
+            ttlStore.store("session-1", mockSession1);
+
+            HttpSession retrieved = ttlStore.retrieve("session-1");
+            assertThat(retrieved).isNotNull();
+            assertThat(retrieved).isEqualTo(mockSession1);
+        }
+
+        @Test
+        @DisplayName("Should create store with default TTL")
+        void shouldCreateStoreWithDefaultTtl() {
+            InMemorySessionMappingStore defaultStore = new InMemorySessionMappingStore();
+
+            assertThat(defaultStore).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Should create store with custom TTL")
+        void shouldCreateStoreWithCustomTtl() {
+            InMemorySessionMappingStore customStore = new InMemorySessionMappingStore(
+                    Duration.ofSeconds(30),
+                    Duration.ofMinutes(1)
+            );
+
+            assertThat(customStore).isNotNull();
         }
     }
 }

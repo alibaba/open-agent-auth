@@ -16,9 +16,6 @@
 package com.alibaba.openagentauth.framework.web;
 
 import com.alibaba.openagentauth.framework.web.interceptor.LocalUserAuthenticationInterceptor;
-import com.alibaba.openagentauth.framework.web.manager.SessionAttributes;
-import com.alibaba.openagentauth.framework.web.manager.SessionManager;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -50,9 +47,6 @@ import static org.mockito.Mockito.when;
 class LocalUserAuthenticationInterceptorTest {
 
     @Mock
-    private SessionMappingBizService sessionMappingBizService;
-
-    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -66,7 +60,6 @@ class LocalUserAuthenticationInterceptorTest {
     @BeforeEach
     void setUp() {
         interceptor = new TestableLocalUserAuthenticationInterceptor(
-            sessionMappingBizService,
             List.of("/login", "/callback")
         );
     }
@@ -75,10 +68,8 @@ class LocalUserAuthenticationInterceptorTest {
      * Testable subclass that exposes protected methods for testing.
      */
     private static class TestableLocalUserAuthenticationInterceptor extends LocalUserAuthenticationInterceptor {
-        public TestableLocalUserAuthenticationInterceptor(
-                SessionMappingBizService sessionMappingBizService,
-                List<String> excludedPaths) {
-            super(sessionMappingBizService, excludedPaths);
+        public TestableLocalUserAuthenticationInterceptor(List<String> excludedPaths) {
+            super(excludedPaths);
         }
 
         public String testBuildAuthorizationUrl(HttpServletRequest request, String state) {
@@ -101,10 +92,7 @@ class LocalUserAuthenticationInterceptorTest {
         @DisplayName("Should create interceptor with null excluded paths")
         void shouldCreateInterceptorWithNullExcludedPaths() {
             // Act
-            LocalUserAuthenticationInterceptor interceptor = new LocalUserAuthenticationInterceptor(
-                sessionMappingBizService,
-                null
-            );
+            LocalUserAuthenticationInterceptor interceptor = new LocalUserAuthenticationInterceptor(null);
 
             // Assert
             assertThat(interceptor).isNotNull();
@@ -128,7 +116,6 @@ class LocalUserAuthenticationInterceptorTest {
             when(request.getContextPath()).thenReturn("");
             when(request.getRequestURI()).thenReturn("/protected");
             when(request.getQueryString()).thenReturn(null);
-            when(session.getId()).thenReturn("session123");
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -148,13 +135,9 @@ class LocalUserAuthenticationInterceptorTest {
             when(request.getScheme()).thenReturn("https");
             when(request.getServerName()).thenReturn("example.com");
             when(request.getServerPort()).thenReturn(443);
-            when(request.getScheme()).thenReturn("https");
-            when(request.getServerName()).thenReturn("example.com");
-            when(request.getServerPort()).thenReturn(443);
             when(request.getContextPath()).thenReturn("");
             when(request.getRequestURI()).thenReturn("/oauth2/authorize");
             when(request.getQueryString()).thenReturn("response_type=code&client_id=test");
-            when(session.getId()).thenReturn("session123");
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -177,7 +160,6 @@ class LocalUserAuthenticationInterceptorTest {
             when(request.getContextPath()).thenReturn("/app");
             when(request.getRequestURI()).thenReturn("/app/protected");
             when(request.getQueryString()).thenReturn(null);
-            when(session.getId()).thenReturn("session123");
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -200,7 +182,6 @@ class LocalUserAuthenticationInterceptorTest {
             when(request.getContextPath()).thenReturn("");
             when(request.getRequestURI()).thenReturn("/protected");
             when(request.getQueryString()).thenReturn(null);
-            when(session.getId()).thenReturn("session123");
 
             // Act
             boolean result = interceptor.preHandle(request, response);
@@ -229,24 +210,13 @@ class LocalUserAuthenticationInterceptorTest {
             // Arrange
             when(request.getRequestURI()).thenReturn("/protected");
             when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
-            when(sessionMappingBizService.restoreSession("session123", false, request))
-                .thenReturn(null);
+            when(session.getAttribute("authenticated_user")).thenReturn("user123");
 
-            // Mock SessionManager to return authenticated user
-            MockedStatic<SessionManager> mockedSessionManager = Mockito.mockStatic(SessionManager.class);
-            try {
-                mockedSessionManager.when(() -> SessionManager.getAttribute(session, SessionAttributes.AUTHENTICATED_USER))
-                    .thenReturn("user123");
+            // Act
+            boolean result = interceptor.preHandle(request, response);
 
-                // Act
-                boolean result = interceptor.preHandle(request, response);
-
-                // Assert
-                assertThat(result).isTrue();
-            } finally {
-                mockedSessionManager.close();
-            }
+            // Assert
+            assertThat(result).isTrue();
         }
     }
 

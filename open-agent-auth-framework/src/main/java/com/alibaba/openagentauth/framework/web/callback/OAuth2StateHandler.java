@@ -20,8 +20,21 @@ import com.alibaba.openagentauth.core.util.ValidationUtils;
 /**
  * OAuth2 State parameter handler.
  * <p>
- * Parses and processes OAuth2 state parameters, supporting different authorization flows.
+ * Parses and processes OAuth2 state parameters to determine the authorization flow type.
+ * The state parameter format depends on the flow type:
  * </p>
+ * <ul>
+ *   <li><b>User Authentication:</b> {@code user:{random}} — session managed via HTTP cookies</li>
+ *   <li><b>Agent Operation Authorization:</b> {@code agent:{random}:{sessionId}} — session ID
+ *       embedded in state for cross-domain session restoration</li>
+ * </ul>
+ * <p>
+ * The state parameter serves two purposes per RFC 6749 Section 10.12:
+ * </p>
+ * <ul>
+ *   <li><b>CSRF protection:</b> The random component prevents cross-site request forgery attacks</li>
+ *   <li><b>Flow routing:</b> The prefix component determines which callback flow to execute</li>
+ * </ul>
  *
  * @since 1.0
  */
@@ -29,30 +42,52 @@ public class OAuth2StateHandler {
 
     private static final String STATE_PREFIX_USER_AUTHENTICATION = "user";
     private static final String STATE_PREFIX_AGENT_OPERATION_AUTH = "agent";
+    private static final String STATE_SEPARATOR = ":";
 
     /**
-     * Parse state parameter.
+     * Parse state parameter to determine the authorization flow type.
+     * <p>
+     * The state parameter format varies by flow:
+     * </p>
+     * <ul>
+     *   <li>User Authentication: {@code user:{random}} — no sessionId</li>
+     *   <li>Agent Operation Authorization: {@code agent:{random}:{sessionId}} — sessionId for cross-domain restore</li>
+     * </ul>
      *
      * @param state state parameter string
-     * @return parsed StateInfo
+     * @return parsed StateInfo containing the flow type, original state, and optional sessionId
      */
     public StateInfo parse(String state) {
         if (ValidationUtils.isNullOrEmpty(state)) {
             return StateInfo.unknown();
         }
 
-        String[] parts = state.split(":");
-        if (parts.length < 1) {
+        // Extract flow type prefix (before the first colon)
+        int firstSeparatorIndex = state.indexOf(STATE_SEPARATOR);
+        if (firstSeparatorIndex < 0) {
             return StateInfo.unknown();
         }
 
-        String flowType = parts[0];
-        String sessionId = parts.length >= 3 ? parts[2] : null;
+        String flowType = state.substring(0, firstSeparatorIndex);
+        FlowType resolvedFlowType = determineFlowType(flowType);
+
+        // For Agent Operation Authorization flow, extract sessionId from the third segment
+        String sessionId = null;
+        if (resolvedFlowType == FlowType.AGENT_OPERATION_AUTH) {
+            String remainder = state.substring(firstSeparatorIndex + 1);
+            int secondSeparatorIndex = remainder.indexOf(STATE_SEPARATOR);
+            if (secondSeparatorIndex >= 0) {
+                sessionId = remainder.substring(secondSeparatorIndex + 1);
+                if (sessionId.isEmpty()) {
+                    sessionId = null;
+                }
+            }
+        }
 
         return StateInfo.builder()
-                .flowType(determineFlowType(flowType))
-                .sessionId(sessionId)
+                .flowType(resolvedFlowType)
                 .originalState(state)
+                .sessionId(sessionId)
                 .build();
     }
 
@@ -82,17 +117,18 @@ public class OAuth2StateHandler {
     }
 
     /**
-     * State information.
+     * State information containing the parsed flow type, original state string,
+     * and optional sessionId (only for Agent Operation Authorization flow).
      */
     public static class StateInfo {
         private final FlowType flowType;
-        private final String sessionId;
         private final String originalState;
+        private final String sessionId;
 
-        private StateInfo(FlowType flowType, String sessionId, String originalState) {
+        private StateInfo(FlowType flowType, String originalState, String sessionId) {
             this.flowType = flowType;
-            this.sessionId = sessionId;
             this.originalState = originalState;
+            this.sessionId = sessionId;
         }
 
         public static StateInfo unknown() {
@@ -107,12 +143,19 @@ public class OAuth2StateHandler {
             return flowType;
         }
 
-        public String getSessionId() {
-            return sessionId;
-        }
-
         public String getOriginalState() {
             return originalState;
+        }
+
+        /**
+         * Returns the session ID extracted from the state parameter.
+         * Only populated for Agent Operation Authorization flow where cross-domain
+         * session restoration is needed.
+         *
+         * @return the session ID, or null if not applicable
+         */
+        public String getSessionId() {
+            return sessionId;
         }
 
         /**
@@ -120,16 +163,11 @@ public class OAuth2StateHandler {
          */
         public static class StateInfoBuilder {
             private FlowType flowType;
-            private String sessionId;
             private String originalState;
+            private String sessionId;
 
             public StateInfoBuilder flowType(FlowType flowType) {
                 this.flowType = flowType;
-                return this;
-            }
-
-            public StateInfoBuilder sessionId(String sessionId) {
-                this.sessionId = sessionId;
                 return this;
             }
 
@@ -138,8 +176,13 @@ public class OAuth2StateHandler {
                 return this;
             }
 
+            public StateInfoBuilder sessionId(String sessionId) {
+                this.sessionId = sessionId;
+                return this;
+            }
+
             public StateInfo build() {
-                return new StateInfo(flowType, sessionId, originalState);
+                return new StateInfo(flowType, originalState, sessionId);
             }
         }
     }

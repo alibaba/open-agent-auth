@@ -17,6 +17,8 @@ package com.alibaba.openagentauth.core.model.audit;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
 import java.util.Objects;
 
@@ -36,6 +38,7 @@ import java.util.Objects;
  * @see <a href="https://datatracker.ietf.org/doc/draft-liu-agent-operation-authorization/">draft-liu-agent-operation-authorization-01</a>
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonDeserialize(builder = AuditTrail.Builder.class)
 public class AuditTrail {
 
     /**
@@ -183,6 +186,7 @@ public class AuditTrail {
     /**
      * Builder for {@link AuditTrail}.
      */
+    @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
 
         /**
@@ -200,6 +204,7 @@ public class AuditTrail {
          * @param originalPromptText the original prompt text
          * @return this builder instance
          */
+        @JsonProperty("original_prompt_text")
         public Builder originalPromptText(String originalPromptText) {
             this.originalPromptText = originalPromptText;
             return this;
@@ -211,6 +216,7 @@ public class AuditTrail {
          * @param renderedOperationText the rendered operation text
          * @return this builder instance
          */
+        @JsonProperty("rendered_operation_text")
         public Builder renderedOperationText(String renderedOperationText) {
             this.renderedOperationText = renderedOperationText;
             return this;
@@ -222,6 +228,7 @@ public class AuditTrail {
          * @param semanticExpansionLevel the semantic expansion level
          * @return this builder instance
          */
+        @JsonProperty("semantic_expansion_level")
         public Builder semanticExpansionLevel(String semanticExpansionLevel) {
             this.semanticExpansionLevel = semanticExpansionLevel;
             return this;
@@ -236,6 +243,7 @@ public class AuditTrail {
          * @param userAcknowledgeTimestamp the user acknowledgment timestamp in ISO 8601 format
          * @return this builder instance
          */
+        @JsonProperty("user_acknowledge_timestamp")
         public Builder userAcknowledgeTimestamp(String userAcknowledgeTimestamp) {
             this.userAcknowledgeTimestamp = userAcknowledgeTimestamp;
             return this;
@@ -247,6 +255,7 @@ public class AuditTrail {
          * @param consentInterfaceVersion the consent interface version
          * @return this builder instance
          */
+        @JsonProperty("consent_interface_version")
         public Builder consentInterfaceVersion(String consentInterfaceVersion) {
             this.consentInterfaceVersion = consentInterfaceVersion;
             return this;

@@ -18,7 +18,6 @@ package com.alibaba.openagentauth.framework.web;
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.model.request.InitiateAuthorizationRequest;
 import com.alibaba.openagentauth.framework.web.interceptor.AgentUserIdpUserAuthInterceptor;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,9 +47,6 @@ class AgentUserIdpUserAuthInterceptorTest {
     private AgentAapExecutor agentAapExecutor;
 
     @Mock
-    private SessionMappingBizService sessionMappingBizService;
-
-    @Mock
     private HttpServletRequest request;
 
     private AgentUserIdpUserAuthInterceptor interceptor;
@@ -58,7 +54,6 @@ class AgentUserIdpUserAuthInterceptorTest {
     @BeforeEach
     void setUp() {
         interceptor = new AgentUserIdpUserAuthInterceptor(
-            sessionMappingBizService,
             List.of("/login", "/callback"),
             agentAapExecutor
         );
@@ -86,7 +81,6 @@ class AgentUserIdpUserAuthInterceptorTest {
             // Arrange
             TestableAgentUserIdpUserAuthInterceptor testableInterceptor = 
                 new TestableAgentUserIdpUserAuthInterceptor(
-                    sessionMappingBizService,
                     List.of("/login", "/callback"),
                     agentAapExecutor
                 );
@@ -112,7 +106,6 @@ class AgentUserIdpUserAuthInterceptorTest {
             // Arrange
             TestableAgentUserIdpUserAuthInterceptor testableInterceptor = 
                 new TestableAgentUserIdpUserAuthInterceptor(
-                    sessionMappingBizService,
                     List.of("/login", "/callback"),
                     agentAapExecutor
                 );
@@ -137,7 +130,6 @@ class AgentUserIdpUserAuthInterceptorTest {
             // Arrange
             TestableAgentUserIdpUserAuthInterceptor testableInterceptor = 
                 new TestableAgentUserIdpUserAuthInterceptor(
-                    sessionMappingBizService,
                     List.of("/login", "/callback"),
                     agentAapExecutor
                 );
@@ -162,10 +154,9 @@ class AgentUserIdpUserAuthInterceptorTest {
      */
     private static class TestableAgentUserIdpUserAuthInterceptor extends AgentUserIdpUserAuthInterceptor {
         public TestableAgentUserIdpUserAuthInterceptor(
-                SessionMappingBizService sessionMappingBizService,
                 List<String> excludedPaths,
                 AgentAapExecutor agentAapExecutor) {
-            super(sessionMappingBizService, excludedPaths, agentAapExecutor);
+            super(excludedPaths, agentAapExecutor);
         }
 
         public String testBuildAuthorizationUrl(HttpServletRequest request, String state) {

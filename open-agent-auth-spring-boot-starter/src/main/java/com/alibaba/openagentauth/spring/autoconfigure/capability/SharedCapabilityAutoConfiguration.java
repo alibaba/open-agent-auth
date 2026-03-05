@@ -463,20 +463,17 @@ public class SharedCapabilityAutoConfiguration {
         /**
          * Creates the UserAuthenticationInterceptor bean if not already defined.
          *
-         * @param sessionMappingBizService the session mapping business service
          * @param openAgentAuthProperties the global configuration properties
          * @return the UserAuthenticationInterceptor bean
          */
         @Bean
         @ConditionalOnMissingBean
-        public UserAuthenticationInterceptor userAuthenticationInterceptor(
-                SessionMappingBizService sessionMappingBizService,
-                OpenAgentAuthProperties openAgentAuthProperties) {
+        public UserAuthenticationInterceptor userAuthenticationInterceptor(OpenAgentAuthProperties openAgentAuthProperties) {
             String roleName = resolveUserIdpRoleName(openAgentAuthProperties);
             List<String> excludedPaths = openAgentAuthProperties.getCapabilities().getOAuth2Client().getAuthentication().getExcludePaths();
             logger.info("Creating shared UserAuthenticationInterceptor (LocalUserAuthenticationInterceptor) for {}", roleName);
             logger.debug("Using excluded paths: {}", excludedPaths);
-            return new LocalUserAuthenticationInterceptor(sessionMappingBizService, excludedPaths);
+            return new LocalUserAuthenticationInterceptor(excludedPaths);
         }
     }
 }

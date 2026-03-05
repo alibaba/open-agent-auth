@@ -1,15 +1,16 @@
 <div align="center">
+  <img src="public/logo-banner.png" alt="Open Agent Auth Logo" style="border-radius: 10px;">
 
   # Open Agent Auth
 
-  **English** | [中文](README.zh-CN.md)
+  [English](README.md) | **中文**
 
   <h3>企业级 AI 智能体操作授权框架</h3>
 
   ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
   ![Java](https://img.shields.io/badge/Java-17+-orange.svg)
   ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3+-green.svg)
-  ![Code Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)
+  ![Code Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)
   ![Build Status](https://github.com/alibaba/open-agent-auth/actions/workflows/ci.yml/badge.svg)
   ![Version](https://img.shields.io/badge/version-v0.1.0--beta.1-blue)
 
@@ -95,7 +96,7 @@ cd open-agent-auth-samples
 open http://localhost:8081
 ```
 
-> **注意**：模拟 LLM 使用关键词匹配。关于可用产品和匹配规则，请参阅 [模拟 LLM 使用指南](docs/guide/start/mock-llm-guide.md)。
+> **注意**：模拟 LLM 使用关键词匹配。关于可用产品和匹配规则，请参阅 [模拟 LLM 使用指南](docs/guide/02-mock-llm-guide.md)。
 
 #### 方式二：使用 QwenCode（深度体验）
 
@@ -126,7 +127,63 @@ open http://localhost:8081
    ```
 
 **注意：** 使用此方式前请确保 QwenCode 已正确安装并配置。如遇到问题，可使用方式一（模拟 LLM）进行快速测试。
-```
+
+**演示流程**
+
+以下截图展示了使用 **方式一（模拟 LLM）** 时的授权流程。方式二（QwenCode）的流程相同，只是由真实的 LLM 提供响应。
+
+以下截图展示了完整的授权流程，包括用户认证、智能体操作授权及响应交付：
+
+<table>
+<tr>
+<td align="center">
+  <img src="docs/image/sample/01-agent-user-idp-login.jpg" alt="Agent User IDP Login" width="400"/>
+  <br/>
+  <small><i><b>图 1：</b>用户通过智能体身份提供商进行认证，在与智能体交互前建立身份。</i></small>
+</td>
+<td align="center">
+  <img src="docs/image/sample/02-agent-user-idp.jpg" alt="Agent User IDP Dashboard" width="400"/>
+  <br/>
+  <small><i><b>图 2：</b>用户仪表盘显示可用的智能体及登录成功后的认证状态。</i></small>
+</td>
+</tr>
+<tr>
+<td align="center">
+  <img src="docs/image/sample/04-chat-2.jpg" alt="Chat Interface" width="400"/>
+  <br/>
+  <small><i><b>图 3：</b>用户向智能体提交自然语言请求，启动授权工作流。</i></small>
+</td>
+<td align="center">
+  <img src="docs/image/sample/05-as-user-idp-login.jpg" alt="AS User IDP Login" width="400"/>
+  <br/>
+  <small><i><b>图 4：</b>用户通过授权服务器的身份提供商进行认证，以授予智能体操作的同意。</i></small>
+</td>
+</tr>
+<tr>
+<td align="center">
+  <img src="docs/image/sample/07-authorize-1.jpg" alt="Authorization Page" width="400"/>
+  <br/>
+  <small><i><b>图 5：</b>授权同意页面展示智能体请求访问的操作详情和资源。</i></small>
+</td>
+<td align="center">
+  <img src="docs/image/sample/09-authorize-3.jpg" alt="Authorization Confirmation" width="400"/>
+  <br/>
+  <small><i><b>图 6：</b>用户确认授权请求，授予智能体执行操作的权限。</i></small>
+</td>
+</tr>
+<tr>
+<td align="center">
+  <img src="docs/image/sample/10-authorize-4.jpg" alt="Agent Receives Token" width="400"/>
+  <br/>
+  <small><i><b>图 7：</b>智能体从授权服务器接收 AOAT（智能体操作授权令牌）。</i></small>
+</td>
+<td align="center">
+  <img src="docs/image/sample/11-response.jpg" alt="Response Result" width="400"/>
+  <br/>
+  <small><i><b>图 8：</b>智能体从资源服务器接收操作结果并呈现给用户。</i></small>
+</td>
+</tr>
+</table>
 
 ### 集成指南
 
@@ -151,11 +208,11 @@ open http://localhost:8081
 
 #### 基础配置
 
-配置 JWKS 端点及其他相关参数。完整的配置选项请参阅 [配置指南](docs/guide/configuration/00-configuration-overview.md)。
+配置 JWKS 端点及其他相关参数。完整的配置选项请参阅 [配置指南](docs/guide/04-configuration.md)。
 
 #### 高级集成
 
-详细的集成说明与高级用法，请参阅 [集成指南](docs/guide/start/02-integration-guide.md)。
+详细的集成说明与高级用法，请参阅 [集成指南](docs/guide/03-integration-guide.md)。
 
 ---
 
@@ -176,7 +233,7 @@ Open Agent Auth 实现了零信任安全架构，包含四个核心层级：
 
 ### 多层验证机制
 
-资源服务器实现了符合行业标准的多层安全验证机制。验证层的详细信息请参阅 [多层验证](docs/architecture/authorization/five-layer-verification.md)。
+资源服务器实现了符合行业标准的多层安全验证机制。验证层的详细信息请参阅 [多层验证](docs/architecture/03-authorization.md)。
 
 ### 授权流程
 
@@ -185,13 +242,17 @@ sequenceDiagram
     participant User
     participant Agent
     participant AgentIDP
+    participant AgentUserIDP
     participant AuthServer
     participant ResourceServer
 
     User->>Agent: 自然语言请求
+    Agent->>User: 需要执行用户登录
+    User->>AgentUserIDP: 用户登录
+    AgentUserIDP-->>Agent: ID Token (登录后颁发)
     Agent->>AgentIDP: 创建虚拟工作负载
     AgentIDP-->>Agent: WIT (工作负载身份令牌)
-    Agent->>AuthServer: PAR 请求（带操作提案 JWT）
+    Agent->>AuthServer: PAR 请求（带操作提案 JWT，包括 ID Token 和 WIT）
     AuthServer-->>Agent: request_uri
     Agent->>User: 重定向到 /authorize?request_uri=...
     User->>AuthServer: 批准授权
@@ -231,7 +292,7 @@ sequenceDiagram
 
 #### 语义审计追踪
 
-基于 W3C VC 可验证凭证，记录从用户输入到资源操作的完整上下文，实现透明且可审计的智能体操作。审计追踪组件的详细信息请参阅 [审计与合规](docs/architecture/security/audit-and-compliance.md)。
+基于 W3C VC 可验证凭证，记录从用户输入到资源操作的完整上下文，实现透明且可审计的智能体操作。审计追踪组件的详细信息请参阅 [审计与合规](docs/architecture/04-security.md)。
 
 ## 安全机制
 
@@ -243,7 +304,7 @@ Open Agent Auth 在所有层级实施全面的安全措施：
 - **审计与合规**：基于 W3C VC 的可验证审计追踪，用于监管合规与取证分析
 - **安全密钥管理**：JWKS 端点与临时凭证的密钥生命周期管理
 
-详细的安全架构请参阅 [安全文档](docs/architecture/security/README.md)。
+详细的安全架构请参阅 [安全文档](docs/architecture/04-security.md)。
 
 ---
 
@@ -251,17 +312,17 @@ Open Agent Auth 在所有层级实施全面的安全措施：
 
 ### 使用指南
 
-- [快速开始指南](docs/guide/start/01-quick-start.md) - 5 分钟快速上手
-- [配置指南](docs/guide/configuration/00-configuration-overview.md) - 详细配置选项
-- [用户指南](docs/guide/start/00-user-guide.md) - 完整用户文档
-- [集成测试指南](docs/guide/test/integration-testing-guide.md) - 集成测试指南
+- [快速开始指南](docs/guide/01-quick-start.md) - 5 分钟快速上手
+- [配置指南](docs/guide/04-configuration.md) - 详细配置选项
+- [集成指南](docs/guide/03-integration-guide.md) - 完整集成文档
+- [集成测试指南](docs/guide/07-integration-testing.md) - 集成测试指南
 
 ### 架构文档
 
-- [架构概览](docs/architecture/README.md)
-- [身份与工作负载管理](docs/architecture/identity/README.md)
-- [安全与审计](docs/architecture/security/README.md)
-- [Spring Boot 集成](docs/architecture/integration/spring-boot-integration.md)
+- [架构概览](docs/architecture/index.md)
+- [身份与工作负载管理](docs/architecture/02-identity.md)
+- [安全与审计](docs/architecture/04-security.md)
+- [Spring Boot 集成](docs/architecture/07-spring-boot-integration.md)
 
 ### 标准规范
 
@@ -301,30 +362,30 @@ Open Agent Auth v0.1.0-beta.1 处于公开 Beta 测试阶段 — 功能完整、
 计划在后续版本中提供以下增强功能：
 
 **授权发现**
-- 支持从资源服务器响应中动态发现授权服务器
-- 支持授权服务器地址协商与路由
-- 基于资源提供方授权要求的灵活授权流程
+- [ ] 支持从资源服务器响应中动态发现授权服务器
+- [ ] 支持授权服务器地址协商与路由
+- [ ] 基于资源提供方授权要求的灵活授权流程
 
 **智能体到智能体授权**
-- 在多个 AI 智能体之间实现安全授权
-- 支持智能体委托与链式授权流程
-- 跨智能体身份验证与信任建立
+- [ ] 在多个 AI 智能体之间实现安全授权
+- [ ] 支持智能体委托与链式授权流程
+- [ ] 跨智能体身份验证与信任建立
 
 **OpenAPI 适配器**
-- 用于 Web 应用程序的 REST API 集成适配器
-- 基于 OpenAPI 规范自动生成策略
-- 用于集中授权的 API 网关集成
+- [ ] 用于 Web 应用程序的 REST API 集成适配器
+- [ ] 基于 OpenAPI 规范自动生成策略
+- [ ] 用于集中授权的 API 网关集成
 
 **提示安全传输**
-- 带加密的安全提示传递机制
-- 防止注入与篡改的提示保护
-- 安全提示处理的参考实现
+- [ ] 带加密的安全提示传递机制
+- [ ] 防止注入与篡改的提示保护
+- [ ] 安全提示处理的参考实现
 
 **增强审计与合规**
-- 全面的审计日志增强
-- 监管合规报告（SOC2、GDPR 等）
-- 实时审计监控与告警
-- 审计数据保留与归档策略
+- [ ] 全面的审计日志增强
+- [ ] 监管合规报告（SOC2、GDPR 等）
+- [ ] 实时审计监控与告警
+- [ ] 审计数据保留与归档策略
 
 ---
 
@@ -366,40 +427,3 @@ Open Agent Auth v0.1.0-beta.1 处于公开 Beta 测试阶段 — 功能完整、
 
 </div>
 
-## here are the updates to merge: 
-
-```markdown:README.zh-CN.md
-**演示流程**
-
-以下截图展示了使用 **方式一（模拟 LLM）** 时的授权流程。方式二（QwenCode）的流程相同，只是由真实的 LLM 提供响应。
-
-以下截图展示了完整的授权流程，包括用户认证、智能体操作授权及响应交付：
-```
-
-## here are the updates to merge: 
-
-```markdown:README.zh-CN.md
-### 运行示例程序
-
-示例程序提供两种启动方式：
-
-#### 方式一：使用模拟 LLM（快速开始）
-
-```bash
-# 克隆并构建
-git clone https://github.com/alibaba/open-agent-auth.git
-cd open-agent-auth
-mvn clean package -DskipTests
-
-# 使用模拟 LLM 启动所有服务
-cd open-agent-auth-samples
-./scripts/sample-start.sh --profile mock-llm
-
-# 访问智能体界面
-open http://localhost:8081
-```
-
-> **注意**：模拟 LLM 使用关键词匹配。关于可用产品和匹配规则，请参阅 [模拟 LLM 使用指南](docs/guide/start/mock-llm-guide.md)。
-
-#### 方式二：使用 QwenCode（深度体验）
-```

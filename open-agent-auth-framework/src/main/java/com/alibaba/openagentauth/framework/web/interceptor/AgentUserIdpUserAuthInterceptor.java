@@ -17,7 +17,6 @@ package com.alibaba.openagentauth.framework.web.interceptor;
 
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.model.request.InitiateAuthorizationRequest;
-import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,16 +77,14 @@ public class AgentUserIdpUserAuthInterceptor extends UserAuthenticationIntercept
     /**
      * Constructs a new AgentUserIdpUserAuthInterceptor.
      *
-     * @param sessionMappingBizService the session mapping business service
      * @param excludedPaths the list of paths to exclude from authentication
      * @param agentAapExecutor the Agent AAP executor
      */
     public AgentUserIdpUserAuthInterceptor(
-            SessionMappingBizService sessionMappingBizService,
             List<String> excludedPaths,
             AgentAapExecutor agentAapExecutor
     ) {
-        super(sessionMappingBizService, excludedPaths);
+        super(excludedPaths);
         this.agentAapExecutor = agentAapExecutor;
         logger.info("AgentUserIdpUserAuthInterceptor initialized");
     }

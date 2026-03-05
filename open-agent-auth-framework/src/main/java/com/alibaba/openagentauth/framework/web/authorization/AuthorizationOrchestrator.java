@@ -373,38 +373,46 @@ public class AuthorizationOrchestrator {
 
     /**
      * Handles unauthenticated users by redirecting to login.
+     * <p>
+     * This method orchestrates the complete unauthenticated user flow:
+     * </p>
+     * <ol>
+     *   <li>Builds the authorization URL that the user should return to after login</li>
+     *   <li>Stores the authorization URL in the session as {@code REDIRECT_URI}</li>
+     *   <li>Delegates to the {@link UserAuthenticationInterceptor} to get the login URL</li>
+     * </ol>
+     * <p>
+     * Session continuity is maintained through standard HTTP session cookies.
+     * The {@code REDIRECT_URI} is stored in the session <em>before</em> calling
+     * {@code getLoginUrl()}, so it is available after the OAuth redirect completes.
+     * </p>
      *
      * @param request the HTTP request
      * @param context the authorization request context
      * @return authorization result (redirect to login or error)
      */
     private AuthorizationResult handleUnauthenticated(HttpServletRequest request, AuthorizationRequestContext context) {
-        // If no authentication interceptor is available, return unauthorized
         if (userAuthenticationInterceptor == null) {
             logger.debug("User authentication interceptor not available, returning unauthorized");
             return AuthorizationResult.unauthorized("login_required", "User authentication required");
         }
 
-        // Get login URL
+        // Build the authorization URL that the user should return to after login
+        String authorizationUrl = buildAuthorizationUrl(request, context);
+
+        // Store redirect URI in session BEFORE getting login URL.
+        // The session cookie will preserve this across the OAuth redirect flow.
+        HttpSession session = request.getSession(true);
+        SessionManager.setAttribute(session, SessionAttributes.REDIRECT_URI, authorizationUrl);
+        logger.debug("Stored redirect URI in session: {}", session.getId());
+
+        // Get login URL — this internally stores the session mapping
         String loginUrl = userAuthenticationInterceptor.getLoginUrl(request);
         if (loginUrl == null) {
             return AuthorizationResult.unauthorized("login_required", "User authentication required");
         }
 
         logger.info("User not authenticated, redirecting to login: {}", loginUrl);
-
-        // Build authorization URL for redirect after login
-        String authorizationUrl = buildAuthorizationUrl(request, context);
-
-        // Store in session using SessionManager
-        HttpSession session = request.getSession(true);
-        SessionManager.setAttribute(session, SessionAttributes.REDIRECT_URI, authorizationUrl);
-
-        // Store session mapping
-        sessionMappingBizService.storeSession(session.getId(), session);
-        logger.debug("Session stored in SessionMappingBizService: {}", session.getId());
-
-        // Redirect to login
         return AuthorizationResult.redirect(loginUrl);
     }
 

@@ -65,19 +65,29 @@ import java.util.stream.Collectors;
  * 
  * <b>API Endpoints:</b></p>
  * <ul>
- *   <li>POST /api/v1/workloads/token/issue - Issue WIT with automatic workload management</li>
- *   <li>POST /api/v1/workloads/revoke - Revoke a workload identity</li>
- *   <li>POST /api/v1/workloads/get - Retrieve workload information</li>
+ *   <li>POST /api/v1/workloads/token/issue - Issue WIT with automatic workload management (Agent IDP only)</li>
+ *   <li>POST /api/v1/workloads/revoke - Revoke a workload identity (Agent IDP only)</li>
+ *   <li>POST /api/v1/workloads/get - Retrieve workload information (Agent IDP only)</li>
+ *   <li>POST /api/v1/workloads/list - List workloads with pagination (all roles with WorkloadRegistry)</li>
  * </ul>
+ * <p>
+ * <b>Multi-Role Support:</b></p>
+ * <p>
+ * This controller is activated when a {@link WorkloadRegistry} bean is present.
+ * In Agent IDP role (with {@link AgentIdentityProvider}), all endpoints are available.
+ * In Agent role (with {@link com.alibaba.openagentauth.core.protocol.wimse.workload.store.RemoteWorkloadRegistry}),
+ * only the list endpoint is functional; write operations return 405 Method Not Allowed.
+ * </p>
  *
  * @see AgentIdentityProvider
+ * @see WorkloadRegistry
  * @see <a href="https://datatracker.ietf.org/doc/html/draft-ietf-wimse-workload-creds">IETF WIMSE Workload Credentials Draft</a>
  * @see <a href="https://datatracker.ietf.org/doc/html/draft-ietf-wimse-protocol">IETF WIMSE Protocol Draft</a>
  * @since 1.0
  */
 @RestController
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnBean(AgentIdentityProvider.class)
+@ConditionalOnBean(WorkloadRegistry.class)
 public class WorkloadController {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkloadController.class);
@@ -88,19 +98,23 @@ public class WorkloadController {
     /**
      * Constructor for dependency injection.
      * <p>
-     * Initializes the controller with the required AgentIdentityProvider service
-     * and optional WorkloadRegistry for listing workloads.
+     * Initializes the controller with the required WorkloadRegistry for listing workloads
+     * and optional AgentIdentityProvider for write operations (issue, revoke, get).
+     * When AgentIdentityProvider is not available (Agent role with RemoteWorkloadRegistry),
+     * only the list endpoint is functional; write operations return 405 Method Not Allowed.
      * </p>
      *
-     * @param agentIdentityProvider the workload identity provider service implementing WIMSE operations
-     * @param workloadRegistry      the workload registry for listing workloads (optional)
+     * @param workloadRegistry      the workload registry for listing workloads
+     * @param agentIdentityProvider the workload identity provider service (optional, only in Agent IDP role)
      */
     public WorkloadController(
-            AgentIdentityProvider agentIdentityProvider,
-            Optional<WorkloadRegistry> workloadRegistry
+            WorkloadRegistry workloadRegistry,
+            Optional<AgentIdentityProvider> agentIdentityProvider
     ) {
-        this.agentIdentityProvider = agentIdentityProvider;
-        this.workloadRegistry = workloadRegistry.orElse(null);
+        this.workloadRegistry = workloadRegistry;
+        this.agentIdentityProvider = agentIdentityProvider.orElse(null);
+        String mode = this.agentIdentityProvider != null ? "read-write" : "read-only";
+        logger.info("WorkloadController initialized in {} mode", mode);
     }
 
 
@@ -129,6 +143,12 @@ public class WorkloadController {
     public ResponseEntity<IssueWitResponse> issue(
             @RequestBody IssueWitRequest request
     ) {
+        if (agentIdentityProvider == null) {
+            logger.warn("WIT issuance is not available in read-only mode");
+            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                    .body(IssueWitResponse.error("WIT issuance is not available in read-only mode"));
+        }
+
         logger.info("Issuing WIT with automatic workload management");
         
         try {
@@ -173,6 +193,11 @@ public class WorkloadController {
     public ResponseEntity<Void> revoke(
             @RequestBody RevokeWorkloadRequest request
     ) {
+        if (agentIdentityProvider == null) {
+            logger.warn("Workload revocation is not available in read-only mode");
+            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+        }
+
         logger.info("Revoking workload: {}", request.getWorkloadId());
         
         try {
@@ -205,6 +230,11 @@ public class WorkloadController {
     public ResponseEntity<WorkloadResponse> get(
             @RequestBody GetWorkloadRequest request
     ) {
+        if (agentIdentityProvider == null) {
+            logger.warn("Workload retrieval by ID is not available in read-only mode");
+            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
+        }
+
         logger.debug("Getting workload information: {}", request.getWorkloadId());
         
         try {

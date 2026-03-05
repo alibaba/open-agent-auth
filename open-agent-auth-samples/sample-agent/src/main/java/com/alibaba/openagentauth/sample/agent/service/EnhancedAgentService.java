@@ -702,6 +702,17 @@ public class EnhancedAgentService {
         log.info("Converting {} messages to Qwen format", conversationHistory.size());
         
         for (ChatMessage message : conversationHistory) {
+            // Skip authorization-related intermediate messages that should not be sent to LLM.
+            // These messages (REQUIRED, INITIATED, DENIED, FAILED) are internal state transitions
+            // of the authorization flow and would confuse the LLM if included in the prompt.
+            ChatMessage.AuthorizationStatus authStatus = message.getAuthorizationStatus();
+            if (authStatus != null && authStatus != ChatMessage.AuthorizationStatus.AUTHORIZED
+                    && authStatus != ChatMessage.AuthorizationStatus.NOT_REQUIRED) {
+                log.info("Skipping authorization intermediate message: role={}, status={}", 
+                        message.getRole(), authStatus);
+                continue;
+            }
+            
             Map<String, String> qwenMessage = new HashMap<>();
             qwenMessage.put("role", message.getRole());
             

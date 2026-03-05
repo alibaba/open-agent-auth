@@ -191,6 +191,8 @@
         <form action="/login" method="post">
             <!-- Hidden field for redirect_uri (used to redirect back to authorization endpoint) -->
             <input type="hidden" name="redirect_uri" th:value="${redirect_uri}">
+            <!-- CSRF token for form protection -->
+            <input type="hidden" name="_csrf" th:value="${_csrf}">
             
             <div class="form-group">
                 <label for="username" th:text="${@environment.getProperty('open-agent-auth.capabilities.user-authentication.login-page.username-label', 'Username')}">Username</label>

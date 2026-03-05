@@ -671,7 +671,7 @@ class DefaultAgentIdentityProviderTest {
             agentIdentityProvider.revokeAgentWorkload(WORKLOAD_ID);
 
             // Assert
-            verify(mockWorkloadRegistry, times(1)).delete(WORKLOAD_ID);
+            verify(mockWorkloadRegistry, times(1)).revoke(WORKLOAD_ID);
         }
 
         @Test

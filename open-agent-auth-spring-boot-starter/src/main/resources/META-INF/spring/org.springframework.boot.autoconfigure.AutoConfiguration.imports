@@ -1,7 +1,10 @@
 # Open Agent Auth Auto-Configuration
 # This file defines the order in which auto-configurations are loaded
 
-# Layer 0: Core configuration (loaded first - provides shared beans like KeyManager)
+# Layer 0: Security configuration (loaded first - configures session cookie name, SameSite, etc.)
+com.alibaba.openagentauth.spring.autoconfigure.SecurityAutoConfiguration
+
+# Layer 0: Core configuration (loaded after security - provides shared beans like KeyManager)
 com.alibaba.openagentauth.spring.autoconfigure.core.CoreAutoConfiguration
 
 # Layer 1: Shared Capability configuration (loaded after core - provides shared infrastructure beans)
@@ -25,6 +28,10 @@ com.alibaba.openagentauth.spring.config.OAuth2AuthorizationConfiguration
 
 # Layer 3: Configuration Validator (validates role-capability consistency)
 com.alibaba.openagentauth.spring.autoconfigure.ConfigurationValidator
+
+# Admin Console configuration (loaded after role configs, before SpringWeb)
+# Registers AdminAccessInterceptor and user authentication interceptor for admin endpoints
+com.alibaba.openagentauth.spring.autoconfigure.AdminAutoConfiguration
 
 # Spring Web configuration (loaded last - scans for REST controllers with @ConditionalOnBean)
 # Must be loaded after all role and config classes so that @ConditionalOnBean can detect registered beans
