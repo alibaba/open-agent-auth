@@ -6,7 +6,7 @@ hero:
   text: Enterprise-Grade AI Agent Authorization
   tagline: Cryptographic identity binding, fine-grained authorization, and semantic audit trails for AI agents operating on behalf of users.
   image:
-    src: /public/logo.png
+    src: /logo.png
     alt: Open Agent Auth
   actions:
     - theme: brand
