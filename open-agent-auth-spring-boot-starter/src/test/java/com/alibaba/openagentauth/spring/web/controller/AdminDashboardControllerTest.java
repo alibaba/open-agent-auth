@@ -92,7 +92,11 @@ class AdminDashboardControllerTest {
 
             // Assert
             assertThat(viewName).isEqualTo("admin/dashboard");
-            verify(model).addAttribute("navItems", new ArrayList<>());
+            // All 5 Optional beans are present, so navItems should contain 4 items
+            // (bindings, policies, audit, workloads)
+            verify(model).addAttribute(org.mockito.ArgumentMatchers.eq("navItems"),
+                    org.mockito.ArgumentMatchers.argThat(arg ->
+                            arg instanceof List && ((List<?>) arg).size() == 4));
             verify(model).addAttribute("defaultPage", "/admin/bindings");
         }
 
@@ -121,7 +125,7 @@ class AdminDashboardControllerTest {
         @DisplayName("Should include binding navigation item when BindingInstanceStore is present")
         void shouldIncludeBindingNavigationItemWhenBindingInstanceStoreIsPresent() {
             // Arrange
-            AdminDashboardController controller = new AdminDashboardController(
+            AdminDashboardController bindingController = new AdminDashboardController(
                     Optional.of(bindingInstanceStore),
                     Optional.empty(),
                     Optional.empty(),
@@ -130,11 +134,15 @@ class AdminDashboardControllerTest {
             );
 
             // Act
-            String viewName = controller.dashboardPage(model);
+            String viewName = bindingController.dashboardPage(model);
 
             // Assert
             assertThat(viewName).isEqualTo("admin/dashboard");
-            verify(model).addAttribute("navItems", new ArrayList<>());
+            // Only bindingInstanceStore is present, so navItems should contain 1 item
+            verify(model).addAttribute(org.mockito.ArgumentMatchers.eq("navItems"),
+                    org.mockito.ArgumentMatchers.argThat(arg ->
+                            arg instanceof List && ((List<?>) arg).size() == 1));
+            verify(model).addAttribute("defaultPage", "/admin/bindings");
         }
 
         @Test

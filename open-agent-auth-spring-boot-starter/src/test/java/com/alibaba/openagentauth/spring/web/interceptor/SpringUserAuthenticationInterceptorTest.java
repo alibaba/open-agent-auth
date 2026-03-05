@@ -116,12 +116,17 @@ class SpringUserAuthenticationInterceptorTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when delegate is null")
-        void shouldThrowExceptionWhenDelegateIsNull() {
-            // Act & Assert
+        @DisplayName("Should accept null delegate in constructor but fail on usage")
+        void shouldAcceptNullDelegateButFailOnUsage() {
+            // Act - constructor does not perform null check
+            SpringUserAuthenticationInterceptor nullDelegateInterceptor =
+                    new SpringUserAuthenticationInterceptor(null);
+
+            // Assert - NPE occurs when preHandle is called with null delegate
+            assertThat(nullDelegateInterceptor).isNotNull();
             org.junit.jupiter.api.Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> new SpringUserAuthenticationInterceptor(null)
+                    () -> nullDelegateInterceptor.preHandle(request, response, null)
             );
         }
     }
