@@ -349,10 +349,26 @@
             }
         });
 
+        function isSafeFrameUrl(rawUrl) {
+            if (!rawUrl || typeof rawUrl !== 'string') {
+                return false;
+            }
+            var url = rawUrl.trim();
+            if (url === '') {
+                return false;
+            }
+            try {
+                var parsed = new URL(url, window.location.origin);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+            } catch (e) {
+                return false;
+            }
+        }
+
         function navigateTo(element) {
             var url = element.getAttribute('data-url');
             var frame = document.getElementById('contentFrame');
-            if (frame) {
+            if (frame && isSafeFrameUrl(url)) {
                 frame.src = url;
             }
 
