@@ -8,6 +8,10 @@
     "docs:build": "vitepress build",
     "docs:preview": "vitepress preview"
   },
+  "overrides": {
+    "dompurify": ">=3.3.2",
+    "esbuild": ">=0.25.0"
+  },
   "devDependencies": {
     "mermaid": "^11.12.3",
     "vitepress": "^1.6.3",
