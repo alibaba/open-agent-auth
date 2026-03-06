@@ -7,6 +7,12 @@ const { isDark } = useData()
 <template>
   <div class="home-content">
 
+    <!-- Slogan -->
+    <section class="slogan-section">
+      <p class="slogan-line-1">Equal partners. Trust actions.</p>
+      <p class="slogan-line-2">The social contract for the agent era.</p>
+    </section>
+
     <!-- Quick Navigation -->
     <section class="quick-nav">
       <div class="section-header">
@@ -187,6 +193,49 @@ const { isDark } = useData()
   max-width: 1152px;
   margin: 0 auto;
   padding: 0 24px;
+}
+
+/* ─── Slogan ─── */
+.slogan-section {
+  text-align: center;
+  padding: 2.5rem 0 1rem;
+}
+
+.slogan-line-1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--vp-c-text-1);
+  margin: 0 0 0.25rem;
+  line-height: 1.3;
+}
+
+.slogan-line-2 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--vp-c-text-2);
+  margin: 0;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+@media (min-width: 640px) {
+  .slogan-line-1 {
+    font-size: 1.75rem;
+  }
+  .slogan-line-2 {
+    font-size: 1.35rem;
+  }
+}
+
+@media (min-width: 960px) {
+  .slogan-line-1 {
+    font-size: 2rem;
+  }
+  .slogan-line-2 {
+    font-size: 1.5rem;
+  }
 }
 
 /* ─── Section Header ─── */

@@ -15,6 +15,9 @@
  */
 package com.alibaba.openagentauth.framework.web.interceptor;
 
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import com.alibaba.openagentauth.framework.web.manager.SessionAttributes;
 import com.alibaba.openagentauth.framework.web.manager.SessionManager;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,9 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Unified user authentication interceptor for both Authorization Server and Agent roles.
@@ -101,10 +105,8 @@ public class UserAuthenticationInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(UserAuthenticationInterceptor.class);
 
-    /**
-     * Prefix for the state parameter format: {@code user:{random}}.
-     */
-    private static final String STATE_PREFIX = "user:";
+    private static final int STATE_BYTE_LENGTH = 32;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
      * The list of paths to exclude from authentication.
@@ -112,12 +114,32 @@ public class UserAuthenticationInterceptor {
     private final List<String> excludedPaths;
 
     /**
-     * Constructs a new UserAuthenticationInterceptor.
+     * The repository for storing authorization requests keyed by opaque state values.
+     */
+    private final OAuth2AuthorizationRequestStorage authorizationRequestStorage;
+
+    /**
+     * Constructs a new UserAuthenticationInterceptor with a default in-memory repository.
      *
      * @param excludedPaths the list of paths to exclude from authentication
      */
     public UserAuthenticationInterceptor(List<String> excludedPaths) {
+        this(excludedPaths, new InMemoryOAuth2AuthorizationRequestStorage());
+    }
+
+    /**
+     * Constructs a new UserAuthenticationInterceptor with a custom repository.
+     *
+     * @param excludedPaths the list of paths to exclude from authentication
+     * @param authorizationRequestStorage the repository for storing authorization requests
+     */
+    public UserAuthenticationInterceptor(
+            List<String> excludedPaths,
+            OAuth2AuthorizationRequestStorage authorizationRequestStorage) {
         this.excludedPaths = excludedPaths != null ? excludedPaths : new ArrayList<>();
+        this.authorizationRequestStorage = authorizationRequestStorage != null
+                ? authorizationRequestStorage
+                : new InMemoryOAuth2AuthorizationRequestStorage();
         logger.info("UserAuthenticationInterceptor initialized with excluded paths: {}", this.excludedPaths);
     }
 
@@ -204,10 +226,10 @@ public class UserAuthenticationInterceptor {
     /**
      * Gets the login URL for unauthenticated users.
      * <p>
-     * Generates a login URL with a state parameter for CSRF protection and flow routing.
-     * The state format is: {@code user:{random}}. Session management is handled through
-     * standard HTTP session cookies, following the approach used by mainstream OAuth2/OIDC
-     * implementations (Spring Authorization Server, Keycloak).
+     * Generates a login URL with an opaque state parameter for CSRF protection.
+     * The state is a cryptographically secure random value per RFC 6749 Section 10.12.
+     * Flow type metadata is stored server-side in the {@link OAuth2AuthorizationRequestStorage},
+     * following the approach used by Spring Security OAuth2.
      * </p>
      *
      * @param request the HTTP request
@@ -216,13 +238,31 @@ public class UserAuthenticationInterceptor {
     public String getLoginUrl(HttpServletRequest request) {
         HttpSession session = request.getSession(true);
 
-        String state = STATE_PREFIX + generateState();
+        String state = generateState();
+
+        // Store authorization request with flow type metadata in the repository
+        OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.builder()
+                .state(state)
+                .flowType(OAuth2AuthorizationRequest.FlowType.USER_AUTHENTICATION)
+                .build();
+        authorizationRequestStorage.save(authorizationRequest);
+
+        // Also store state in session for backward compatibility
         SessionManager.setAttribute(session, SessionAttributes.OAUTH_STATE, state);
 
         String authorizationUrl = buildAuthorizationUrl(request, state);
 
         logger.info("Generated login URL redirecting to User IDP");
         return authorizationUrl;
+    }
+
+    /**
+     * Returns the authorization request repository used by this interceptor.
+     *
+     * @return the authorization request repository
+     */
+    public OAuth2AuthorizationRequestStorage getAuthorizationRequestStorage() {
+        return authorizationRequestStorage;
     }
 
     /**
@@ -244,12 +284,18 @@ public class UserAuthenticationInterceptor {
     }
 
     /**
-     * Generates a secure random state parameter for CSRF protection.
+     * Generates a cryptographically secure, opaque state parameter for CSRF protection.
+     * <p>
+     * Uses {@link SecureRandom} to generate 32 bytes (256 bits) of entropy,
+     * encoded as a URL-safe Base64 string without padding.
+     * </p>
      *
-     * @return the state string
+     * @return the opaque state string
      */
     protected String generateState() {
-        return UUID.randomUUID().toString();
+        byte[] randomBytes = new byte[STATE_BYTE_LENGTH];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 
     /**

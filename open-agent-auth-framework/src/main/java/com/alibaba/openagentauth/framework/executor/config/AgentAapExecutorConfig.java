@@ -20,6 +20,8 @@ import com.alibaba.openagentauth.framework.executor.strategy.impl.DefaultDeviceF
 import com.alibaba.openagentauth.framework.executor.strategy.impl.DefaultStateGenerationStrategy;
 import com.alibaba.openagentauth.framework.executor.strategy.DeviceFingerprintStrategy;
 import com.alibaba.openagentauth.framework.executor.strategy.StateGenerationStrategy;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -135,6 +137,16 @@ public class AgentAapExecutorConfig {
      */
     private final Boolean encryptionEnabled;
 
+    /**
+     * Storage for OAuth2 authorization requests keyed by opaque state values.
+     * <p>
+     * This storage enables the RFC 6749-compliant opaque state pattern where
+     * flow type metadata (e.g., AGENT_OPERATION_AUTH) is stored server-side
+     * rather than encoded in the state parameter itself.
+     * </p>
+     */
+    private final OAuth2AuthorizationRequestStorage authorizationRequestStorage;
+
     private AgentAapExecutorConfig(Builder builder) {
         this.clientId = builder.clientId;
         this.redirectUri = builder.redirectUri;
@@ -151,6 +163,7 @@ public class AgentAapExecutorConfig {
         this.sanitizationLevel = builder.sanitizationLevel;
         this.requireUserInteraction = builder.requireUserInteraction;
         this.encryptionEnabled = builder.encryptionEnabled;
+        this.authorizationRequestStorage = builder.authorizationRequestStorage;
     }
     
     /**
@@ -293,6 +306,15 @@ public class AgentAapExecutorConfig {
         return encryptionEnabled;
     }
 
+    /**
+     * Returns the authorization request storage.
+     *
+     * @return the authorization request storage
+     */
+    public OAuth2AuthorizationRequestStorage getAuthorizationRequestStorage() {
+        return authorizationRequestStorage;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -331,6 +353,7 @@ public class AgentAapExecutorConfig {
         private String sanitizationLevel;
         private Boolean requireUserInteraction;
         private Boolean encryptionEnabled;
+        private OAuth2AuthorizationRequestStorage authorizationRequestStorage = new InMemoryOAuth2AuthorizationRequestStorage();
 
         /**
          * Sets the OAuth 2.0 client identifier.
@@ -498,6 +521,22 @@ public class AgentAapExecutorConfig {
          */
         public Builder encryptionEnabled(Boolean encryptionEnabled) {
             this.encryptionEnabled = encryptionEnabled;
+            return this;
+        }
+
+        /**
+         * Sets the authorization request storage.
+         * <p>
+         * For distributed deployments, provide a shared storage implementation
+         * (e.g., Redis-backed) to ensure state can be resolved across instances.
+         * </p>
+         *
+         * @param storage the authorization request storage
+         * @return this builder instance
+         * @throws NullPointerException if storage is null
+         */
+        public Builder authorizationRequestStorage(OAuth2AuthorizationRequestStorage storage) {
+            this.authorizationRequestStorage = Objects.requireNonNull(storage, "OAuth2AuthorizationRequestStorage cannot be null");
             return this;
         }
 

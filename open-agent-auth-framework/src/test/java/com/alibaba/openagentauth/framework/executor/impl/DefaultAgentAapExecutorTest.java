@@ -42,6 +42,7 @@ import com.alibaba.openagentauth.framework.model.request.RequestAuthUrlRequest;
 import com.alibaba.openagentauth.framework.model.response.RequestAuthUrlResponse;
 import com.alibaba.openagentauth.framework.model.workload.WorkloadContext;
 import com.alibaba.openagentauth.framework.model.workload.WorkloadRequestContext;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -136,8 +137,10 @@ class DefaultAgentAapExecutorTest {
         // Setup strategy mocks using separate mock objects
         when(mockConfig.getStateGenerationStrategy()).thenReturn(mockStateGenerationStrategy);
         when(mockConfig.getDeviceFingerprintStrategy()).thenReturn(mockDeviceFingerprintStrategy);
-        when(mockStateGenerationStrategy.generate(anyString())).thenReturn(STATE);
+        when(mockStateGenerationStrategy.generate()).thenReturn(STATE);
         when(mockDeviceFingerprintStrategy.generate(anyString())).thenReturn("device-fingerprint-123");
+        when(mockConfig.getAuthorizationRequestStorage())
+                .thenReturn(new InMemoryOAuth2AuthorizationRequestStorage());
         
         // Setup policy builder
         when(mockPolicyBuilder.buildPolicy(any(RequestAuthUrlRequest.class))).thenReturn(POLICY);

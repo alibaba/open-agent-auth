@@ -106,7 +106,7 @@ class AdminAutoConfigurationTest {
         void shouldCreateConfigurationSuccessfully() {
             // Act
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             // Assert
             assertThat(configuration).isNotNull();
@@ -121,7 +121,7 @@ class AdminAutoConfigurationTest {
 
             // Act
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             // Assert
             assertThat(configuration).isNotNull();
@@ -139,7 +139,7 @@ class AdminAutoConfigurationTest {
             adminProperties.getAccessControl().setEnabled(true);
             adminProperties.getAccessControl().setAllowedSessionSubjects(List.of("admin"));
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             // Act
             AdminAccessInterceptor interceptor = configuration.adminAccessInterceptor();
@@ -154,7 +154,7 @@ class AdminAutoConfigurationTest {
             // Arrange
             adminProperties.getAccessControl().setEnabled(false);
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             // Act
             AdminAccessInterceptor interceptor = configuration.adminAccessInterceptor();
@@ -170,7 +170,7 @@ class AdminAutoConfigurationTest {
             adminProperties.getAccessControl().setEnabled(true);
             adminProperties.getAccessControl().setAllowedSessionSubjects(List.of());
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             // Act
             AdminAccessInterceptor interceptor = configuration.adminAccessInterceptor();
@@ -187,7 +187,7 @@ class AdminAutoConfigurationTest {
             adminProperties.getAccessControl().setAllowedSessionSubjects(
                     List.of("admin", "operator", "superuser"));
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             // Act
             AdminAccessInterceptor interceptor = configuration.adminAccessInterceptor();
@@ -208,7 +208,7 @@ class AdminAutoConfigurationTest {
             adminProperties.getAccessControl().setEnabled(true);
             adminProperties.getAccessControl().setAllowedSessionSubjects(List.of("admin"));
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
@@ -231,7 +231,7 @@ class AdminAutoConfigurationTest {
             adminProperties.getAccessControl().setAllowedSessionSubjects(List.of("admin"));
             UserAuthenticationInterceptor userAuthInterceptor = new UserAuthenticationInterceptor(List.of());
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(userAuthInterceptor));
+                    rootProperties, objectProviderOf(userAuthInterceptor), objectProviderOf(null));
 
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
@@ -265,7 +265,7 @@ class AdminAutoConfigurationTest {
             adminProperties.getAccessControl().setEnabled(true);
             adminProperties.getAccessControl().setAllowedSessionSubjects(List.of("admin"));
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
@@ -305,7 +305,7 @@ class AdminAutoConfigurationTest {
             configureRole("agent-idp", "http://localhost:8082");
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
             // Act
@@ -331,7 +331,7 @@ class AdminAutoConfigurationTest {
             configureRole("authorization-server", "http://localhost:8085");
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
             // Act
@@ -355,7 +355,7 @@ class AdminAutoConfigurationTest {
 
             UserAuthenticationInterceptor existingInterceptor = new UserAuthenticationInterceptor(List.of());
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(existingInterceptor));
+                    rootProperties, objectProviderOf(existingInterceptor), objectProviderOf(null));
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
             // Act
@@ -376,7 +376,7 @@ class AdminAutoConfigurationTest {
             configureRole("resource-server", "http://localhost:8086");
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
             // Act
@@ -401,7 +401,7 @@ class AdminAutoConfigurationTest {
             configureRole("agent-idp", "http://localhost:8082");
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
             // Act
@@ -423,7 +423,7 @@ class AdminAutoConfigurationTest {
             // Do NOT set client-id
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
             // Act
@@ -445,7 +445,7 @@ class AdminAutoConfigurationTest {
             // Do NOT configure any role
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
             // Act
@@ -468,7 +468,7 @@ class AdminAutoConfigurationTest {
             configureRole("agent-idp", "http://localhost:8082");
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
             TestableInterceptorRegistry registry = new TestableInterceptorRegistry();
 
             // Act
@@ -514,7 +514,7 @@ class AdminAutoConfigurationTest {
             adminProperties.getAccessControl().setAllowedSessionSubjects(List.of("admin"));
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             // Act
             AdminAccessInterceptor interceptor = configuration.adminAccessInterceptor();
@@ -531,7 +531,7 @@ class AdminAutoConfigurationTest {
             adminProperties.getAccessControl().setEnabled(false);
 
             AdminAutoConfiguration configuration = new AdminAutoConfiguration(
-                    rootProperties, objectProviderOf(null));
+                    rootProperties, objectProviderOf(null), objectProviderOf(null));
 
             // Act
             AdminAccessInterceptor interceptor = configuration.adminAccessInterceptor();

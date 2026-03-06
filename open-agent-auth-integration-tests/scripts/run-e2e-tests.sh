@@ -41,7 +41,7 @@ NC='\033[0m' # No Color
 # Parse arguments
 DEBUG_MODE=false
 SKIP_BUILD=false
-TEST_CLASS="FullAuthorizationFlowE2ETest"
+TEST_CLASS="FullAuthorizationFlowE2ETest,AdminDashboardE2ETest"
 for arg in "$@"; do
     case $arg in
         --debug)

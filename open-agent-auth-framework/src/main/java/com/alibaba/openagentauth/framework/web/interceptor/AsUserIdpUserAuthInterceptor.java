@@ -15,6 +15,7 @@
  */
 package com.alibaba.openagentauth.framework.web.interceptor;
 
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +100,7 @@ public class AsUserIdpUserAuthInterceptor extends UserAuthenticationInterceptor 
     private final String callbackUrl;
 
     /**
-     * Constructs a new AsUserIdpUserAuthInterceptor.
+     * Constructs a new AsUserIdpUserAuthInterceptor with a default repository.
      *
      * @param excludedPaths the list of paths to exclude from authentication
      * @param issuer the AS User IDP issuer URL
@@ -117,6 +118,29 @@ public class AsUserIdpUserAuthInterceptor extends UserAuthenticationInterceptor 
         this.clientId = clientId;
         this.callbackUrl = callbackUrl;
         logger.info("AsUserIdpUserAuthInterceptor initialized with issuer: {}, clientId: {}", issuer, clientId);
+    }
+
+    /**
+     * Constructs a new AsUserIdpUserAuthInterceptor with a shared repository.
+     *
+     * @param excludedPaths the list of paths to exclude from authentication
+     * @param authorizationRequestStorage the shared repository for storing authorization requests
+     * @param issuer the AS User IDP issuer URL
+     * @param clientId the OAuth 2.0 client ID
+     * @param callbackUrl the callback URL for OAuth 2.0 flow
+     */
+    public AsUserIdpUserAuthInterceptor(
+            List<String> excludedPaths,
+            OAuth2AuthorizationRequestStorage authorizationRequestStorage,
+            String issuer,
+            String clientId,
+            String callbackUrl
+    ) {
+        super(excludedPaths, authorizationRequestStorage);
+        this.issuer = issuer;
+        this.clientId = clientId;
+        this.callbackUrl = callbackUrl;
+        logger.info("AsUserIdpUserAuthInterceptor initialized with shared repository, issuer: {}, clientId: {}", issuer, clientId);
     }
 
     /**

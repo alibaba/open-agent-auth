@@ -15,100 +15,100 @@
  */
 package com.alibaba.openagentauth.framework.web.callback;
 
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * OAuth2 State parameter handler.
  * <p>
- * Parses and processes OAuth2 state parameters to determine the authorization flow type.
- * The state parameter format depends on the flow type:
+ * Resolves authorization flow metadata from an opaque state parameter by looking up
+ * the corresponding {@link OAuth2AuthorizationRequest} from an
+ * {@link OAuth2AuthorizationRequestStorage}.
  * </p>
- * <ul>
- *   <li><b>User Authentication:</b> {@code user:{random}} — session managed via HTTP cookies</li>
- *   <li><b>Agent Operation Authorization:</b> {@code agent:{random}:{sessionId}} — session ID
- *       embedded in state for cross-domain session restoration</li>
- * </ul>
+ *
+ * <h3>Design Change (1.1)</h3>
  * <p>
- * The state parameter serves two purposes per RFC 6749 Section 10.12:
+ * In version 1.0, this class parsed business semantics (flow type prefix, session ID)
+ * directly from the state string format ({@code agent:UUID:sessionId}). Starting from
+ * version 1.1, the state is treated as an opaque CSRF token per RFC 6749 Section 10.12.
+ * All flow metadata is resolved from the server-side {@link OAuth2AuthorizationRequestStorage},
+ * following the approach used by Spring Security OAuth2.
  * </p>
- * <ul>
- *   <li><b>CSRF protection:</b> The random component prevents cross-site request forgery attacks</li>
- *   <li><b>Flow routing:</b> The prefix component determines which callback flow to execute</li>
- * </ul>
  *
  * @since 1.0
  */
 public class OAuth2StateHandler {
 
-    private static final String STATE_PREFIX_USER_AUTHENTICATION = "user";
-    private static final String STATE_PREFIX_AGENT_OPERATION_AUTH = "agent";
-    private static final String STATE_SEPARATOR = ":";
+    private static final Logger logger = LoggerFactory.getLogger(OAuth2StateHandler.class);
+
+    private final OAuth2AuthorizationRequestStorage requestStorage;
 
     /**
-     * Parse state parameter to determine the authorization flow type.
-     * <p>
-     * The state parameter format varies by flow:
-     * </p>
-     * <ul>
-     *   <li>User Authentication: {@code user:{random}} — no sessionId</li>
-     *   <li>Agent Operation Authorization: {@code agent:{random}:{sessionId}} — sessionId for cross-domain restore</li>
-     * </ul>
+     * Creates a new OAuth2StateHandler with the given authorization request storage.
      *
-     * @param state state parameter string
-     * @return parsed StateInfo containing the flow type, original state, and optional sessionId
+     * @param requestStorage the storage for resolving authorization requests by state
      */
-    public StateInfo parse(String state) {
+    public OAuth2StateHandler(OAuth2AuthorizationRequestStorage requestStorage) {
+        this.requestStorage = requestStorage;
+    }
+
+    /**
+     * Resolves the authorization flow metadata for the given state parameter.
+     * <p>
+     * Looks up the {@link OAuth2AuthorizationRequest} from the repository using the
+     * opaque state value. If found, the request is consumed (removed) from the repository
+     * to prevent replay attacks. If not found, returns an unknown state info.
+     * </p>
+     *
+     * @param state the opaque state parameter from the authorization callback
+     * @return resolved StateInfo containing the flow type, original state, and optional sessionId
+     */
+    public StateInfo resolve(String state) {
         if (ValidationUtils.isNullOrEmpty(state)) {
+            logger.debug("State parameter is null or empty, returning unknown");
             return StateInfo.unknown();
         }
 
-        // Extract flow type prefix (before the first colon)
-        int firstSeparatorIndex = state.indexOf(STATE_SEPARATOR);
-        if (firstSeparatorIndex < 0) {
+        OAuth2AuthorizationRequest authorizationRequest = requestStorage.remove(state);
+        if (authorizationRequest == null) {
+            logger.warn("No authorization request found for state: {}", state);
             return StateInfo.unknown();
         }
 
-        String flowType = state.substring(0, firstSeparatorIndex);
-        FlowType resolvedFlowType = determineFlowType(flowType);
-
-        // For Agent Operation Authorization flow, extract sessionId from the third segment
-        String sessionId = null;
-        if (resolvedFlowType == FlowType.AGENT_OPERATION_AUTH) {
-            String remainder = state.substring(firstSeparatorIndex + 1);
-            int secondSeparatorIndex = remainder.indexOf(STATE_SEPARATOR);
-            if (secondSeparatorIndex >= 0) {
-                sessionId = remainder.substring(secondSeparatorIndex + 1);
-                if (sessionId.isEmpty()) {
-                    sessionId = null;
-                }
-            }
-        }
+        OAuth2AuthorizationRequest.FlowType flowType = authorizationRequest.getFlowType();
+        logger.debug("Resolved authorization request for state: {}, flowType: {}", state, flowType);
 
         return StateInfo.builder()
-                .flowType(resolvedFlowType)
+                .flowType(mapFlowType(flowType))
                 .originalState(state)
-                .sessionId(sessionId)
+                .sessionId(authorizationRequest.getSessionId())
                 .build();
     }
 
     /**
-     * Determine flow type.
+     * Maps the {@link OAuth2AuthorizationRequest.FlowType} to the handler's {@link FlowType}.
      *
-     * @param prefix prefix
-     * @return flow type
+     * @param requestFlowType the flow type from the authorization request
+     * @return the corresponding handler flow type
      */
-    private FlowType determineFlowType(String prefix) {
-        if (STATE_PREFIX_AGENT_OPERATION_AUTH.equals(prefix)) {
-            return FlowType.AGENT_OPERATION_AUTH;
-        }
-        if (STATE_PREFIX_USER_AUTHENTICATION.equals(prefix)) {
-            return FlowType.USER_AUTHENTICATION;
-        }
-        return FlowType.UNKNOWN;
+    private FlowType mapFlowType(OAuth2AuthorizationRequest.FlowType requestFlowType) {
+        return switch (requestFlowType) {
+            case USER_AUTHENTICATION -> FlowType.USER_AUTHENTICATION;
+            case AGENT_OPERATION_AUTH -> FlowType.AGENT_OPERATION_AUTH;
+            default -> FlowType.UNKNOWN;
+        };
     }
 
     /**
      * Flow type enum.
+     * <p>
+     * Defines the type of OAuth 2.0 authorization flow, which determines
+     * how the callback response should be processed.
+     * </p>
      */
     public enum FlowType {
         USER_AUTHENTICATION,
@@ -117,8 +117,11 @@ public class OAuth2StateHandler {
     }
 
     /**
-     * State information containing the parsed flow type, original state string,
-     * and optional sessionId (only for Agent Operation Authorization flow).
+     * State information resolved from the {@link OAuth2AuthorizationRequestStorage}.
+     * <p>
+     * Contains the flow type, original state string, and optional session ID
+     * for cross-domain session restoration.
+     * </p>
      */
     public static class StateInfo {
         private final FlowType flowType;
@@ -148,9 +151,11 @@ public class OAuth2StateHandler {
         }
 
         /**
-         * Returns the session ID extracted from the state parameter.
-         * Only populated for Agent Operation Authorization flow where cross-domain
-         * session restoration is needed.
+         * Returns the session ID for cross-domain session restoration.
+         * <p>
+         * Only populated for Agent Operation Authorization flow where the
+         * authorization redirect may cross domain boundaries.
+         * </p>
          *
          * @return the session ID, or null if not applicable
          */
