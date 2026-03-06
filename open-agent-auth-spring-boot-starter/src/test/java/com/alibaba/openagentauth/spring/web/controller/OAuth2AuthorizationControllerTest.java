@@ -327,6 +327,7 @@ class OAuth2AuthorizationControllerTest {
 
         @Test
         @DisplayName("Should handle error with null error description")
+        @SuppressWarnings("unchecked")
         void shouldHandleErrorWithNullErrorDescription() {
             // Arrange
             AuthorizationResult errorResult = AuthorizationResult.error(
@@ -342,8 +343,10 @@ class OAuth2AuthorizationControllerTest {
             // Assert
             assertThat(response).isInstanceOf(ResponseEntity.class);
             ResponseEntity<?> responseEntity = (ResponseEntity<?>) response;
-            // When error description is null, it returns 500 because the error map construction fails
-            assertThat(responseEntity.getStatusCodeValue()).isEqualTo(500);
+            assertThat(responseEntity.getStatusCodeValue()).isEqualTo(400);
+            Map<String, String> body = (Map<String, String>) responseEntity.getBody();
+            assertThat(body).containsEntry("error", ERROR_CODE);
+            assertThat(body).doesNotContainKey("error_description");
         }
     }
 }

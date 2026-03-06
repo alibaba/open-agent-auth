@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -143,10 +144,11 @@ public class OAuth2AuthorizationController {
         return switch (result.getType()) {
             case REDIRECT -> new RedirectView(result.getRedirectUri());
             case ERROR -> {
-                Map<String, String> errorBody = Map.of(
-                    "error", result.getError(),
-                    "error_description", result.getErrorDescription()
-                );
+                Map<String, String> errorBody = new HashMap<>();
+                errorBody.put("error", result.getError());
+                if (result.getErrorDescription() != null) {
+                    errorBody.put("error_description", result.getErrorDescription());
+                }
                 yield ResponseEntity.status(result.getHttpStatus()).body(errorBody);
             }
             case CONSENT_PAGE -> result.getConsentPage();
