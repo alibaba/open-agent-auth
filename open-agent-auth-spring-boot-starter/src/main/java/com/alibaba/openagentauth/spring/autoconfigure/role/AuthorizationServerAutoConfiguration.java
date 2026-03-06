@@ -61,6 +61,8 @@ import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.actor.AuthorizationServer;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
 import com.alibaba.openagentauth.framework.orchestration.DefaultAuthorizationServer;
+import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
 import com.alibaba.openagentauth.framework.web.interceptor.AsUserIdpUserAuthInterceptor;
 import com.alibaba.openagentauth.framework.web.interceptor.UserAuthenticationInterceptor;
@@ -332,10 +334,18 @@ public class AuthorizationServerAutoConfiguration {
         }
 
         @Bean
+        @ConditionalOnMissingBean(OAuth2AuthorizationRequestRepository.class)
+        public OAuth2AuthorizationRequestRepository authorizationRequestRepository() {
+            logger.info("Creating fallback OAuth2AuthorizationRequestRepository bean for Authorization Server role");
+            return new HttpSessionOAuth2AuthorizationRequestRepository();
+        }
+
+        @Bean
         @ConditionalOnMissingBean
         public OAuth2CallbackService callbackService(
                 FrameworkOAuth2TokenClient frameworkOAuth2TokenClient,
                 SessionMappingBizService sessionMappingBizService,
+                OAuth2AuthorizationRequestRepository authorizationRequestRepository,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
             logger.info("Creating OAuth2CallbackService bean for Authorization Server role");
@@ -346,7 +356,9 @@ public class AuthorizationServerAutoConfiguration {
             }
             return new OAuth2CallbackService(
                     frameworkOAuth2TokenClient,
+                    null,
                     sessionMappingBizService,
+                    authorizationRequestRepository,
                     callbackEndpoint
             );
         }
@@ -551,7 +563,8 @@ public class AuthorizationServerAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         public UserAuthenticationInterceptor userAuthenticationInterceptor(
-                OpenAgentAuthProperties openAgentAuthProperties
+                OpenAgentAuthProperties openAgentAuthProperties,
+                OAuth2AuthorizationRequestRepository authorizationRequestRepository
         ) {
             logger.info("Creating UserAuthenticationInterceptor bean with AsUserIdpUserAuthInterceptor");
             
@@ -572,6 +585,7 @@ public class AuthorizationServerAutoConfiguration {
             
             return new AsUserIdpUserAuthInterceptor(
                     excludedPaths,
+                    authorizationRequestRepository,
                     asUserIdpIssuer,
                     clientId,
                     callbackUrl + "/callback");

@@ -21,6 +21,8 @@ import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenRequest;
 import com.alibaba.openagentauth.framework.model.response.AuthenticationResponse;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
+import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
 import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.OpenAgentAuthProperties;
@@ -198,7 +200,8 @@ class AdminOAuth2CallbackConfigurationTest {
 
             // Act
             OAuth2CallbackService callbackService = callbackConfiguration
-                    .callbackService(frameworkOAuth2TokenClient, sessionMappingBizService, defaultProperties);
+                    .callbackService(frameworkOAuth2TokenClient, sessionMappingBizService,
+                            new HttpSessionOAuth2AuthorizationRequestRepository(), defaultProperties);
 
             // Assert
             assertThat(callbackService).isNotNull();
@@ -212,7 +215,8 @@ class AdminOAuth2CallbackConfigurationTest {
 
             // Act
             OAuth2CallbackService callbackService = callbackConfiguration
-                    .callbackService(frameworkOAuth2TokenClient, sessionMappingBizService, rootProperties);
+                    .callbackService(frameworkOAuth2TokenClient, sessionMappingBizService,
+                            new HttpSessionOAuth2AuthorizationRequestRepository(), rootProperties);
 
             // Assert
             assertThat(callbackService).isNotNull();
@@ -226,7 +230,8 @@ class AdminOAuth2CallbackConfigurationTest {
 
             // Act
             OAuth2CallbackService callbackService = callbackConfiguration
-                    .callbackService(frameworkOAuth2TokenClient, sessionMappingBizService, rootProperties);
+                    .callbackService(frameworkOAuth2TokenClient, sessionMappingBizService,
+                            new HttpSessionOAuth2AuthorizationRequestRepository(), rootProperties);
 
             // Assert
             assertThat(callbackService).isNotNull();

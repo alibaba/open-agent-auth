@@ -34,6 +34,8 @@ import com.alibaba.openagentauth.core.protocol.oidc.impl.DefaultIdTokenGenerator
 import com.alibaba.openagentauth.core.protocol.oidc.registry.InMemoryUserRegistry;
 import com.alibaba.openagentauth.core.protocol.oidc.registry.UserRegistry;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
+import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
 import com.alibaba.openagentauth.framework.web.interceptor.LocalUserAuthenticationInterceptor;
 import com.alibaba.openagentauth.framework.web.interceptor.UserAuthenticationInterceptor;
 import com.alibaba.openagentauth.framework.web.provider.ConsentPageProvider;
@@ -156,6 +158,25 @@ public class SharedCapabilityAutoConfiguration {
     }
 
     // ==================== Shared Infrastructure Beans ====================
+
+    /**
+     * Creates the shared OAuth2AuthorizationRequestRepository bean.
+     * <p>
+     * This repository stores authorization request metadata (flow type, session ID)
+     * keyed by opaque state values. It is shared between {@link UserAuthenticationInterceptor}
+     * (which saves requests during login redirect) and {@code OAuth2CallbackService}
+     * (which resolves requests during callback), ensuring both components operate
+     * on the same state storage.
+     * </p>
+     *
+     * @return the shared OAuth2AuthorizationRequestRepository bean
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public OAuth2AuthorizationRequestRepository authorizationRequestRepository() {
+        logger.info("Creating shared OAuth2AuthorizationRequestRepository bean");
+        return new HttpSessionOAuth2AuthorizationRequestRepository();
+    }
 
     /**
      * Creates the SessionMappingStore bean if not already defined.
@@ -468,12 +489,14 @@ public class SharedCapabilityAutoConfiguration {
          */
         @Bean
         @ConditionalOnMissingBean
-        public UserAuthenticationInterceptor userAuthenticationInterceptor(OpenAgentAuthProperties openAgentAuthProperties) {
+        public UserAuthenticationInterceptor userAuthenticationInterceptor(
+                OpenAgentAuthProperties openAgentAuthProperties,
+                OAuth2AuthorizationRequestRepository authorizationRequestRepository) {
             String roleName = resolveUserIdpRoleName(openAgentAuthProperties);
             List<String> excludedPaths = openAgentAuthProperties.getCapabilities().getOAuth2Client().getAuthentication().getExcludePaths();
             logger.info("Creating shared UserAuthenticationInterceptor (LocalUserAuthenticationInterceptor) for {}", roleName);
             logger.debug("Using excluded paths: {}", excludedPaths);
-            return new LocalUserAuthenticationInterceptor(excludedPaths);
+            return new LocalUserAuthenticationInterceptor(excludedPaths, authorizationRequestRepository);
         }
     }
 }

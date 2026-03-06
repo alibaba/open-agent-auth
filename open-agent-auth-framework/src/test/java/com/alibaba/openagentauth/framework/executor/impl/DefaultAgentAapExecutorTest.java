@@ -33,6 +33,7 @@ import com.alibaba.openagentauth.framework.executor.config.AgentAapExecutorConfi
 import com.alibaba.openagentauth.framework.executor.strategy.DeviceFingerprintStrategy;
 import com.alibaba.openagentauth.framework.executor.strategy.PolicyBuilder;
 import com.alibaba.openagentauth.framework.executor.strategy.StateGenerationStrategy;
+import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
 import com.alibaba.openagentauth.framework.model.context.AgentAuthorizationContext;
 import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenRequest;
 import com.alibaba.openagentauth.framework.model.request.InitiateAuthorizationRequest;
@@ -136,8 +137,10 @@ class DefaultAgentAapExecutorTest {
         // Setup strategy mocks using separate mock objects
         when(mockConfig.getStateGenerationStrategy()).thenReturn(mockStateGenerationStrategy);
         when(mockConfig.getDeviceFingerprintStrategy()).thenReturn(mockDeviceFingerprintStrategy);
-        when(mockStateGenerationStrategy.generate(anyString())).thenReturn(STATE);
+        when(mockStateGenerationStrategy.generate()).thenReturn(STATE);
         when(mockDeviceFingerprintStrategy.generate(anyString())).thenReturn("device-fingerprint-123");
+        when(mockConfig.getAuthorizationRequestRepository())
+                .thenReturn(new HttpSessionOAuth2AuthorizationRequestRepository());
         
         // Setup policy builder
         when(mockPolicyBuilder.buildPolicy(any(RequestAuthUrlRequest.class))).thenReturn(POLICY);

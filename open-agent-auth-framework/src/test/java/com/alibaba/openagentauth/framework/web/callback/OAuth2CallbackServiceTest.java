@@ -24,6 +24,8 @@ import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenReq
 import com.alibaba.openagentauth.framework.model.response.AuthenticationResponse;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
 import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +72,9 @@ class OAuth2CallbackServiceTest {
     private SessionMappingBizService mockSessionMappingBizService;
 
     @Mock
+    private OAuth2AuthorizationRequestRepository mockAuthorizationRequestRepository;
+
+    @Mock
     private HttpServletRequest mockHttpRequest;
 
     @Mock
@@ -83,9 +88,10 @@ class OAuth2CallbackServiceTest {
 
     private static final String CLIENT_ID = "client-123";
     private static final String CODE = "auth-code-123";
-    private static final String STATE_USER_AUTH = "user:uuid";
-    private static final String STATE_AGENT_AUTH = "agent:uuid";
-    private static final String STATE_DEFAULT = "unknown:uuid";
+    // Updated state constants to be opaque values instead of "user:uuid" / "agent:uuid" format
+    private static final String STATE_USER_AUTH = "opaque-state-user-auth";
+    private static final String STATE_AGENT_AUTH = "opaque-state-agent-auth";
+    private static final String STATE_DEFAULT = "opaque-state-unknown";
     private static final String REDIRECT_URI = "http://localhost:8080/callback";
     // Valid JWT token with subject claim
     private static final String ID_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsImlhdCI6MTYwOTQ1OTIwMH0.fake-signature";
@@ -96,7 +102,27 @@ class OAuth2CallbackServiceTest {
 
     @BeforeEach
     void setUp() {
-        callbackService = new OAuth2CallbackService(mockOAuth2TokenClient, mockAgent, mockSessionMappingBizService, CALLBACK_ENDPOINT);
+        // Mock repository to return appropriate authorization requests for each state
+        when(mockAuthorizationRequestRepository.remove(STATE_USER_AUTH))
+                .thenReturn(OAuth2AuthorizationRequest.builder()
+                        .state(STATE_USER_AUTH)
+                        .flowType(OAuth2AuthorizationRequest.FlowType.USER_AUTHENTICATION)
+                        .build());
+        when(mockAuthorizationRequestRepository.remove(STATE_AGENT_AUTH))
+                .thenReturn(OAuth2AuthorizationRequest.builder()
+                        .state(STATE_AGENT_AUTH)
+                        .flowType(OAuth2AuthorizationRequest.FlowType.AGENT_OPERATION_AUTH)
+                        .build());
+        when(mockAuthorizationRequestRepository.remove(STATE_DEFAULT))
+                .thenReturn(null); // Unknown state returns null
+
+        // Construct callbackService with 5 parameters including mockAuthorizationRequestRepository
+        callbackService = new OAuth2CallbackService(
+                mockOAuth2TokenClient,
+                mockAgent,
+                mockSessionMappingBizService,
+                mockAuthorizationRequestRepository,
+                CALLBACK_ENDPOINT);
 
         // Default HTTP request setup
         when(mockHttpRequest.getScheme()).thenReturn("https");
@@ -138,6 +164,21 @@ class OAuth2CallbackServiceTest {
         void shouldCreateServiceWithNullAgent() {
             // Act
             OAuth2CallbackService service = new OAuth2CallbackService(mockOAuth2TokenClient, null, mockSessionMappingBizService, CALLBACK_ENDPOINT);
+
+            // Assert
+            assertThat(service).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Should create service with five-parameter constructor (with Repository)")
+        void shouldCreateServiceWithFiveParameterConstructor() {
+            // Act
+            OAuth2CallbackService service = new OAuth2CallbackService(
+                    mockOAuth2TokenClient,
+                    mockAgent,
+                    mockSessionMappingBizService,
+                    mockAuthorizationRequestRepository,
+                    CALLBACK_ENDPOINT);
 
             // Assert
             assertThat(service).isNotNull();
@@ -350,8 +391,15 @@ class OAuth2CallbackServiceTest {
         @Test
         @DisplayName("Should handle agent operation authorization flow with null session ID")
         void shouldHandleAgentOperationAuthorizationFlowWithNullSessionId() throws Exception {
-            // Arrange
-            OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, "agent:uuid", null, null, mockHttpRequest);
+            // Arrange - use a dedicated opaque state and mock repository to return AGENT_OPERATION_AUTH with null sessionId
+            String stateWithNullSession = "opaque-state-agent-null-session";
+            when(mockAuthorizationRequestRepository.remove(stateWithNullSession))
+                    .thenReturn(OAuth2AuthorizationRequest.builder()
+                            .state(stateWithNullSession)
+                            .flowType(OAuth2AuthorizationRequest.FlowType.AGENT_OPERATION_AUTH)
+                            .sessionId(null)
+                            .build());
+            OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, stateWithNullSession, null, null, mockHttpRequest);
             setupAgentTokenExchangeSuccess();
             when(mockSessionMappingBizService.restoreSession(isNull(), anyBoolean(), eq(mockHttpRequest))).thenReturn(mockRestoredSession);
             when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
@@ -510,9 +558,13 @@ class OAuth2CallbackServiceTest {
         @Test
         @DisplayName("Should return error when Agent is not configured for agent auth flow")
         void shouldReturnErrorWhenAgentNotConfiguredForAgentAuthFlow() {
-            // Arrange - use three-parameter constructor (no Agent)
+            // Arrange - use five-parameter constructor with null Agent but with mock repository
             OAuth2CallbackService serviceWithoutAgent = new OAuth2CallbackService(
-                    mockOAuth2TokenClient, mockSessionMappingBizService, CALLBACK_ENDPOINT);
+                    mockOAuth2TokenClient,
+                    null,
+                    mockSessionMappingBizService,
+                    mockAuthorizationRequestRepository,
+                    CALLBACK_ENDPOINT);
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_AGENT_AUTH, null, null, mockHttpRequest);
 
             // Act
@@ -645,26 +697,26 @@ class OAuth2CallbackServiceTest {
         void shouldHandleEmptyStateParameter() throws Exception {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, "", null, null, mockHttpRequest);
-            setupTokenExchangeSuccess();
-            // When state is empty, OAuth2StateHandler.parse() throws NullPointerException
-            // which is caught and returns 500
-            when(mockHttpRequest.getSession(false)).thenReturn(null);
-            when(mockHttpRequest.getSession(true)).thenReturn(mockRequestSession);
+            // Mock repository to return null for empty state (unknown/expired state)
+            when(mockAuthorizationRequestRepository.remove("")).thenReturn(null);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
 
-            // Assert
-            // When state is empty, the code throws NullPointerException
-            // which is caught and returns 500
+            // Assert - empty state cannot be resolved from repository, callback returns error
             assertThat(result.isSuccess()).isFalse();
-            assertThat(result.getStatusCode()).isEqualTo(500);
         }
 
         @Test
         @DisplayName("Should handle state parameter with only flow type")
         void shouldHandleStateParameterWithOnlyFlowType() throws Exception {
             // Arrange
+            // Mock repository to return USER_AUTHENTICATION for "user:uuid" state
+            when(mockAuthorizationRequestRepository.remove("user:uuid"))
+                    .thenReturn(OAuth2AuthorizationRequest.builder()
+                            .state("user:uuid")
+                            .flowType(OAuth2AuthorizationRequest.FlowType.USER_AUTHENTICATION)
+                            .build());
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, "user:uuid", null, null, mockHttpRequest);
             setupTokenExchangeSuccess();
             when(mockHttpRequest.getSession(false)).thenReturn(null);

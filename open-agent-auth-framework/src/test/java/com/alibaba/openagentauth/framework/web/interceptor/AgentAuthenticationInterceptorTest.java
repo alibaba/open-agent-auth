@@ -400,12 +400,11 @@ class AgentAuthenticationInterceptorTest {
             ArgumentCaptor<InitiateAuthorizationRequest> captor = ArgumentCaptor.forClass(InitiateAuthorizationRequest.class);
             verify(agentAapExecutor).initiateUserAuthentication(captor.capture());
             String state = captor.getValue().getState();
-            assertThat(state).startsWith("user:");
-            // State format is now simplified to "user:{random}" without sessionId
-            String[] parts = state.split(":");
-            assertThat(parts).hasSize(2);
-            assertThat(parts[0]).isEqualTo("user");
-            assertThat(parts[1]).isNotEmpty();
+            // State is now an opaque URL-safe Base64 value (32 bytes, 43 characters)
+            assertThat(state).isNotNull();
+            assertThat(state).isNotEmpty();
+            assertThat(state).doesNotContain(":");
+            assertThat(state).hasSize(43);
         }
 
         @Test
@@ -432,11 +431,9 @@ class AgentAuthenticationInterceptorTest {
             ArgumentCaptor<String> stateCaptor = ArgumentCaptor.forClass(String.class);
             verify(session).setAttribute(eq(SessionAttributes.OAUTH_STATE.getKey()), stateCaptor.capture());
             String storedState = stateCaptor.getValue();
+            // The state parameter stored in session is now an opaque value
             assertThat(storedState).isNotNull();
-            // The state parameter stored in session should start with "user:" and contain only random value
-            assertThat(storedState).startsWith("user:");
-            String[] parts = storedState.split(":");
-            assertThat(parts).hasSize(2);
+            assertThat(storedState).isNotEmpty();
         }
     }
 

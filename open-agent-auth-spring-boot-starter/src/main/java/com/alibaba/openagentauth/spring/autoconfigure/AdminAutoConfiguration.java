@@ -23,7 +23,10 @@ import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenRequest;
 import com.alibaba.openagentauth.framework.model.response.AuthenticationResponse;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
+import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
+import com.alibaba.openagentauth.spring.web.controller.OAuth2CallbackController;
 import com.alibaba.openagentauth.framework.web.interceptor.AsUserIdpUserAuthInterceptor;
 import com.alibaba.openagentauth.framework.web.interceptor.UserAuthenticationInterceptor;
 import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
@@ -120,18 +123,22 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
     private final OpenAgentAuthProperties properties;
     private final AdminProperties adminProperties;
     private final ObjectProvider<UserAuthenticationInterceptor> userAuthInterceptorProvider;
+    private final ObjectProvider<OAuth2AuthorizationRequestRepository> authorizationRequestRepositoryProvider;
 
     /**
      * Creates a new AdminAutoConfiguration.
      *
      * @param properties the root configuration properties
      * @param userAuthInterceptorProvider optional user authentication interceptor from any role
+     * @param authorizationRequestRepositoryProvider optional shared authorization request repository
      */
     public AdminAutoConfiguration(OpenAgentAuthProperties properties,
-                                  ObjectProvider<UserAuthenticationInterceptor> userAuthInterceptorProvider) {
+                                  ObjectProvider<UserAuthenticationInterceptor> userAuthInterceptorProvider,
+                                  ObjectProvider<OAuth2AuthorizationRequestRepository> authorizationRequestRepositoryProvider) {
         this.properties = properties;
         this.adminProperties = properties.getAdmin();
         this.userAuthInterceptorProvider = userAuthInterceptorProvider;
+        this.authorizationRequestRepositoryProvider = authorizationRequestRepositoryProvider;
         logger.info("Admin console enabled with access-control={}", adminProperties.getAccessControl().isEnabled());
     }
 
@@ -249,8 +256,16 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
 
             logger.info("Creating fallback admin authentication interceptor using User IDP '{}' (issuer: {})",
                     serviceName, userIdpIssuer);
+
+            // Use the shared repository if available (created by AdminOAuth2CallbackConfiguration),
+            // otherwise fall back to a default instance. This ensures the interceptor and
+            // OAuth2CallbackService share the same repository for state validation.
+            OAuth2AuthorizationRequestRepository repository = authorizationRequestRepositoryProvider.getIfAvailable(
+                            HttpSessionOAuth2AuthorizationRequestRepository::new);
+
             return new AsUserIdpUserAuthInterceptor(
                     excludedPaths,
+                    repository,
                     userIdpIssuer,
                     clientId,
                     callbackUrl + ConfigConstants.DEFAULT_CALLBACK_ENDPOINT);
@@ -309,6 +324,23 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
 
         private static final Logger logger = LoggerFactory.getLogger(AdminOAuth2CallbackConfiguration.class);
 
+        /**
+         * Creates a shared {@link OAuth2AuthorizationRequestRepository} bean.
+         * <p>
+         * This repository is shared between the fallback {@link AsUserIdpUserAuthInterceptor}
+         * (which stores authorization requests during login redirect) and the fallback
+         * {@link OAuth2CallbackService} (which resolves them during callback processing).
+         * </p>
+         *
+         * @return the shared authorization request repository
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2AuthorizationRequestRepository authorizationRequestRepository() {
+            logger.info("Creating shared OAuth2AuthorizationRequestRepository for admin OAuth2 flow");
+            return new HttpSessionOAuth2AuthorizationRequestRepository();
+        }
+
         @Bean
         @ConditionalOnMissingBean
         public ServiceEndpointResolver serviceEndpointResolver(OpenAgentAuthProperties openAgentAuthProperties) {
@@ -354,6 +386,7 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
         public OAuth2CallbackService callbackService(
                 FrameworkOAuth2TokenClient frameworkOAuth2TokenClient,
                 SessionMappingBizService sessionMappingBizService,
+                OAuth2AuthorizationRequestRepository authorizationRequestRepository,
                 OpenAgentAuthProperties openAgentAuthProperties) {
             logger.info("Creating fallback OAuth2CallbackService for admin OAuth2 callback");
             var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
@@ -363,8 +396,31 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
             }
             return new OAuth2CallbackService(
                     frameworkOAuth2TokenClient,
+                    null,
                     sessionMappingBizService,
+                    authorizationRequestRepository,
                     callbackEndpoint);
+        }
+
+        /**
+         * Creates the fallback OAuth2CallbackController bean.
+         * <p>
+         * This controller handles the {@code /callback} endpoint for roles that do not
+         * provide their own controller (e.g., agent-idp). Without this bean, the callback
+         * endpoint would not exist, resulting in a 404 after User IDP login redirect.
+         * </p>
+         *
+         * @param callbackService        the OAuth2 callback service
+         * @param openAgentAuthProperties the global configuration properties
+         * @return the OAuth2CallbackController bean
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2CallbackController oauth2CallbackController(
+                OAuth2CallbackService callbackService,
+                OpenAgentAuthProperties openAgentAuthProperties) {
+            logger.info("Creating fallback OAuth2CallbackController for admin OAuth2 callback");
+            return new OAuth2CallbackController(callbackService, openAgentAuthProperties);
         }
 
         /**

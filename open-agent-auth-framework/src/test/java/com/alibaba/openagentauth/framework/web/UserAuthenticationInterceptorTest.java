@@ -350,9 +350,14 @@ class UserAuthenticationInterceptorTest {
 
             // Assert
             assertThat(loginUrl).isNotNull();
-            assertThat(loginUrl).contains("state=user:");
-            // State format is now "user:{random}" without sessionId
-            assertThat(loginUrl).doesNotContain("session123");
+            // State is now an opaque, cryptographically secure random value (RFC 6749 Section 10.12).
+            // Flow type metadata is stored server-side in OAuth2AuthorizationRequestRepository.
+            assertThat(loginUrl).contains("state=");
+            // Verify state is a non-empty opaque value (Base64 URL-safe encoded)
+            String stateValue = loginUrl.substring(loginUrl.indexOf("state=") + "state=".length());
+            assertThat(stateValue).isNotEmpty();
+            assertThat(stateValue).doesNotContain("user:");
+            assertThat(stateValue).doesNotContain("session123");
         }
 
         @Test

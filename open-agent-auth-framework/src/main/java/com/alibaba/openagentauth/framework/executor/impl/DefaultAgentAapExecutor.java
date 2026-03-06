@@ -43,6 +43,8 @@ import com.alibaba.openagentauth.framework.model.request.ParSubmissionRequest;
 import com.alibaba.openagentauth.framework.model.request.PrepareAuthorizationContextRequest;
 import com.alibaba.openagentauth.framework.model.request.RequestAuthUrlRequest;
 import com.alibaba.openagentauth.framework.model.response.RequestAuthUrlResponse;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
 
 import org.slf4j.Logger;
@@ -315,8 +317,19 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
         AgentOperationProposal operationProposal = buildOperationProposal(request);
         OperationRequestContext opContext = buildOperationContext(workloadContext, request);
         Evidence evidence = buildEvidence(request);
-        String state = config.getStateGenerationStrategy().generate(request.getSessionId());
+        String state = config.getStateGenerationStrategy().generate();
         String redirectUri = config.getRedirectUri();
+
+        // Store authorization request with flow type and session metadata in the repository.
+        // This follows the RFC 6749-compliant opaque state pattern where flow routing
+        // metadata is stored server-side rather than encoded in the state parameter.
+        OAuth2AuthorizationRequestRepository requestRepository = config.getAuthorizationRequestRepository();
+        OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.builder()
+                .state(state)
+                .flowType(OAuth2AuthorizationRequest.FlowType.AGENT_OPERATION_AUTH)
+                .sessionId(request.getSessionId())
+                .build();
+        requestRepository.save(authorizationRequest);
 
         return new AuthorizationComponents(operationProposal, evidence, opContext, state, redirectUri);
     }

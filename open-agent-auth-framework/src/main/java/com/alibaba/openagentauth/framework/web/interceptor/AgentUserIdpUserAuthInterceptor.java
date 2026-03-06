@@ -17,6 +17,7 @@ package com.alibaba.openagentauth.framework.web.interceptor;
 
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.model.request.InitiateAuthorizationRequest;
+import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +76,7 @@ public class AgentUserIdpUserAuthInterceptor extends UserAuthenticationIntercept
     private final AgentAapExecutor agentAapExecutor;
 
     /**
-     * Constructs a new AgentUserIdpUserAuthInterceptor.
+     * Constructs a new AgentUserIdpUserAuthInterceptor with a default repository.
      *
      * @param excludedPaths the list of paths to exclude from authentication
      * @param agentAapExecutor the Agent AAP executor
@@ -87,6 +88,23 @@ public class AgentUserIdpUserAuthInterceptor extends UserAuthenticationIntercept
         super(excludedPaths);
         this.agentAapExecutor = agentAapExecutor;
         logger.info("AgentUserIdpUserAuthInterceptor initialized");
+    }
+
+    /**
+     * Constructs a new AgentUserIdpUserAuthInterceptor with a shared repository.
+     *
+     * @param excludedPaths the list of paths to exclude from authentication
+     * @param agentAapExecutor the Agent AAP executor
+     * @param authorizationRequestRepository the shared repository for storing authorization requests
+     */
+    public AgentUserIdpUserAuthInterceptor(
+            List<String> excludedPaths,
+            AgentAapExecutor agentAapExecutor,
+            OAuth2AuthorizationRequestRepository authorizationRequestRepository
+    ) {
+        super(excludedPaths, authorizationRequestRepository);
+        this.agentAapExecutor = agentAapExecutor;
+        logger.info("AgentUserIdpUserAuthInterceptor initialized with shared repository");
     }
 
     /**
