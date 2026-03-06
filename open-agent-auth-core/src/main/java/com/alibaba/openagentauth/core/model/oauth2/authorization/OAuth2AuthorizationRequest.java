@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.openagentauth.framework.web.callback;
+package com.alibaba.openagentauth.core.model.oauth2.authorization;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -45,13 +44,13 @@ import java.util.Objects;
  *   <li>Created tight coupling between state generation and state parsing</li>
  * </ul>
  * <p>
- * The new design stores all metadata server-side in an {@link OAuth2AuthorizationRequestRepository},
+ * The new design stores all metadata server-side in an
+ * {@link com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage},
  * making the state parameter a pure CSRF token.
  * </p>
  *
  * @since 1.1
- * @see OAuth2AuthorizationRequestRepository
- * @see OAuth2StateHandler
+ * @see com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage
  */
 public class OAuth2AuthorizationRequest implements Serializable {
 
@@ -182,7 +181,7 @@ public class OAuth2AuthorizationRequest implements Serializable {
          * Unknown or unrecognized flow type.
          * <p>
          * Used as a fallback when the authorization request cannot be resolved
-         * from the repository. The callback service will treat this as a
+         * from the storage. The callback service will treat this as a
          * default user authentication flow.
          * </p>
          */

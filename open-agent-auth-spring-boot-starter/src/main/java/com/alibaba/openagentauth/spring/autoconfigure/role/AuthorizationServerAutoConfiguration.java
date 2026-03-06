@@ -61,8 +61,8 @@ import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.actor.AuthorizationServer;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
 import com.alibaba.openagentauth.framework.orchestration.DefaultAuthorizationServer;
-import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
 import com.alibaba.openagentauth.framework.web.interceptor.AsUserIdpUserAuthInterceptor;
 import com.alibaba.openagentauth.framework.web.interceptor.UserAuthenticationInterceptor;
@@ -334,10 +334,10 @@ public class AuthorizationServerAutoConfiguration {
         }
 
         @Bean
-        @ConditionalOnMissingBean(OAuth2AuthorizationRequestRepository.class)
-        public OAuth2AuthorizationRequestRepository authorizationRequestRepository() {
-            logger.info("Creating fallback OAuth2AuthorizationRequestRepository bean for Authorization Server role");
-            return new HttpSessionOAuth2AuthorizationRequestRepository();
+        @ConditionalOnMissingBean(OAuth2AuthorizationRequestStorage.class)
+        public OAuth2AuthorizationRequestStorage authorizationRequestStorage() {
+            logger.info("Creating fallback OAuth2AuthorizationRequestStorage bean for Authorization Server role");
+            return new InMemoryOAuth2AuthorizationRequestStorage();
         }
 
         @Bean
@@ -345,7 +345,7 @@ public class AuthorizationServerAutoConfiguration {
         public OAuth2CallbackService callbackService(
                 FrameworkOAuth2TokenClient frameworkOAuth2TokenClient,
                 SessionMappingBizService sessionMappingBizService,
-                OAuth2AuthorizationRequestRepository authorizationRequestRepository,
+                OAuth2AuthorizationRequestStorage authorizationRequestStorage,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
             logger.info("Creating OAuth2CallbackService bean for Authorization Server role");
@@ -358,7 +358,7 @@ public class AuthorizationServerAutoConfiguration {
                     frameworkOAuth2TokenClient,
                     null,
                     sessionMappingBizService,
-                    authorizationRequestRepository,
+                    authorizationRequestStorage,
                     callbackEndpoint
             );
         }
@@ -564,7 +564,7 @@ public class AuthorizationServerAutoConfiguration {
         @ConditionalOnMissingBean
         public UserAuthenticationInterceptor userAuthenticationInterceptor(
                 OpenAgentAuthProperties openAgentAuthProperties,
-                OAuth2AuthorizationRequestRepository authorizationRequestRepository
+                OAuth2AuthorizationRequestStorage authorizationRequestStorage
         ) {
             logger.info("Creating UserAuthenticationInterceptor bean with AsUserIdpUserAuthInterceptor");
             
@@ -585,7 +585,7 @@ public class AuthorizationServerAutoConfiguration {
             
             return new AsUserIdpUserAuthInterceptor(
                     excludedPaths,
-                    authorizationRequestRepository,
+                    authorizationRequestStorage,
                     asUserIdpIssuer,
                     clientId,
                     callbackUrl + "/callback");

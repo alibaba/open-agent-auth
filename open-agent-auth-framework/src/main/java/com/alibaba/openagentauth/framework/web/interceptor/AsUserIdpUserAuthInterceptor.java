@@ -15,7 +15,7 @@
  */
 package com.alibaba.openagentauth.framework.web.interceptor;
 
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,19 +124,19 @@ public class AsUserIdpUserAuthInterceptor extends UserAuthenticationInterceptor 
      * Constructs a new AsUserIdpUserAuthInterceptor with a shared repository.
      *
      * @param excludedPaths the list of paths to exclude from authentication
-     * @param authorizationRequestRepository the shared repository for storing authorization requests
+     * @param authorizationRequestStorage the shared repository for storing authorization requests
      * @param issuer the AS User IDP issuer URL
      * @param clientId the OAuth 2.0 client ID
      * @param callbackUrl the callback URL for OAuth 2.0 flow
      */
     public AsUserIdpUserAuthInterceptor(
             List<String> excludedPaths,
-            OAuth2AuthorizationRequestRepository authorizationRequestRepository,
+            OAuth2AuthorizationRequestStorage authorizationRequestStorage,
             String issuer,
             String clientId,
             String callbackUrl
     ) {
-        super(excludedPaths, authorizationRequestRepository);
+        super(excludedPaths, authorizationRequestStorage);
         this.issuer = issuer;
         this.clientId = clientId;
         this.callbackUrl = callbackUrl;

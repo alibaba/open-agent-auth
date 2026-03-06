@@ -59,8 +59,8 @@ import com.alibaba.openagentauth.framework.executor.impl.DefaultAgentAapExecutor
 import com.alibaba.openagentauth.framework.executor.strategy.PolicyBuilder;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
 import com.alibaba.openagentauth.framework.orchestration.DefaultAgent;
-import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
 import com.alibaba.openagentauth.framework.web.interceptor.AgentAuthenticationInterceptor;
 import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
@@ -386,10 +386,10 @@ public class AgentAutoConfiguration {
          * @return the OAuth2CallbackService bean
          */
         @Bean
-        @ConditionalOnMissingBean(OAuth2AuthorizationRequestRepository.class)
-        public OAuth2AuthorizationRequestRepository authorizationRequestRepository() {
-            logger.info("Creating fallback OAuth2AuthorizationRequestRepository bean for Agent role");
-            return new HttpSessionOAuth2AuthorizationRequestRepository();
+        @ConditionalOnMissingBean(OAuth2AuthorizationRequestStorage.class)
+        public OAuth2AuthorizationRequestStorage authorizationRequestStorage() {
+            logger.info("Creating fallback OAuth2AuthorizationRequestStorage bean for Agent role");
+            return new InMemoryOAuth2AuthorizationRequestStorage();
         }
 
         @Bean
@@ -398,7 +398,7 @@ public class AgentAutoConfiguration {
                 FrameworkOAuth2TokenClient oauth2TokenClient,
                 Agent agentProvider,
                 SessionMappingBizService sessionMappingBizService,
-                OAuth2AuthorizationRequestRepository authorizationRequestRepository,
+                OAuth2AuthorizationRequestStorage authorizationRequestStorage,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
             logger.info("Creating OAuth2CallbackService bean with Agent support");
@@ -410,7 +410,7 @@ public class AgentAutoConfiguration {
                     oauth2TokenClient,
                     agentProvider,
                     sessionMappingBizService,
-                    authorizationRequestRepository,
+                    authorizationRequestStorage,
                     callbackEndpoint
             );
         }
@@ -839,7 +839,7 @@ public class AgentAutoConfiguration {
         @ConditionalOnMissingBean
         public AgentAapExecutorConfig agentAapExecutorConfig(
                 OpenAgentAuthProperties openAgentAuthProperties,
-                OAuth2AuthorizationRequestRepository authorizationRequestRepository) {
+                OAuth2AuthorizationRequestStorage authorizationRequestStorage) {
             var operationAuthProps = openAgentAuthProperties.getCapabilities().getOperationAuthorization();
 
             // Get issuer from roles configuration
@@ -865,7 +865,7 @@ public class AgentAutoConfiguration {
                     .encryptionEnabled(operationAuthProps.getPromptProtection().isEncryptionEnabled())
                     .sanitizationLevel(operationAuthProps.getPromptProtection().getSanitizationLevel())
                     .requireUserInteraction(operationAuthProps.getAuthorization().isRequireUserInteraction())
-                    .authorizationRequestRepository(authorizationRequestRepository)
+                    .authorizationRequestStorage(authorizationRequestStorage)
                     .build();
         }
     }
@@ -963,13 +963,13 @@ public class AgentAutoConfiguration {
         public AgentAuthenticationInterceptor agentAuthenticationInterceptor(
                 AgentAapExecutor agentAapExecutor,
                 OpenAgentAuthProperties openAgentAuthProperties,
-                OAuth2AuthorizationRequestRepository authorizationRequestRepository
+                OAuth2AuthorizationRequestStorage authorizationRequestStorage
         ) {
             logger.info("Creating AgentAuthenticationInterceptor bean with shared repository");
             var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
             List<String> excludedPaths = oauth2ClientProps.getAuthentication().getExcludePaths();
             logger.info("Configured excluded paths: {}", excludedPaths);
-            return new AgentAuthenticationInterceptor(agentAapExecutor, excludedPaths, authorizationRequestRepository);
+            return new AgentAuthenticationInterceptor(agentAapExecutor, excludedPaths, authorizationRequestStorage);
         }
 
         /**

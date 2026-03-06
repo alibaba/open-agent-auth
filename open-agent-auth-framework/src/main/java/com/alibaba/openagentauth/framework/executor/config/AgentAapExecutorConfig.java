@@ -20,8 +20,8 @@ import com.alibaba.openagentauth.framework.executor.strategy.impl.DefaultDeviceF
 import com.alibaba.openagentauth.framework.executor.strategy.impl.DefaultStateGenerationStrategy;
 import com.alibaba.openagentauth.framework.executor.strategy.DeviceFingerprintStrategy;
 import com.alibaba.openagentauth.framework.executor.strategy.StateGenerationStrategy;
-import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -138,14 +138,14 @@ public class AgentAapExecutorConfig {
     private final Boolean encryptionEnabled;
 
     /**
-     * Repository for storing OAuth2 authorization requests keyed by opaque state values.
+     * Storage for OAuth2 authorization requests keyed by opaque state values.
      * <p>
-     * This repository enables the RFC 6749-compliant opaque state pattern where
+     * This storage enables the RFC 6749-compliant opaque state pattern where
      * flow type metadata (e.g., AGENT_OPERATION_AUTH) is stored server-side
      * rather than encoded in the state parameter itself.
      * </p>
      */
-    private final OAuth2AuthorizationRequestRepository authorizationRequestRepository;
+    private final OAuth2AuthorizationRequestStorage authorizationRequestStorage;
 
     private AgentAapExecutorConfig(Builder builder) {
         this.clientId = builder.clientId;
@@ -163,7 +163,7 @@ public class AgentAapExecutorConfig {
         this.sanitizationLevel = builder.sanitizationLevel;
         this.requireUserInteraction = builder.requireUserInteraction;
         this.encryptionEnabled = builder.encryptionEnabled;
-        this.authorizationRequestRepository = builder.authorizationRequestRepository;
+        this.authorizationRequestStorage = builder.authorizationRequestStorage;
     }
     
     /**
@@ -307,12 +307,12 @@ public class AgentAapExecutorConfig {
     }
 
     /**
-     * Returns the authorization request repository.
+     * Returns the authorization request storage.
      *
-     * @return the authorization request repository
+     * @return the authorization request storage
      */
-    public OAuth2AuthorizationRequestRepository getAuthorizationRequestRepository() {
-        return authorizationRequestRepository;
+    public OAuth2AuthorizationRequestStorage getAuthorizationRequestStorage() {
+        return authorizationRequestStorage;
     }
 
     public static Builder builder() {
@@ -353,7 +353,7 @@ public class AgentAapExecutorConfig {
         private String sanitizationLevel;
         private Boolean requireUserInteraction;
         private Boolean encryptionEnabled;
-        private OAuth2AuthorizationRequestRepository authorizationRequestRepository = new HttpSessionOAuth2AuthorizationRequestRepository();
+        private OAuth2AuthorizationRequestStorage authorizationRequestStorage = new InMemoryOAuth2AuthorizationRequestStorage();
 
         /**
          * Sets the OAuth 2.0 client identifier.
@@ -525,18 +525,18 @@ public class AgentAapExecutorConfig {
         }
 
         /**
-         * Sets the authorization request repository.
+         * Sets the authorization request storage.
          * <p>
-         * For distributed deployments, provide a shared repository implementation
+         * For distributed deployments, provide a shared storage implementation
          * (e.g., Redis-backed) to ensure state can be resolved across instances.
          * </p>
          *
-         * @param repository the authorization request repository
+         * @param storage the authorization request storage
          * @return this builder instance
-         * @throws NullPointerException if repository is null
+         * @throws NullPointerException if storage is null
          */
-        public Builder authorizationRequestRepository(OAuth2AuthorizationRequestRepository repository) {
-            this.authorizationRequestRepository = Objects.requireNonNull(repository, "OAuth2AuthorizationRequestRepository cannot be null");
+        public Builder authorizationRequestStorage(OAuth2AuthorizationRequestStorage storage) {
+            this.authorizationRequestStorage = Objects.requireNonNull(storage, "OAuth2AuthorizationRequestStorage cannot be null");
             return this;
         }
 

@@ -15,7 +15,7 @@
  */
 package com.alibaba.openagentauth.framework.web.interceptor;
 
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,12 +55,12 @@ public class LocalUserAuthenticationInterceptor extends UserAuthenticationInterc
      * Constructs a new LocalUserAuthenticationInterceptor with a shared repository.
      *
      * @param excludedPaths the list of paths to exclude from authentication
-     * @param authorizationRequestRepository the shared repository for storing authorization requests
+     * @param authorizationRequestStorage the shared repository for storing authorization requests
      */
     public LocalUserAuthenticationInterceptor(
             List<String> excludedPaths,
-            OAuth2AuthorizationRequestRepository authorizationRequestRepository) {
-        super(excludedPaths, authorizationRequestRepository);
+            OAuth2AuthorizationRequestStorage authorizationRequestStorage) {
+        super(excludedPaths, authorizationRequestStorage);
         logger.info("LocalUserAuthenticationInterceptor initialized with shared repository");
     }
 

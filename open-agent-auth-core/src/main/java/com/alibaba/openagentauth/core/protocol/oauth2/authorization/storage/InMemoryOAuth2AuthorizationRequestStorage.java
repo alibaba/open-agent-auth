@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.openagentauth.framework.web.callback;
+package com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage;
 
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,17 +24,17 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * In-memory implementation of {@link OAuth2AuthorizationRequestRepository}.
+ * In-memory implementation of {@link OAuth2AuthorizationRequestStorage}.
  * <p>
  * This implementation stores authorization requests in a thread-safe {@link ConcurrentHashMap},
  * keyed by the opaque state parameter. It is suitable for single-server deployments and
- * serves as the default repository when no custom implementation is provided.
+ * serves as the default storage when no custom implementation is provided.
  * </p>
  *
  * <h3>Design Notes</h3>
  * <p>
  * Unlike the previous approach of encoding flow type and session ID into the state parameter,
- * this repository stores all authorization metadata server-side, keeping the state parameter
+ * this storage stores all authorization metadata server-side, keeping the state parameter
  * as a pure opaque CSRF token per RFC 6749 Section 10.12.
  * </p>
  *
@@ -46,12 +47,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ul>
  *
  * @since 1.1
- * @see OAuth2AuthorizationRequestRepository
+ * @see OAuth2AuthorizationRequestStorage
  * @see OAuth2AuthorizationRequest
  */
-public class HttpSessionOAuth2AuthorizationRequestRepository implements OAuth2AuthorizationRequestRepository {
+public class InMemoryOAuth2AuthorizationRequestStorage implements OAuth2AuthorizationRequestStorage {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpSessionOAuth2AuthorizationRequestRepository.class);
+    private static final Logger logger = LoggerFactory.getLogger(InMemoryOAuth2AuthorizationRequestStorage.class);
 
     private final Map<String, OAuth2AuthorizationRequest> requestStore = new ConcurrentHashMap<>();
 

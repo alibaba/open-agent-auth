@@ -43,9 +43,9 @@ import com.alibaba.openagentauth.framework.model.request.ParSubmissionRequest;
 import com.alibaba.openagentauth.framework.model.request.PrepareAuthorizationContextRequest;
 import com.alibaba.openagentauth.framework.model.request.RequestAuthUrlRequest;
 import com.alibaba.openagentauth.framework.model.response.RequestAuthUrlResponse;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequest;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -320,16 +320,16 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
         String state = config.getStateGenerationStrategy().generate();
         String redirectUri = config.getRedirectUri();
 
-        // Store authorization request with flow type and session metadata in the repository.
+        // Store authorization request with flow type and session metadata in the storage.
         // This follows the RFC 6749-compliant opaque state pattern where flow routing
         // metadata is stored server-side rather than encoded in the state parameter.
-        OAuth2AuthorizationRequestRepository requestRepository = config.getAuthorizationRequestRepository();
+        OAuth2AuthorizationRequestStorage requestStorage = config.getAuthorizationRequestStorage();
         OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.builder()
                 .state(state)
                 .flowType(OAuth2AuthorizationRequest.FlowType.AGENT_OPERATION_AUTH)
                 .sessionId(request.getSessionId())
                 .build();
-        requestRepository.save(authorizationRequest);
+        requestStorage.save(authorizationRequest);
 
         return new AuthorizationComponents(operationProposal, evidence, opContext, state, redirectUri);
     }

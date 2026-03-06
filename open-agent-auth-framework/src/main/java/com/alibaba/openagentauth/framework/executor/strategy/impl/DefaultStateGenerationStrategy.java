@@ -33,7 +33,7 @@ import java.util.Base64;
  * In version 1.0, this class generated state values in the format {@code agent:UUID:sessionId},
  * encoding flow type and session information directly into the state parameter. Starting from
  * version 1.1, the state is a pure opaque value with no business semantics. Flow routing
- * metadata is stored server-side in an {@code OAuth2AuthorizationRequestRepository}.
+ * metadata is stored server-side in an {@code OAuth2AuthorizationRequestStorage}.
  * </p>
  *
  * @since 1.0

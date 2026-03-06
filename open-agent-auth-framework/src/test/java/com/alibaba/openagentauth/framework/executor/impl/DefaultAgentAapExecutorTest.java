@@ -33,7 +33,6 @@ import com.alibaba.openagentauth.framework.executor.config.AgentAapExecutorConfi
 import com.alibaba.openagentauth.framework.executor.strategy.DeviceFingerprintStrategy;
 import com.alibaba.openagentauth.framework.executor.strategy.PolicyBuilder;
 import com.alibaba.openagentauth.framework.executor.strategy.StateGenerationStrategy;
-import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
 import com.alibaba.openagentauth.framework.model.context.AgentAuthorizationContext;
 import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenRequest;
 import com.alibaba.openagentauth.framework.model.request.InitiateAuthorizationRequest;
@@ -43,6 +42,7 @@ import com.alibaba.openagentauth.framework.model.request.RequestAuthUrlRequest;
 import com.alibaba.openagentauth.framework.model.response.RequestAuthUrlResponse;
 import com.alibaba.openagentauth.framework.model.workload.WorkloadContext;
 import com.alibaba.openagentauth.framework.model.workload.WorkloadRequestContext;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -139,8 +139,8 @@ class DefaultAgentAapExecutorTest {
         when(mockConfig.getDeviceFingerprintStrategy()).thenReturn(mockDeviceFingerprintStrategy);
         when(mockStateGenerationStrategy.generate()).thenReturn(STATE);
         when(mockDeviceFingerprintStrategy.generate(anyString())).thenReturn("device-fingerprint-123");
-        when(mockConfig.getAuthorizationRequestRepository())
-                .thenReturn(new HttpSessionOAuth2AuthorizationRequestRepository());
+        when(mockConfig.getAuthorizationRequestStorage())
+                .thenReturn(new InMemoryOAuth2AuthorizationRequestStorage());
         
         // Setup policy builder
         when(mockPolicyBuilder.buildPolicy(any(RequestAuthUrlRequest.class))).thenReturn(POLICY);

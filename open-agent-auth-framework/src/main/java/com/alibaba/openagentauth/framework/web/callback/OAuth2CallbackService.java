@@ -19,6 +19,8 @@ import com.alibaba.openagentauth.core.exception.oauth2.OAuth2TokenException;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
 import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.actor.Agent;
 import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenRequest;
@@ -62,7 +64,7 @@ public class OAuth2CallbackService {
     private final FrameworkOAuth2TokenClient oauth2TokenClient;
     private final Agent agent;
     private final SessionMappingBizService sessionMappingBizService;
-    private final OAuth2AuthorizationRequestRepository authorizationRequestRepository;
+    private final OAuth2AuthorizationRequestStorage authorizationRequestStorage;
     private final String callbackEndpoint;
 
     /**
@@ -70,7 +72,7 @@ public class OAuth2CallbackService {
      * <p>
      * This constructor is used when the service is deployed in a non-Agent role
      * (e.g., Authorization Server), where Agent operation authorization callbacks
-     * are not expected. Uses a default in-memory authorization request repository.
+     * are not expected. Uses a default in-memory authorization request storage.
      * </p>
      *
      * @param oauth2TokenClient the framework-level token client for user authentication
@@ -82,7 +84,7 @@ public class OAuth2CallbackService {
             SessionMappingBizService sessionMappingBizService,
             String callbackEndpoint) {
         this(oauth2TokenClient, null, sessionMappingBizService,
-                new HttpSessionOAuth2AuthorizationRequestRepository(), callbackEndpoint);
+                new InMemoryOAuth2AuthorizationRequestStorage(), callbackEndpoint);
     }
 
     /**
@@ -91,7 +93,7 @@ public class OAuth2CallbackService {
      * This constructor is used when the service is deployed in the Agent role,
      * where Agent operation authorization callbacks need to be handled via
      * {@link Agent#handleAuthorizationCallback(AuthorizationResponse)}.
-     * Uses a default in-memory authorization request repository.
+     * Uses a default in-memory authorization request storage.
      * </p>
      *
      * @param oauth2TokenClient the framework-level token client for user authentication
@@ -105,48 +107,48 @@ public class OAuth2CallbackService {
             SessionMappingBizService sessionMappingBizService,
             String callbackEndpoint) {
         this(oauth2TokenClient, agent, sessionMappingBizService,
-                new HttpSessionOAuth2AuthorizationRequestRepository(), callbackEndpoint);
+                new InMemoryOAuth2AuthorizationRequestStorage(), callbackEndpoint);
     }
 
     /**
      * Creates a new OAuth2CallbackService with full configuration.
      * <p>
-     * This constructor allows specifying a custom {@link OAuth2AuthorizationRequestRepository}
-     * for distributed deployments (e.g., Redis-backed repository).
+     * This constructor allows specifying a custom {@link OAuth2AuthorizationRequestStorage}
+     * for distributed deployments (e.g., Redis-backed storage).
      * </p>
      *
      * @param oauth2TokenClient the framework-level token client for user authentication
      * @param agent the Agent actor for handling Agent operation authorization callbacks (nullable)
      * @param sessionMappingBizService the session mapping business service
-     * @param authorizationRequestRepository the repository for resolving authorization requests
+     * @param authorizationRequestStorage the storage for resolving authorization requests
      * @param callbackEndpoint the callback endpoint path
      */
     public OAuth2CallbackService(
             FrameworkOAuth2TokenClient oauth2TokenClient,
             Agent agent,
             SessionMappingBizService sessionMappingBizService,
-            OAuth2AuthorizationRequestRepository authorizationRequestRepository,
+            OAuth2AuthorizationRequestStorage authorizationRequestStorage,
             String callbackEndpoint) {
         this.oauth2TokenClient = oauth2TokenClient;
         this.agent = agent;
         this.sessionMappingBizService = sessionMappingBizService;
-        this.authorizationRequestRepository = authorizationRequestRepository != null
-                ? authorizationRequestRepository
-                : new HttpSessionOAuth2AuthorizationRequestRepository();
+        this.authorizationRequestStorage = authorizationRequestStorage != null
+                ? authorizationRequestStorage
+                : new InMemoryOAuth2AuthorizationRequestStorage();
         this.callbackEndpoint = callbackEndpoint;
     }
     
     /**
-     * Returns the authorization request repository used by this service.
+     * Returns the authorization request storage used by this service.
      * <p>
      * This method allows other components (e.g., interceptors, executors) to share
-     * the same repository instance for storing and resolving authorization requests.
+     * the same storage instance for storing and resolving authorization requests.
      * </p>
      *
-     * @return the authorization request repository
+     * @return the authorization request storage
      */
-    public OAuth2AuthorizationRequestRepository getAuthorizationRequestRepository() {
-        return authorizationRequestRepository;
+    public OAuth2AuthorizationRequestStorage getAuthorizationRequestStorage() {
+        return authorizationRequestStorage;
     }
 
     /**
@@ -169,8 +171,8 @@ public class OAuth2CallbackService {
                 );
             }
             
-            // Resolve flow type from authorization request repository
-            OAuth2StateHandler stateHandler = new OAuth2StateHandler(authorizationRequestRepository);
+            // Resolve flow type from authorization request storage
+            OAuth2StateHandler stateHandler = new OAuth2StateHandler(authorizationRequestStorage);
             OAuth2StateHandler.StateInfo stateInfo = stateHandler.resolve(request.getState());
             
             // Build redirect URI

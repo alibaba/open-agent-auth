@@ -13,19 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.openagentauth.framework.web.callback;
+package com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage;
+
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
 
 /**
- * Repository for persisting {@link OAuth2AuthorizationRequest} instances between
+ * Storage interface for persisting {@link OAuth2AuthorizationRequest} instances between
  * the authorization request initiation and the callback response.
  * <p>
- * This interface follows the Repository pattern (as defined in Domain-Driven Design)
- * and is inspired by Spring Security's {@code AuthorizationRequestRepository}. It
- * decouples the storage mechanism from the authorization flow logic, allowing
+ * This interface follows the Storage pattern consistent with {@link OAuth2AuthorizationCodeStorage}
+ * and decouples the storage mechanism from the authorization flow logic, allowing
  * different implementations for different deployment scenarios:
  * </p>
  * <ul>
- *   <li><b>HttpSession-based</b> (default): Suitable for single-server deployments</li>
+ *   <li><b>In-memory</b> (default): Suitable for single-server deployments</li>
  *   <li><b>Redis/Database-based</b>: Suitable for distributed/clustered deployments</li>
  *   <li><b>Cookie-based</b>: Suitable for stateless deployments</li>
  * </ul>
@@ -43,14 +44,15 @@ package com.alibaba.openagentauth.framework.web.callback;
  * <h3>Thread Safety</h3>
  * <p>
  * Implementations should be thread-safe, as concurrent requests may access the
- * repository simultaneously in multi-threaded web server environments.
+ * storage simultaneously in multi-threaded web server environments.
  * </p>
  *
  * @since 1.1
  * @see OAuth2AuthorizationRequest
- * @see HttpSessionOAuth2AuthorizationRequestRepository
+ * @see InMemoryOAuth2AuthorizationRequestStorage
+ * @see OAuth2AuthorizationCodeStorage
  */
-public interface OAuth2AuthorizationRequestRepository {
+public interface OAuth2AuthorizationRequestStorage {
 
     /**
      * Saves an authorization request.
@@ -80,7 +82,7 @@ public interface OAuth2AuthorizationRequestRepository {
      * Removes and returns an authorization request by its state parameter.
      * <p>
      * This method provides consume-once semantics: the request is atomically
-     * retrieved and removed from the repository. This prevents replay attacks
+     * retrieved and removed from the storage. This prevents replay attacks
      * where the same authorization code callback could be processed multiple times.
      * </p>
      *
@@ -88,5 +90,4 @@ public interface OAuth2AuthorizationRequestRepository {
      * @return the removed authorization request, or null if not found
      */
     OAuth2AuthorizationRequest remove(String state);
-
 }

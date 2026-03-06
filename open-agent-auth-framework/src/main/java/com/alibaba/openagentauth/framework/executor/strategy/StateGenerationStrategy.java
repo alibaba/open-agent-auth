@@ -29,7 +29,7 @@ package com.alibaba.openagentauth.framework.executor.strategy;
  * In version 1.0, the state parameter encoded business semantics (flow type prefix
  * and session ID). Starting from version 1.1, the state is a pure opaque value.
  * Flow type and session metadata are stored server-side in an
- * {@code OAuth2AuthorizationRequestRepository}, following the approach used by
+ * {@code OAuth2AuthorizationRequestStorage}, following the approach used by
  * Spring Security OAuth2 and other industry-standard implementations.
  * </p>
  *

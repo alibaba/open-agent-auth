@@ -15,6 +15,8 @@
  */
 package com.alibaba.openagentauth.framework.web.callback;
 
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 
 import org.slf4j.Logger;
@@ -25,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Resolves authorization flow metadata from an opaque state parameter by looking up
  * the corresponding {@link OAuth2AuthorizationRequest} from an
- * {@link OAuth2AuthorizationRequestRepository}.
+ * {@link OAuth2AuthorizationRequestStorage}.
  * </p>
  *
  * <h3>Design Change (1.1)</h3>
@@ -33,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * In version 1.0, this class parsed business semantics (flow type prefix, session ID)
  * directly from the state string format ({@code agent:UUID:sessionId}). Starting from
  * version 1.1, the state is treated as an opaque CSRF token per RFC 6749 Section 10.12.
- * All flow metadata is resolved from the server-side {@link OAuth2AuthorizationRequestRepository},
+ * All flow metadata is resolved from the server-side {@link OAuth2AuthorizationRequestStorage},
  * following the approach used by Spring Security OAuth2.
  * </p>
  *
@@ -43,15 +45,15 @@ public class OAuth2StateHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(OAuth2StateHandler.class);
 
-    private final OAuth2AuthorizationRequestRepository requestRepository;
+    private final OAuth2AuthorizationRequestStorage requestStorage;
 
     /**
-     * Creates a new OAuth2StateHandler with the given authorization request repository.
+     * Creates a new OAuth2StateHandler with the given authorization request storage.
      *
-     * @param requestRepository the repository for resolving authorization requests by state
+     * @param requestStorage the storage for resolving authorization requests by state
      */
-    public OAuth2StateHandler(OAuth2AuthorizationRequestRepository requestRepository) {
-        this.requestRepository = requestRepository;
+    public OAuth2StateHandler(OAuth2AuthorizationRequestStorage requestStorage) {
+        this.requestStorage = requestStorage;
     }
 
     /**
@@ -71,7 +73,7 @@ public class OAuth2StateHandler {
             return StateInfo.unknown();
         }
 
-        OAuth2AuthorizationRequest authorizationRequest = requestRepository.remove(state);
+        OAuth2AuthorizationRequest authorizationRequest = requestStorage.remove(state);
         if (authorizationRequest == null) {
             logger.warn("No authorization request found for state: {}", state);
             return StateInfo.unknown();
@@ -115,7 +117,7 @@ public class OAuth2StateHandler {
     }
 
     /**
-     * State information resolved from the {@link OAuth2AuthorizationRequestRepository}.
+     * State information resolved from the {@link OAuth2AuthorizationRequestStorage}.
      * <p>
      * Contains the flow type, original state string, and optional session ID
      * for cross-domain session restoration.

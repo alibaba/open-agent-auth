@@ -23,8 +23,8 @@ import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenRequest;
 import com.alibaba.openagentauth.framework.model.response.AuthenticationResponse;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
-import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import com.alibaba.openagentauth.framework.web.callback.OAuth2CallbackService;
 import com.alibaba.openagentauth.spring.web.controller.OAuth2CallbackController;
 import com.alibaba.openagentauth.framework.web.interceptor.AsUserIdpUserAuthInterceptor;
@@ -123,22 +123,22 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
     private final OpenAgentAuthProperties properties;
     private final AdminProperties adminProperties;
     private final ObjectProvider<UserAuthenticationInterceptor> userAuthInterceptorProvider;
-    private final ObjectProvider<OAuth2AuthorizationRequestRepository> authorizationRequestRepositoryProvider;
+    private final ObjectProvider<OAuth2AuthorizationRequestStorage> authorizationRequestStorageProvider;
 
     /**
      * Creates a new AdminAutoConfiguration.
      *
      * @param properties the root configuration properties
      * @param userAuthInterceptorProvider optional user authentication interceptor from any role
-     * @param authorizationRequestRepositoryProvider optional shared authorization request repository
+     * @param authorizationRequestStorageProvider optional shared authorization request storage
      */
     public AdminAutoConfiguration(OpenAgentAuthProperties properties,
                                   ObjectProvider<UserAuthenticationInterceptor> userAuthInterceptorProvider,
-                                  ObjectProvider<OAuth2AuthorizationRequestRepository> authorizationRequestRepositoryProvider) {
+                                  ObjectProvider<OAuth2AuthorizationRequestStorage> authorizationRequestStorageProvider) {
         this.properties = properties;
         this.adminProperties = properties.getAdmin();
         this.userAuthInterceptorProvider = userAuthInterceptorProvider;
-        this.authorizationRequestRepositoryProvider = authorizationRequestRepositoryProvider;
+        this.authorizationRequestStorageProvider = authorizationRequestStorageProvider;
         logger.info("Admin console enabled with access-control={}", adminProperties.getAccessControl().isEnabled());
     }
 
@@ -260,12 +260,12 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
             // Use the shared repository if available (created by AdminOAuth2CallbackConfiguration),
             // otherwise fall back to a default instance. This ensures the interceptor and
             // OAuth2CallbackService share the same repository for state validation.
-            OAuth2AuthorizationRequestRepository repository = authorizationRequestRepositoryProvider.getIfAvailable(
-                            HttpSessionOAuth2AuthorizationRequestRepository::new);
+            OAuth2AuthorizationRequestStorage storage = authorizationRequestStorageProvider.getIfAvailable(
+                            InMemoryOAuth2AuthorizationRequestStorage::new);
 
             return new AsUserIdpUserAuthInterceptor(
                     excludedPaths,
-                    repository,
+                    storage,
                     userIdpIssuer,
                     clientId,
                     callbackUrl + ConfigConstants.DEFAULT_CALLBACK_ENDPOINT);
@@ -325,20 +325,20 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
         private static final Logger logger = LoggerFactory.getLogger(AdminOAuth2CallbackConfiguration.class);
 
         /**
-         * Creates a shared {@link OAuth2AuthorizationRequestRepository} bean.
+         * Creates a shared {@link OAuth2AuthorizationRequestStorage} bean.
          * <p>
          * This repository is shared between the fallback {@link AsUserIdpUserAuthInterceptor}
          * (which stores authorization requests during login redirect) and the fallback
          * {@link OAuth2CallbackService} (which resolves them during callback processing).
          * </p>
          *
-         * @return the shared authorization request repository
+         * @return the shared authorization request storage
          */
         @Bean
         @ConditionalOnMissingBean
-        public OAuth2AuthorizationRequestRepository authorizationRequestRepository() {
-            logger.info("Creating shared OAuth2AuthorizationRequestRepository for admin OAuth2 flow");
-            return new HttpSessionOAuth2AuthorizationRequestRepository();
+        public OAuth2AuthorizationRequestStorage authorizationRequestStorage() {
+            logger.info("Creating shared OAuth2AuthorizationRequestStorage for admin OAuth2 flow");
+            return new InMemoryOAuth2AuthorizationRequestStorage();
         }
 
         @Bean
@@ -386,7 +386,7 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
         public OAuth2CallbackService callbackService(
                 FrameworkOAuth2TokenClient frameworkOAuth2TokenClient,
                 SessionMappingBizService sessionMappingBizService,
-                OAuth2AuthorizationRequestRepository authorizationRequestRepository,
+                OAuth2AuthorizationRequestStorage authorizationRequestStorage,
                 OpenAgentAuthProperties openAgentAuthProperties) {
             logger.info("Creating fallback OAuth2CallbackService for admin OAuth2 callback");
             var oauth2ClientProps = openAgentAuthProperties.getCapabilities().getOAuth2Client();
@@ -398,7 +398,7 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
                     frameworkOAuth2TokenClient,
                     null,
                     sessionMappingBizService,
-                    authorizationRequestRepository,
+                    authorizationRequestStorage,
                     callbackEndpoint);
         }
 

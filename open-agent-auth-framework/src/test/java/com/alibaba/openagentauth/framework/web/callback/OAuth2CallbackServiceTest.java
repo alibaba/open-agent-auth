@@ -15,6 +15,9 @@
  */
 package com.alibaba.openagentauth.framework.web.callback;
 
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
+
 import com.alibaba.openagentauth.core.exception.oauth2.OAuth2TokenException;
 import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
@@ -24,8 +27,8 @@ import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenReq
 import com.alibaba.openagentauth.framework.model.response.AuthenticationResponse;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenClient;
 import com.alibaba.openagentauth.framework.web.service.SessionMappingBizService;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequest;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,7 +75,7 @@ class OAuth2CallbackServiceTest {
     private SessionMappingBizService mockSessionMappingBizService;
 
     @Mock
-    private OAuth2AuthorizationRequestRepository mockAuthorizationRequestRepository;
+    private OAuth2AuthorizationRequestStorage mockAuthorizationRequestStorage;
 
     @Mock
     private HttpServletRequest mockHttpRequest;
@@ -103,25 +106,25 @@ class OAuth2CallbackServiceTest {
     @BeforeEach
     void setUp() {
         // Mock repository to return appropriate authorization requests for each state
-        when(mockAuthorizationRequestRepository.remove(STATE_USER_AUTH))
+        when(mockAuthorizationRequestStorage.remove(STATE_USER_AUTH))
                 .thenReturn(OAuth2AuthorizationRequest.builder()
                         .state(STATE_USER_AUTH)
                         .flowType(OAuth2AuthorizationRequest.FlowType.USER_AUTHENTICATION)
                         .build());
-        when(mockAuthorizationRequestRepository.remove(STATE_AGENT_AUTH))
+        when(mockAuthorizationRequestStorage.remove(STATE_AGENT_AUTH))
                 .thenReturn(OAuth2AuthorizationRequest.builder()
                         .state(STATE_AGENT_AUTH)
                         .flowType(OAuth2AuthorizationRequest.FlowType.AGENT_OPERATION_AUTH)
                         .build());
-        when(mockAuthorizationRequestRepository.remove(STATE_DEFAULT))
+        when(mockAuthorizationRequestStorage.remove(STATE_DEFAULT))
                 .thenReturn(null); // Unknown state returns null
 
-        // Construct callbackService with 5 parameters including mockAuthorizationRequestRepository
+        // Construct callbackService with 5 parameters including mockAuthorizationRequestStorage
         callbackService = new OAuth2CallbackService(
                 mockOAuth2TokenClient,
                 mockAgent,
                 mockSessionMappingBizService,
-                mockAuthorizationRequestRepository,
+                mockAuthorizationRequestStorage,
                 CALLBACK_ENDPOINT);
 
         // Default HTTP request setup
@@ -177,7 +180,7 @@ class OAuth2CallbackServiceTest {
                     mockOAuth2TokenClient,
                     mockAgent,
                     mockSessionMappingBizService,
-                    mockAuthorizationRequestRepository,
+                    mockAuthorizationRequestStorage,
                     CALLBACK_ENDPOINT);
 
             // Assert
@@ -393,7 +396,7 @@ class OAuth2CallbackServiceTest {
         void shouldHandleAgentOperationAuthorizationFlowWithNullSessionId() throws Exception {
             // Arrange - use a dedicated opaque state and mock repository to return AGENT_OPERATION_AUTH with null sessionId
             String stateWithNullSession = "opaque-state-agent-null-session";
-            when(mockAuthorizationRequestRepository.remove(stateWithNullSession))
+            when(mockAuthorizationRequestStorage.remove(stateWithNullSession))
                     .thenReturn(OAuth2AuthorizationRequest.builder()
                             .state(stateWithNullSession)
                             .flowType(OAuth2AuthorizationRequest.FlowType.AGENT_OPERATION_AUTH)
@@ -563,7 +566,7 @@ class OAuth2CallbackServiceTest {
                     mockOAuth2TokenClient,
                     null,
                     mockSessionMappingBizService,
-                    mockAuthorizationRequestRepository,
+                    mockAuthorizationRequestStorage,
                     CALLBACK_ENDPOINT);
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, STATE_AGENT_AUTH, null, null, mockHttpRequest);
 
@@ -698,7 +701,7 @@ class OAuth2CallbackServiceTest {
             // Arrange
             OAuth2CallbackRequest request = new OAuth2CallbackRequest(CODE, "", null, null, mockHttpRequest);
             // Mock repository to return null for empty state (unknown/expired state)
-            when(mockAuthorizationRequestRepository.remove("")).thenReturn(null);
+            when(mockAuthorizationRequestStorage.remove("")).thenReturn(null);
 
             // Act
             OAuth2CallbackResult result = callbackService.handleCallback(request, CLIENT_ID);
@@ -712,7 +715,7 @@ class OAuth2CallbackServiceTest {
         void shouldHandleStateParameterWithOnlyFlowType() throws Exception {
             // Arrange
             // Mock repository to return USER_AUTHENTICATION for "user:uuid" state
-            when(mockAuthorizationRequestRepository.remove("user:uuid"))
+            when(mockAuthorizationRequestStorage.remove("user:uuid"))
                     .thenReturn(OAuth2AuthorizationRequest.builder()
                             .state("user:uuid")
                             .flowType(OAuth2AuthorizationRequest.FlowType.USER_AUTHENTICATION)

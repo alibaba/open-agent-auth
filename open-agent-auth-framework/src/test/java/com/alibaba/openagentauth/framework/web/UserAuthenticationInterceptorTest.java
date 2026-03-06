@@ -351,7 +351,7 @@ class UserAuthenticationInterceptorTest {
             // Assert
             assertThat(loginUrl).isNotNull();
             // State is now an opaque, cryptographically secure random value (RFC 6749 Section 10.12).
-            // Flow type metadata is stored server-side in OAuth2AuthorizationRequestRepository.
+            // Flow type metadata is stored server-side in OAuth2AuthorizationRequestStorage.
             assertThat(loginUrl).contains("state=");
             // Verify state is a non-empty opaque value (Base64 URL-safe encoded)
             String stateValue = loginUrl.substring(loginUrl.indexOf("state=") + "state=".length());

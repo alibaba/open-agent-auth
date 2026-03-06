@@ -15,9 +15,9 @@
  */
 package com.alibaba.openagentauth.framework.web.interceptor;
 
-import com.alibaba.openagentauth.framework.web.callback.HttpSessionOAuth2AuthorizationRequestRepository;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequest;
-import com.alibaba.openagentauth.framework.web.callback.OAuth2AuthorizationRequestRepository;
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import com.alibaba.openagentauth.framework.web.manager.SessionAttributes;
 import com.alibaba.openagentauth.framework.web.manager.SessionManager;
 import jakarta.servlet.http.HttpServletRequest;
@@ -116,7 +116,7 @@ public class UserAuthenticationInterceptor {
     /**
      * The repository for storing authorization requests keyed by opaque state values.
      */
-    private final OAuth2AuthorizationRequestRepository authorizationRequestRepository;
+    private final OAuth2AuthorizationRequestStorage authorizationRequestStorage;
 
     /**
      * Constructs a new UserAuthenticationInterceptor with a default in-memory repository.
@@ -124,22 +124,22 @@ public class UserAuthenticationInterceptor {
      * @param excludedPaths the list of paths to exclude from authentication
      */
     public UserAuthenticationInterceptor(List<String> excludedPaths) {
-        this(excludedPaths, new HttpSessionOAuth2AuthorizationRequestRepository());
+        this(excludedPaths, new InMemoryOAuth2AuthorizationRequestStorage());
     }
 
     /**
      * Constructs a new UserAuthenticationInterceptor with a custom repository.
      *
      * @param excludedPaths the list of paths to exclude from authentication
-     * @param authorizationRequestRepository the repository for storing authorization requests
+     * @param authorizationRequestStorage the repository for storing authorization requests
      */
     public UserAuthenticationInterceptor(
             List<String> excludedPaths,
-            OAuth2AuthorizationRequestRepository authorizationRequestRepository) {
+            OAuth2AuthorizationRequestStorage authorizationRequestStorage) {
         this.excludedPaths = excludedPaths != null ? excludedPaths : new ArrayList<>();
-        this.authorizationRequestRepository = authorizationRequestRepository != null
-                ? authorizationRequestRepository
-                : new HttpSessionOAuth2AuthorizationRequestRepository();
+        this.authorizationRequestStorage = authorizationRequestStorage != null
+                ? authorizationRequestStorage
+                : new InMemoryOAuth2AuthorizationRequestStorage();
         logger.info("UserAuthenticationInterceptor initialized with excluded paths: {}", this.excludedPaths);
     }
 
@@ -228,7 +228,7 @@ public class UserAuthenticationInterceptor {
      * <p>
      * Generates a login URL with an opaque state parameter for CSRF protection.
      * The state is a cryptographically secure random value per RFC 6749 Section 10.12.
-     * Flow type metadata is stored server-side in the {@link OAuth2AuthorizationRequestRepository},
+     * Flow type metadata is stored server-side in the {@link OAuth2AuthorizationRequestStorage},
      * following the approach used by Spring Security OAuth2.
      * </p>
      *
@@ -245,7 +245,7 @@ public class UserAuthenticationInterceptor {
                 .state(state)
                 .flowType(OAuth2AuthorizationRequest.FlowType.USER_AUTHENTICATION)
                 .build();
-        authorizationRequestRepository.save(authorizationRequest);
+        authorizationRequestStorage.save(authorizationRequest);
 
         // Also store state in session for backward compatibility
         SessionManager.setAttribute(session, SessionAttributes.OAUTH_STATE, state);
@@ -261,8 +261,8 @@ public class UserAuthenticationInterceptor {
      *
      * @return the authorization request repository
      */
-    public OAuth2AuthorizationRequestRepository getAuthorizationRequestRepository() {
-        return authorizationRequestRepository;
+    public OAuth2AuthorizationRequestStorage getAuthorizationRequestStorage() {
+        return authorizationRequestStorage;
     }
 
     /**

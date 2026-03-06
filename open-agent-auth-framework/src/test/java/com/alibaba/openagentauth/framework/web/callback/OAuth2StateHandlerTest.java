@@ -15,6 +15,8 @@
  */
 package com.alibaba.openagentauth.framework.web.callback;
 
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -35,7 +37,7 @@ import static org.mockito.Mockito.verify;
 class OAuth2StateHandlerTest {
 
     @Mock
-    private OAuth2AuthorizationRequestRepository mockRepository;
+    private OAuth2AuthorizationRequestStorage mockRepository;
 
     private OAuth2StateHandler stateHandler;
 
