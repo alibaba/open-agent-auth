@@ -20,8 +20,8 @@ import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
+import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,6 +39,7 @@ import java.util.Base64;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -182,26 +183,23 @@ class OAuth2ParControllerTest {
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when request parameter is missing")
-        void shouldReturnBadRequestWhenRequestParameterIsMissing() {
+        @DisplayName("Should throw IllegalArgumentException when request parameter is missing")
+        void shouldThrowIllegalArgumentExceptionWhenRequestParameterIsMissing() {
             // Given
             String authHeader = createBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
             requestBody.add("client_id", CLIENT_ID);
             requestBody.add("redirect_uri", REDIRECT_URI);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_request");
+            // When & Then
+            assertThatThrownBy(() -> controller.par(requestBody, authHeader))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("request");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when PAR exception occurs without RFC error code")
-        void shouldReturnBadRequestWhenParExceptionOccursWithoutRfcErrorCode() {
+        @DisplayName("Should throw ParException without RFC error code")
+        void shouldThrowParExceptionWithoutRfcErrorCode() {
             // Given
             String authHeader = createBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
@@ -212,21 +210,15 @@ class OAuth2ParControllerTest {
             when(parServer.processParRequest(any(ParRequest.class), eq(CLIENT_ID)))
                     .thenThrow(new ParException("Invalid redirect URI", new RuntimeException("Invalid redirect URI")));
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            // ParException without RFC error code returns the internal error code "OPEN_AGENT_AUTH_10_0402"
-            assertThat(response.getBody().get("error")).isEqualTo("OPEN_AGENT_AUTH_10_0402");
-            // The error description is formatted by the error code template
-            assertThat(response.getBody().get("error_description")).isNotNull();
+            // When & Then
+            assertThatThrownBy(() -> controller.par(requestBody, authHeader))
+                    .isInstanceOf(ParException.class)
+                    .hasMessageContaining("Invalid redirect URI");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when PAR exception occurs with RFC error code")
-        void shouldReturnBadRequestWhenParExceptionOccursWithRfcErrorCode() {
+        @DisplayName("Should throw ParException with RFC error code")
+        void shouldThrowParExceptionWithRfcErrorCode() {
             // Given
             String authHeader = createBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
@@ -237,20 +229,15 @@ class OAuth2ParControllerTest {
             when(parServer.processParRequest(any(ParRequest.class), eq(CLIENT_ID)))
                     .thenThrow(ParException.invalidRedirectUri("Redirect URI is not registered"));
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_redirect_uri");
-            // The error description is formatted by the error code template
-            assertThat(response.getBody().get("error_description")).isNotNull();
+            // When & Then
+            assertThatThrownBy(() -> controller.par(requestBody, authHeader))
+                    .isInstanceOf(ParException.class)
+                    .hasMessageContaining("Redirect URI is not registered");
         }
 
         @Test
-        @DisplayName("Should return INTERNAL_SERVER_ERROR when unexpected exception occurs during PAR server processing")
-        void shouldReturnInternalServerErrorWhenUnexpectedExceptionOccursDuringParServerProcessing() {
+        @DisplayName("Should throw RuntimeException during PAR server processing")
+        void shouldThrowRuntimeExceptionDuringParServerProcessing() {
             // Given
             String authHeader = createBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
@@ -261,13 +248,10 @@ class OAuth2ParControllerTest {
             when(parServer.processParRequest(any(ParRequest.class), eq(CLIENT_ID)))
                     .thenThrow(new RuntimeException("Unexpected error"));
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("server_error");
+            // When & Then
+            assertThatThrownBy(() -> controller.par(requestBody, authHeader))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Unexpected error");
         }
     }
 
@@ -276,28 +260,23 @@ class OAuth2ParControllerTest {
     class ClientAuthenticationTests {
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when Authorization header is missing")
-        void shouldReturnBadRequestWhenAuthorizationHeaderIsMissing() {
+        @DisplayName("Should throw FrameworkOAuth2TokenException when Authorization header is missing")
+        void shouldThrowFrameworkOAuth2TokenExceptionWhenAuthorizationHeaderIsMissing() {
             // Given
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
             requestBody.add("request", REQUEST_JWT);
             requestBody.add("client_id", CLIENT_ID);
             requestBody.add("redirect_uri", REDIRECT_URI);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.par(requestBody, null);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description")).asString()
-                    .contains("Authorization header is missing");
+            // When & Then
+            assertThatThrownBy(() -> controller.par(requestBody, null))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasMessageContaining("Authorization header");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when Authorization header has invalid format")
-        void shouldReturnBadRequestWhenAuthorizationHeaderHasInvalidFormat() {
+        @DisplayName("Should throw FrameworkOAuth2TokenException when Authorization header has invalid format")
+        void shouldThrowFrameworkOAuth2TokenExceptionWhenAuthorizationHeaderHasInvalidFormat() {
             // Given
             String invalidAuthHeader = "Bearer invalid-token";
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
@@ -305,20 +284,15 @@ class OAuth2ParControllerTest {
             requestBody.add("client_id", CLIENT_ID);
             requestBody.add("redirect_uri", REDIRECT_URI);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.par(requestBody, invalidAuthHeader);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description")).asString()
-                    .contains("Only Basic authentication is supported");
+            // When & Then
+            assertThatThrownBy(() -> controller.par(requestBody, invalidAuthHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasMessageContaining("Basic authentication");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when client credentials are invalid")
-        void shouldReturnBadRequestWhenClientCredentialsAreInvalid() {
+        @DisplayName("Should throw FrameworkOAuth2TokenException when client credentials are invalid")
+        void shouldThrowFrameworkOAuth2TokenExceptionWhenClientCredentialsAreInvalid() {
             // Given
             String authHeader = createBasicAuthHeader(CLIENT_ID, "wrong-secret");
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
@@ -326,20 +300,15 @@ class OAuth2ParControllerTest {
             requestBody.add("client_id", CLIENT_ID);
             requestBody.add("redirect_uri", REDIRECT_URI);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description")).asString()
-                    .contains("Invalid client secret");
+            // When & Then
+            assertThatThrownBy(() -> controller.par(requestBody, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasMessageContaining("Invalid client secret");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when client is not registered")
-        void shouldReturnBadRequestWhenClientIsNotRegistered() {
+        @DisplayName("Should throw FrameworkOAuth2TokenException when client is not registered")
+        void shouldThrowFrameworkOAuth2TokenExceptionWhenClientIsNotRegistered() {
             // Given
             String authHeader = createBasicAuthHeader("unknown-client", "secret");
             MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
@@ -347,15 +316,10 @@ class OAuth2ParControllerTest {
             requestBody.add("client_id", "unknown-client");
             requestBody.add("redirect_uri", REDIRECT_URI);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description")).asString()
-                    .contains("Client not registered");
+            // When & Then
+            assertThatThrownBy(() -> controller.par(requestBody, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasMessageContaining("Client not registered");
         }
     }
 

@@ -15,13 +15,11 @@
  */
 package com.alibaba.openagentauth.spring.web.controller;
 
-import com.alibaba.openagentauth.core.exception.oauth2.ParException;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
-import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
 import com.alibaba.openagentauth.spring.util.OAuth2ClientAuthenticator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -29,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -105,71 +102,36 @@ public class OAuth2ParController {
             @RequestBody MultiValueMap<String, String> requestBody,
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
-        try {
-            logger.info("Received PAR request");
+        logger.info("Received PAR request");
 
-            // Step 1: Authenticate client using Basic Auth (RFC 9126 Section 2.1)
-            String authenticatedClientId = OAuth2ClientAuthenticator.authenticateWithBasicAuth(
-                    authorizationHeader, clientStore);
-            logger.debug("Client authenticated: {}", authenticatedClientId);
+        // Step 1: Authenticate client using Basic Auth (RFC 9126 Section 2.1)
+        String authenticatedClientId = OAuth2ClientAuthenticator.authenticateWithBasicAuth(
+                authorizationHeader, clientStore);
+        logger.debug("Client authenticated: {}", authenticatedClientId);
 
-            // Step 2: Convert MultiValueMap to Map for processing
-            Map<String, String> requestMap = new HashMap<>();
-            if (requestBody != null) {
-                requestBody.forEach((key, values) -> {
-                    if (values != null && !values.isEmpty()) {
-                        requestMap.put(key, values.get(0));
-                    }
-                });
-            }
-
-            // Step 3: Parse the PAR request with authenticated client ID
-            ParRequest request = parseParRequest(requestMap, authenticatedClientId);
-
-            // Step 4: Submit to PAR server with authenticated client ID
-            ParResponse response = parServer.processParRequest(request, authenticatedClientId);
-
-            logger.info("PAR request processed successfully, request_uri: {}", response.getRequestUri());
-
-            // Step 5: Return response
-            return ResponseEntity.ok(Map.of(
-                    "request_uri", response.getRequestUri(),
-                    "expires_in", response.getExpiresIn()
-            ));
-
-        } catch (FrameworkOAuth2TokenException e) {
-            logger.error("Client authentication failed: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "error", e.getErrorCode(),
-                            "error_description", e.getErrorDescription()
-                    ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid PAR request: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "error", "invalid_request",
-                            "error_description", e.getMessage()
-                    ));
-        } catch (ParException e) {
-            logger.error("PAR request failed: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "error", e.getRfcErrorCode() != null ? e.getRfcErrorCode() : e.getErrorCode(),
-                            "error_description", e.getMessage()
-                    ));
-        } catch (Exception e) {
-            logger.error("Unexpected error processing PAR request: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "error", "server_error",
-                            "error_description", "Internal server error"
-                    ));
+        // Step 2: Convert MultiValueMap to Map for processing
+        Map<String, String> requestMap = new HashMap<>();
+        if (requestBody != null) {
+            requestBody.forEach((key, values) -> {
+                if (values != null && !values.isEmpty()) {
+                    requestMap.put(key, values.get(0));
+                }
+            });
         }
+
+        // Step 3: Parse the PAR request with authenticated client ID
+        ParRequest request = parseParRequest(requestMap, authenticatedClientId);
+
+        // Step 4: Submit to PAR server with authenticated client ID
+        ParResponse response = parServer.processParRequest(request, authenticatedClientId);
+
+        logger.info("PAR request processed successfully, request_uri: {}", response.getRequestUri());
+
+        // Step 5: Return response
+        return ResponseEntity.ok(Map.of(
+                "request_uri", response.getRequestUri(),
+                "expires_in", response.getExpiresIn()
+        ));
     }
 
     /**

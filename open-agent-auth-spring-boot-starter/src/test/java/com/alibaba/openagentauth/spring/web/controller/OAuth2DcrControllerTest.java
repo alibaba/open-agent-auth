@@ -119,8 +119,8 @@ class OAuth2DcrControllerTest {
         }
 
         @Test
-        @DisplayName("Should handle DCR exception during registration")
-        void shouldHandleDcrExceptionDuringRegistration() throws Exception {
+        @DisplayName("Should throw DcrException during registration")
+        void shouldThrowDcrExceptionDuringRegistration() throws Exception {
             // Arrange
             Map<String, Object> requestBody = Map.of(
                     "redirect_uris", List.of(REDIRECT_URI),
@@ -130,19 +130,15 @@ class OAuth2DcrControllerTest {
             DcrException dcrException = DcrException.invalidRedirectUri("Invalid redirect URI");
             when(dcrServer.registerClient(any(DcrRequest.class))).thenThrow(dcrException);
 
-            // Act
-            ResponseEntity<Map<String, Object>> response = controller.registerClient(requestBody);
-
-            // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody()).containsEntry("error", dcrException.getErrorCode());
-            assertThat(response.getBody()).containsEntry("error_description", dcrException.getMessage());
+            // Act & Assert
+            assertThatThrownBy(() -> controller.registerClient(requestBody))
+                    .isInstanceOf(DcrException.class)
+                    .hasMessageContaining("Invalid redirect URI");
         }
 
         @Test
-        @DisplayName("Should handle unexpected error during registration")
-        void shouldHandleUnexpectedErrorDuringRegistration() throws Exception {
+        @DisplayName("Should throw RuntimeException during registration")
+        void shouldThrowRuntimeExceptionDuringRegistration() throws Exception {
             // Arrange
             Map<String, Object> requestBody = Map.of(
                     "redirect_uris", List.of(REDIRECT_URI),
@@ -151,14 +147,10 @@ class OAuth2DcrControllerTest {
 
             when(dcrServer.registerClient(any(DcrRequest.class))).thenThrow(new RuntimeException("Unexpected error"));
 
-            // Act
-            ResponseEntity<Map<String, Object>> response = controller.registerClient(requestBody);
-
-            // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody()).containsEntry("error", "server_error");
-            assertThat(response.getBody()).containsEntry("error_description", "Internal server error");
+            // Act & Assert
+            assertThatThrownBy(() -> controller.registerClient(requestBody))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Unexpected error");
         }
 
         @Test
@@ -214,20 +206,16 @@ class OAuth2DcrControllerTest {
         }
 
         @Test
-        @DisplayName("Should handle DCR exception during read")
-        void shouldHandleDcrExceptionDuringRead() throws Exception {
+        @DisplayName("Should throw DcrException during read")
+        void shouldThrowDcrExceptionDuringRead() throws Exception {
             // Arrange
             DcrException dcrException = DcrException.invalidClientId("Invalid client");
             when(dcrServer.readClient(CLIENT_ID, REGISTRATION_ACCESS_TOKEN)).thenThrow(dcrException);
 
-            // Act
-            ResponseEntity<Map<String, Object>> response = controller.readClient(CLIENT_ID, AUTHORIZATION_HEADER);
-
-            // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody()).containsEntry("error", dcrException.getErrorCode());
-            assertThat(response.getBody()).containsEntry("error_description", dcrException.getMessage());
+            // Act & Assert
+            assertThatThrownBy(() -> controller.readClient(CLIENT_ID, AUTHORIZATION_HEADER))
+                    .isInstanceOf(DcrException.class)
+                    .hasMessageContaining("Invalid client");
         }
     }
 
@@ -274,8 +262,8 @@ class OAuth2DcrControllerTest {
         }
 
         @Test
-        @DisplayName("Should handle DCR exception during update")
-        void shouldHandleDcrExceptionDuringUpdate() throws Exception {
+        @DisplayName("Should throw DcrException during update")
+        void shouldThrowDcrExceptionDuringUpdate() throws Exception {
             // Arrange
             Map<String, Object> requestBody = Map.of(
                     "redirect_uris", List.of(REDIRECT_URI),
@@ -285,14 +273,10 @@ class OAuth2DcrControllerTest {
             DcrException dcrException = DcrException.invalidClientMetadata("Invalid client metadata");
             when(dcrServer.updateClient(anyString(), anyString(), any(DcrRequest.class))).thenThrow(dcrException);
 
-            // Act
-            ResponseEntity<Map<String, Object>> response = controller.updateClient(CLIENT_ID, requestBody, AUTHORIZATION_HEADER);
-
-            // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody()).containsEntry("error", dcrException.getErrorCode());
-            assertThat(response.getBody()).containsEntry("error_description", dcrException.getMessage());
+            // Act & Assert
+            assertThatThrownBy(() -> controller.updateClient(CLIENT_ID, requestBody, AUTHORIZATION_HEADER))
+                    .isInstanceOf(DcrException.class)
+                    .hasMessageContaining("Invalid client metadata");
         }
     }
 
@@ -314,17 +298,16 @@ class OAuth2DcrControllerTest {
         }
 
         @Test
-        @DisplayName("Should handle DCR exception during deletion")
-        void shouldHandleDcrExceptionDuringDeletion() throws Exception {
+        @DisplayName("Should throw DcrException during deletion")
+        void shouldThrowDcrExceptionDuringDeletion() throws Exception {
             // Arrange
             DcrException dcrException = DcrException.invalidClientId("Invalid client");
             org.mockito.Mockito.doThrow(dcrException).when(dcrServer).deleteClient(CLIENT_ID, REGISTRATION_ACCESS_TOKEN);
 
-            // Act
-            ResponseEntity<Void> response = controller.deleteClient(CLIENT_ID, AUTHORIZATION_HEADER);
-
-            // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            // Act & Assert
+            assertThatThrownBy(() -> controller.deleteClient(CLIENT_ID, AUTHORIZATION_HEADER))
+                    .isInstanceOf(DcrException.class)
+                    .hasMessageContaining("Invalid client");
         }
     }
 

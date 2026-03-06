@@ -34,6 +34,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -128,40 +129,32 @@ class OAuth2AuthorizationControllerTest {
         }
 
         @Test
-        @DisplayName("Should handle OAuth2AuthorizationException")
-        void shouldHandleOAuth2AuthorizationException() {
+        @DisplayName("Should throw OAuth2AuthorizationException")
+        void shouldThrowOAuth2AuthorizationException() {
             // Arrange
+            OAuth2AuthorizationException exception = new OAuth2AuthorizationException(
+                    OAuth2RfcErrorCode.INVALID_REQUEST, ERROR_DESCRIPTION);
             when(orchestrator.processAuthorization(any(HttpServletRequest.class)))
-                    .thenThrow(new OAuth2AuthorizationException(OAuth2RfcErrorCode.INVALID_REQUEST, ERROR_DESCRIPTION));
+                    .thenThrow(exception);
 
-            // Act
-            Object response = controller.authorize(request);
-
-            // Assert
-            assertThat(response).isInstanceOf(ResponseEntity.class);
-            ResponseEntity<?> responseEntity = (ResponseEntity<?>) response;
-            assertThat(responseEntity.getStatusCodeValue()).isEqualTo(400);
-            Map<?, ?> body = (Map<?, ?>) responseEntity.getBody();
-            assertThat(body.containsKey("error")).isTrue();
-            assertThat(body.containsKey("error_description")).isTrue();
+            // Act & Assert
+            assertThatThrownBy(() -> controller.authorize(request))
+                    .isInstanceOf(OAuth2AuthorizationException.class)
+                    .hasMessageContaining(ERROR_DESCRIPTION);
         }
 
         @Test
-        @DisplayName("Should handle unexpected exceptions gracefully")
-        void shouldHandleUnexpectedExceptionsGracefully() {
+        @DisplayName("Should throw RuntimeException on unexpected errors")
+        void shouldThrowRuntimeExceptionOnUnexpectedErrors() {
             // Arrange
+            RuntimeException exception = new RuntimeException("Unexpected error");
             when(orchestrator.processAuthorization(any(HttpServletRequest.class)))
-                    .thenThrow(new RuntimeException("Unexpected error"));
+                    .thenThrow(exception);
 
-            // Act
-            Object response = controller.authorize(request);
-
-            // Assert
-            assertThat(response).isInstanceOf(ResponseEntity.class);
-            ResponseEntity<?> responseEntity = (ResponseEntity<?>) response;
-            assertThat(responseEntity.getStatusCodeValue()).isEqualTo(500);
-            Map<?, ?> body = (Map<?, ?>) responseEntity.getBody();
-            assertThat(body.containsKey("error")).isTrue();
+            // Act & Assert
+            assertThatThrownBy(() -> controller.authorize(request))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Unexpected error");
         }
     }
 
@@ -208,39 +201,32 @@ class OAuth2AuthorizationControllerTest {
         }
 
         @Test
-        @DisplayName("Should handle OAuth2AuthorizationException on consent submission")
-        void shouldHandleOAuth2AuthorizationExceptionOnConsentSubmission() {
+        @DisplayName("Should throw OAuth2AuthorizationException on consent submission")
+        void shouldThrowOAuth2AuthorizationExceptionOnConsentSubmission() {
             // Arrange
+            OAuth2AuthorizationException exception = new OAuth2AuthorizationException(
+                    OAuth2RfcErrorCode.INVALID_REQUEST, ERROR_DESCRIPTION);
             when(orchestrator.processConsentSubmission(any(HttpServletRequest.class)))
-                    .thenThrow(new OAuth2AuthorizationException(OAuth2RfcErrorCode.INVALID_REQUEST, ERROR_DESCRIPTION));
+                    .thenThrow(exception);
 
-            // Act
-            Object response = controller.handleConsentSubmission(request);
-
-            // Assert
-            assertThat(response).isInstanceOf(ResponseEntity.class);
-            ResponseEntity<?> responseEntity = (ResponseEntity<?>) response;
-            assertThat(responseEntity.getStatusCodeValue()).isEqualTo(400);
-            Map<?, ?> body = (Map<?, ?>) responseEntity.getBody();
-            assertThat(body.containsKey("error")).isTrue();
+            // Act & Assert
+            assertThatThrownBy(() -> controller.handleConsentSubmission(request))
+                    .isInstanceOf(OAuth2AuthorizationException.class)
+                    .hasMessageContaining(ERROR_DESCRIPTION);
         }
 
         @Test
-        @DisplayName("Should handle unexpected exceptions on consent submission")
-        void shouldHandleUnexpectedExceptionsOnConsentSubmission() {
+        @DisplayName("Should throw RuntimeException on consent submission unexpected errors")
+        void shouldThrowRuntimeExceptionOnConsentSubmissionUnexpectedErrors() {
             // Arrange
+            RuntimeException exception = new RuntimeException("Unexpected error");
             when(orchestrator.processConsentSubmission(any(HttpServletRequest.class)))
-                    .thenThrow(new RuntimeException("Unexpected error"));
+                    .thenThrow(exception);
 
-            // Act
-            Object response = controller.handleConsentSubmission(request);
-
-            // Assert
-            assertThat(response).isInstanceOf(ResponseEntity.class);
-            ResponseEntity<?> responseEntity = (ResponseEntity<?>) response;
-            assertThat(responseEntity.getStatusCodeValue()).isEqualTo(500);
-            Map<?, ?> body = (Map<?, ?>) responseEntity.getBody();
-            assertThat(body.containsKey("error")).isTrue();
+            // Act & Assert
+            assertThatThrownBy(() -> controller.handleConsentSubmission(request))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Unexpected error");
         }
     }
 

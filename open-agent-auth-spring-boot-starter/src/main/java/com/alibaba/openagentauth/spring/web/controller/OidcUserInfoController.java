@@ -140,33 +140,25 @@ public class OidcUserInfoController {
      */
     @GetMapping("${open-agent-auth.capabilities.oauth2-server.endpoints.oauth2.userinfo:/oauth2/userinfo}")
     public ResponseEntity<Map<String, Object>> userinfo(HttpServletRequest request) {
-        try {
-            // Step 1: Extract Bearer Token from Authorization header (RFC 6750 Section 2.1)
-            String accessToken = extractBearerToken(request);
-            if (accessToken == null) {
-                logger.warn("UserInfo request failed: missing or malformed Authorization header");
-                return unauthorizedResponse("invalid_request", "Missing or malformed Authorization header");
-            }
-
-            // Step 2: Parse and verify the access token (signed JWT) and extract subject and scope
-            AccessTokenInfo tokenInfo = verifyAccessTokenAndExtractInfo(accessToken);
-            if (tokenInfo == null || tokenInfo.subject() == null) {
-                logger.warn("UserInfo request failed: invalid access token");
-                return unauthorizedResponse("invalid_token", "Access token is invalid or expired");
-            }
-
-            // Step 3: Build UserInfo response with claims filtered by scope (OIDC Core 1.0 Section 5.4)
-            Map<String, Object> userInfo = buildUserInfoResponse(tokenInfo.subject(), tokenInfo.scope());
-
-            logger.info("UserInfo retrieved successfully for user: {}", tokenInfo.subject());
-            return ResponseEntity.ok(userInfo);
-
-        } catch (Exception e) {
-            logger.error("Unexpected error processing UserInfo request: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("server_error", "Internal server error"));
+        // Step 1: Extract Bearer Token from Authorization header (RFC 6750 Section 2.1)
+        String accessToken = extractBearerToken(request);
+        if (accessToken == null) {
+            logger.warn("UserInfo request failed: missing or malformed Authorization header");
+            return unauthorizedResponse("invalid_request", "Missing or malformed Authorization header");
         }
+
+        // Step 2: Parse and verify the access token (signed JWT) and extract subject and scope
+        AccessTokenInfo tokenInfo = verifyAccessTokenAndExtractInfo(accessToken);
+        if (tokenInfo == null || tokenInfo.subject() == null) {
+            logger.warn("UserInfo request failed: invalid access token");
+            return unauthorizedResponse("invalid_token", "Access token is invalid or expired");
+        }
+
+        // Step 3: Build UserInfo response with claims filtered by scope (OIDC Core 1.0 Section 5.4)
+        Map<String, Object> userInfo = buildUserInfoResponse(tokenInfo.subject(), tokenInfo.scope());
+
+        logger.info("UserInfo retrieved successfully for user: {}", tokenInfo.subject());
+        return ResponseEntity.ok(userInfo);
     }
 
     /**
