@@ -36,6 +36,7 @@ import java.util.Base64;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -221,7 +222,7 @@ class OAuth2TokenControllerTest {
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when OAuth2 exception occurs")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when OAuth2 exception occurs")
         void shouldReturnBadRequestWhenOAuth2ExceptionOccurs() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
@@ -229,20 +230,15 @@ class OAuth2TokenControllerTest {
             when(tokenServer.issueToken(any(TokenRequest.class), eq(CLIENT_ID)))
                     .thenThrow(new FrameworkOAuth2TokenException("invalid_grant", "Invalid authorization code"));
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_grant");
-            assertThat(response.getBody().get("error_description")).isEqualTo("Invalid authorization code");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_grant")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Invalid authorization code");
         }
 
         @Test
-        @DisplayName("Should return INTERNAL_SERVER_ERROR when unexpected exception occurs")
+        @DisplayName("Should throw RuntimeException when unexpected exception occurs")
         void shouldReturnInternalServerErrorWhenUnexpectedExceptionOccurs() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
@@ -250,16 +246,10 @@ class OAuth2TokenControllerTest {
             when(tokenServer.issueToken(any(TokenRequest.class), eq(CLIENT_ID)))
                     .thenThrow(new RuntimeException("Unexpected error"));
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("server_error");
-            assertThat(response.getBody().get("error_description")).isEqualTo("Internal server error");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Unexpected error");
         }
     }
 
@@ -268,103 +258,73 @@ class OAuth2TokenControllerTest {
     class ClientAuthenticationTests {
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when Authorization header is missing")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when Authorization header is missing")
         void shouldReturnBadRequestWhenAuthorizationHeaderIsMissing() {
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, null
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Authorization header is missing");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, null))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Authorization header is missing");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when Authorization header has invalid scheme")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when Authorization header has invalid scheme")
         void shouldReturnBadRequestWhenAuthorizationHeaderHasInvalidScheme() {
             // Given
             String invalidAuthHeader = "Bearer " + buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET).substring(6);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, invalidAuthHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Only Basic authentication is supported");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, invalidAuthHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Only Basic authentication is supported");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when Authorization header has invalid Base64")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when Authorization header has invalid Base64")
         void shouldReturnBadRequestWhenAuthorizationHeaderHasInvalidBase64() {
             // Given
             String invalidAuthHeader = "Basic invalid_base64!!!";
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, invalidAuthHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Invalid Base64 encoding");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, invalidAuthHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Invalid Base64 encoding");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when credentials format is invalid")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when credentials format is invalid")
         void shouldReturnBadRequestWhenCredentialsFormatIsInvalid() {
             // Given
             String credentials = "invalid_credentials_without_colon";
             String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             String authHeader = "Basic " + encoded;
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Invalid credentials format");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Invalid credentials format");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when client ID is empty")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when client ID is empty")
         void shouldReturnBadRequestWhenClientIdIsEmpty() {
             // Given
             String credentials = ":" + CLIENT_SECRET;
             String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             String authHeader = "Basic " + encoded;
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Client ID is required");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Client ID is required");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when client is not registered")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when client is not registered")
         void shouldReturnBadRequestWhenClientIsNotRegistered() {
             // Given
             String unregisteredClientId = "unregistered-client";
@@ -372,41 +332,29 @@ class OAuth2TokenControllerTest {
             
             when(clientStore.retrieve(unregisteredClientId)).thenReturn(null);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Client not registered");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Client not registered");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when client secret is invalid")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when client secret is invalid")
         void shouldReturnBadRequestWhenClientSecretIsInvalid() {
             // Given
             String wrongSecret = "wrong-secret";
             String authHeader = buildBasicAuthHeader(CLIENT_ID, wrongSecret);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Invalid client secret");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Invalid client secret");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when client has no secret configured")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when client has no secret configured")
         void shouldReturnBadRequestWhenClientHasNoSecretConfigured() {
             // Given
             String publicClientId = "public-client";
@@ -419,21 +367,15 @@ class OAuth2TokenControllerTest {
                     .build();
             when(clientStore.retrieve(publicClientId)).thenReturn(publicClient);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Client is not configured for authentication");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Client is not configured for authentication");
         }
 
         @Test
-        @DisplayName("Should return BAD_REQUEST when client uses unsupported auth method")
+        @DisplayName("Should throw FrameworkOAuth2TokenException when client uses unsupported auth method")
         void shouldReturnBadRequestWhenClientUsesUnsupportedAuthMethod() {
             // Given
             String jwtAuthClientId = "jwt-auth-client";
@@ -446,17 +388,11 @@ class OAuth2TokenControllerTest {
                     .build();
             when(clientStore.retrieve(jwtAuthClientId)).thenReturn(jwtClient);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("invalid_client");
-            assertThat(response.getBody().get("error_description"))
-                    .isEqualTo("Client authentication failed: Unsupported authentication method: private_key_jwt");
+            // When & Then
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
+                    .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Unsupported authentication method: private_key_jwt");
         }
     }
 
@@ -487,61 +423,37 @@ class OAuth2TokenControllerTest {
         }
 
         @Test
-        @DisplayName("Should return INTERNAL_SERVER_ERROR when code is null")
+        @DisplayName("Should throw IllegalStateException when code is null")
         void shouldHandleTokenRequestWithNullCode() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, null, REDIRECT_URI, authHeader
-            );
-
-            // Then - TokenRequest.Builder throws IllegalStateException for null code
-            // Controller should return 500 INTERNAL_SERVER_ERROR
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("server_error");
-            assertThat(response.getBody().get("error_description")).isEqualTo("Internal server error");
+            // When & Then - TokenRequest.Builder throws IllegalStateException for null code
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, null, REDIRECT_URI, authHeader))
+                    .isInstanceOf(IllegalStateException.class);
         }
 
         @Test
-        @DisplayName("Should return INTERNAL_SERVER_ERROR when redirect URI is null")
+        @DisplayName("Should throw IllegalStateException when redirect URI is null")
         void shouldHandleTokenRequestWithNullRedirectUri() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, null, authHeader
-            );
-
-            // Then - TokenRequest.Builder throws IllegalStateException for null redirectUri
-            // Controller should return 500 INTERNAL_SERVER_ERROR
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("server_error");
-            assertThat(response.getBody().get("error_description")).isEqualTo("Internal server error");
+            // When & Then - TokenRequest.Builder throws IllegalStateException for null redirectUri
+            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, null, authHeader))
+                    .isInstanceOf(IllegalStateException.class);
         }
 
         @Test
-        @DisplayName("Should return INTERNAL_SERVER_ERROR when grant type is not authorization_code")
+        @DisplayName("Should throw IllegalStateException when grant type is not authorization_code")
         void shouldHandleTokenRequestWithDifferentGrantTypes() {
             // Given
             String grantType = "refresh_token";
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
 
-            // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    grantType, CODE, REDIRECT_URI, authHeader
-            );
-
-            // Then - TokenRequest.Builder throws IllegalStateException for non-authorization_code grant type
-            // Controller should return 500 INTERNAL_SERVER_ERROR
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().get("error")).isEqualTo("server_error");
-            assertThat(response.getBody().get("error_description")).isEqualTo("Internal server error");
+            // When & Then - TokenRequest.Builder throws IllegalStateException for non-authorization_code grant type
+            assertThatThrownBy(() -> controller.token(grantType, CODE, REDIRECT_URI, authHeader))
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 }

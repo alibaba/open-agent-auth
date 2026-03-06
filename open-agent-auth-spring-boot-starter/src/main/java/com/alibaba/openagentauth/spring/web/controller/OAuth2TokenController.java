@@ -19,14 +19,12 @@ import com.alibaba.openagentauth.core.model.oauth2.token.TokenRequest;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
-import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenServer;
 import com.alibaba.openagentauth.spring.util.OAuth2ClientAuthenticator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -105,62 +103,43 @@ public class OAuth2TokenController {
             @RequestParam(value = "redirect_uri", required = false) String redirectUri,
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
-        try {
-            logger.info("Received token request with grant_type: {}", grantType);
+        logger.info("Received token request with grant_type: {}", grantType);
 
-            // Step 1: Authenticate client using Basic Auth (RFC 6749 Section 2.3.1)
-            String authenticatedClientId = OAuth2ClientAuthenticator.authenticateWithBasicAuth(
-                    authorizationHeader, clientStore);
-            logger.debug("Client authenticated: {}", authenticatedClientId);
+        // Step 1: Authenticate client using Basic Auth (RFC 6749 Section 2.3.1)
+        String authenticatedClientId = OAuth2ClientAuthenticator.authenticateWithBasicAuth(
+                authorizationHeader, clientStore);
+        logger.debug("Client authenticated: {}", authenticatedClientId);
 
-            // Step 2: Parse the token request
-            TokenRequest request = TokenRequest.builder()
-                    .grantType(grantType)
-                    .code(code)
-                    .redirectUri(redirectUri)
-                    .clientId(authenticatedClientId)
-                    .build();
+        // Step 2: Parse the token request
+        TokenRequest request = TokenRequest.builder()
+                .grantType(grantType)
+                .code(code)
+                .redirectUri(redirectUri)
+                .clientId(authenticatedClientId)
+                .build();
 
-            // Step 3: Submit to token server
-            TokenResponse response = tokenServer.issueToken(request, authenticatedClientId);
+        // Step 3: Submit to token server
+        TokenResponse response = tokenServer.issueToken(request, authenticatedClientId);
 
-            logger.info("Token issued successfully for grant_type: {}", request.getGrantType());
+        logger.info("Token issued successfully for grant_type: {}", request.getGrantType());
 
-            // Step 4: Build response body per RFC 6749 Section 5.1 and OIDC Core 1.0 Section 3.1.3.3
-            Map<String, Object> responseBody = new java.util.HashMap<>();
-            responseBody.put("access_token", response.getAccessToken());
-            responseBody.put("token_type", response.getTokenType());
-            responseBody.put("expires_in", response.getExpiresIn());
-            
-            // Add scope if present
-            if (response.getScope() != null) {
-                responseBody.put("scope", response.getScope());
-            }
+        // Step 4: Build response body per RFC 6749 Section 5.1 and OIDC Core 1.0 Section 3.1.3.3
+        Map<String, Object> responseBody = new java.util.HashMap<>();
+        responseBody.put("access_token", response.getAccessToken());
+        responseBody.put("token_type", response.getTokenType());
+        responseBody.put("expires_in", response.getExpiresIn());
 
-            // Add id_token if present (OIDC Core 1.0 Section 3.1.3.3)
-            if (response.getIdToken() != null) {
-                responseBody.put("id_token", response.getIdToken());
-            }
-            
-            return ResponseEntity.ok(responseBody);
-
-        } catch (FrameworkOAuth2TokenException e) {
-            logger.error("Token request failed: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "error", e.getErrorCode(),
-                            "error_description", e.getErrorDescription()
-                    ));
-        } catch (Exception e) {
-            logger.error("Unexpected error processing token request: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "error", "server_error",
-                            "error_description", "Internal server error"
-                    ));
+        // Add scope if present
+        if (response.getScope() != null) {
+            responseBody.put("scope", response.getScope());
         }
+
+        // Add id_token if present (OIDC Core 1.0 Section 3.1.3.3)
+        if (response.getIdToken() != null) {
+            responseBody.put("id_token", response.getIdToken());
+        }
+
+        return ResponseEntity.ok(responseBody);
     }
 
 }

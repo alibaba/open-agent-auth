@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -377,21 +378,19 @@ class OidcUserInfoControllerTest {
     class ServerErrorHandling {
 
         @Test
-        @DisplayName("Should return 500 when user registry throws exception")
+        @DisplayName("Should throw RuntimeException when user registry throws exception (handled by global exception handler)")
         void shouldReturn500WhenUserRegistryThrowsException() {
             // Arrange
             String accessToken = generateValidAccessToken(SUBJECT);
             when(request.getHeader("Authorization")).thenReturn("Bearer " + accessToken);
             when(userRegistry.getName(SUBJECT)).thenThrow(new RuntimeException("Registry error"));
 
-            // Act
-            ResponseEntity<Map<String, Object>> response = controller.userinfo(request);
-
-            // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody()).containsEntry("error", "server_error");
-            assertThat(response.getBody()).containsEntry("error_description", "Internal server error");
+            // Act & Assert
+            // The RuntimeException propagates up and is handled by the global OAuth2ExceptionHandler
+            // in production. In unit tests without Spring MVC context, it throws directly.
+            assertThatThrownBy(() -> controller.userinfo(request))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Registry error");
         }
     }
 }

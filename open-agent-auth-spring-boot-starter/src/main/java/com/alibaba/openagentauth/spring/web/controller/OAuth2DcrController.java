@@ -15,7 +15,6 @@
  */
 package com.alibaba.openagentauth.spring.web.controller;
 
-import com.alibaba.openagentauth.core.exception.oauth2.DcrException;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrRequest;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
@@ -85,34 +84,15 @@ public class OAuth2DcrController {
     public ResponseEntity<Map<String, Object>> registerClient(
             @RequestBody Map<String, Object> requestBody
     ) {
-        try {
-            logger.info("Received client registration request");
+        logger.info("Received client registration request");
 
-            DcrRequest request = parseDcrRequest(requestBody);
-            DcrResponse response = dcrServer.registerClient(request);
+        DcrRequest request = parseDcrRequest(requestBody);
+        DcrResponse response = dcrServer.registerClient(request);
 
-            logger.info("Client registered successfully: {}", response.getClientId());
+        logger.info("Client registered successfully: {}", response.getClientId());
 
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(buildDcrResponseMap(response));
-
-        } catch (DcrException e) {
-            logger.error("Client registration failed: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "error", e.getErrorCode(),
-                            "error_description", e.getMessage()
-                    ));
-        } catch (Exception e) {
-            logger.error("Unexpected error during client registration: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "error", "server_error",
-                            "error_description", "Internal server error"
-                    ));
-        }
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(buildDcrResponseMap(response));
     }
 
     /**
@@ -130,23 +110,12 @@ public class OAuth2DcrController {
             @PathVariable String clientId,
             String authorization
     ) {
-        try {
-            logger.info("Reading client registration: {}", clientId);
+        logger.info("Reading client registration: {}", clientId);
 
-            String registrationAccessToken = extractRegistrationAccessToken(authorization);
-            DcrResponse response = dcrServer.readClient(clientId, registrationAccessToken);
+        String registrationAccessToken = extractRegistrationAccessToken(authorization);
+        DcrResponse response = dcrServer.readClient(clientId, registrationAccessToken);
 
-            return ResponseEntity.ok(buildDcrResponseMap(response));
-
-        } catch (DcrException e) {
-            logger.error("Failed to read client registration: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "error", e.getErrorCode(),
-                            "error_description", e.getMessage()
-                    ));
-        }
+        return ResponseEntity.ok(buildDcrResponseMap(response));
     }
 
     /**
@@ -166,24 +135,13 @@ public class OAuth2DcrController {
             @RequestBody Map<String, Object> requestBody,
             String authorization
     ) {
-        try {
-            logger.info("Updating client registration: {}", clientId);
+        logger.info("Updating client registration: {}", clientId);
 
-            String registrationAccessToken = extractRegistrationAccessToken(authorization);
-            DcrRequest request = parseDcrRequest(requestBody);
-            DcrResponse response = dcrServer.updateClient(clientId, registrationAccessToken, request);
+        String registrationAccessToken = extractRegistrationAccessToken(authorization);
+        DcrRequest request = parseDcrRequest(requestBody);
+        DcrResponse response = dcrServer.updateClient(clientId, registrationAccessToken, request);
 
-            return ResponseEntity.ok(buildDcrResponseMap(response));
-
-        } catch (DcrException e) {
-            logger.error("Failed to update client registration: {}", e.getMessage(), e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "error", e.getErrorCode(),
-                            "error_description", e.getMessage()
-                    ));
-        }
+        return ResponseEntity.ok(buildDcrResponseMap(response));
     }
 
     /**
@@ -201,19 +159,13 @@ public class OAuth2DcrController {
             @PathVariable String clientId,
             String authorization
     ) {
-        try {
-            logger.info("Deleting client registration: {}", clientId);
+        logger.info("Deleting client registration: {}", clientId);
 
-            String registrationAccessToken = extractRegistrationAccessToken(authorization);
-            dcrServer.deleteClient(clientId, registrationAccessToken);
+        String registrationAccessToken = extractRegistrationAccessToken(authorization);
+        dcrServer.deleteClient(clientId, registrationAccessToken);
 
-            logger.info("Client deleted successfully: {}", clientId);
-            return ResponseEntity.noContent().build();
-
-        } catch (DcrException e) {
-            logger.error("Failed to delete client registration: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
+        logger.info("Client deleted successfully: {}", clientId);
+        return ResponseEntity.noContent().build();
     }
 
     /**

@@ -15,7 +15,6 @@
  */
 package com.alibaba.openagentauth.spring.web.controller;
 
-import com.alibaba.openagentauth.core.exception.oauth2.OAuth2AuthorizationException;
 import com.alibaba.openagentauth.framework.web.authorization.AuthorizationOrchestrator;
 import com.alibaba.openagentauth.framework.web.authorization.AuthorizationResult;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -111,28 +111,10 @@ public class OAuth2AuthorizationController {
      */
     @GetMapping("${open-agent-auth.capabilities.oauth2-server.endpoints.oauth2.authorize:/oauth2/authorize}")
     public Object authorize(HttpServletRequest request) {
-        try {
-
-            // Process authorization request
-            logger.info("Authorization request received: {}", request.getRequestURI());
-            AuthorizationResult result = orchestrator.processAuthorization(request);
-            return handleAuthorizationResult(result);
-
-        } catch (OAuth2AuthorizationException e) {
-            logger.error("Authorization failed: {}", e.getMessage(), e);
-            Map<String, String> errorBody = Map.of(
-                "error", e.getErrorCode(),
-                "error_description", e.getMessage()
-            );
-            return ResponseEntity.badRequest().body(errorBody);
-        } catch (Exception e) {
-            logger.error("Unexpected error during authorization: {}", e.getMessage(), e);
-            Map<String, String> serverError = Map.of(
-                "error", "server_error",
-                "error_description", "Internal server error"
-            );
-            return ResponseEntity.internalServerError().body(serverError);
-        }
+        // Process authorization request
+        logger.info("Authorization request received: {}", request.getRequestURI());
+        AuthorizationResult result = orchestrator.processAuthorization(request);
+        return handleAuthorizationResult(result);
     }
 
     /**
@@ -147,25 +129,9 @@ public class OAuth2AuthorizationController {
      */
     @PostMapping("${open-agent-auth.capabilities.oauth2-server.endpoints.oauth2.authorize:/oauth2/authorize}")
     public Object handleConsentSubmission(HttpServletRequest request) {
-        try {
-            logger.info("Consent submission received: {}", request.getRequestURI());
-            AuthorizationResult result = orchestrator.processConsentSubmission(request);
-            return handleAuthorizationResult(result);
-        } catch (OAuth2AuthorizationException e) {
-            logger.error("Consent submission failed: {}", e.getMessage(), e);
-            Map<String, String> errorBody = Map.of(
-                "error", e.getErrorCode(),
-                "error_description", e.getMessage()
-            );
-            return ResponseEntity.badRequest().body(errorBody);
-        } catch (Exception e) {
-            logger.error("Unexpected error during consent submission: {}", e.getMessage(), e);
-            Map<String, String> serverError = Map.of(
-                "error", "server_error",
-                "error_description", "Internal server error"
-            );
-            return ResponseEntity.internalServerError().body(serverError);
-        }
+        logger.info("Consent submission received: {}", request.getRequestURI());
+        AuthorizationResult result = orchestrator.processConsentSubmission(request);
+        return handleAuthorizationResult(result);
     }
 
     /**
@@ -178,10 +144,11 @@ public class OAuth2AuthorizationController {
         return switch (result.getType()) {
             case REDIRECT -> new RedirectView(result.getRedirectUri());
             case ERROR -> {
-                Map<String, String> errorBody = Map.of(
-                    "error", result.getError(),
-                    "error_description", result.getErrorDescription()
-                );
+                Map<String, String> errorBody = new HashMap<>();
+                errorBody.put("error", result.getError());
+                if (result.getErrorDescription() != null) {
+                    errorBody.put("error_description", result.getErrorDescription());
+                }
                 yield ResponseEntity.status(result.getHttpStatus()).body(errorBody);
             }
             case CONSENT_PAGE -> result.getConsentPage();

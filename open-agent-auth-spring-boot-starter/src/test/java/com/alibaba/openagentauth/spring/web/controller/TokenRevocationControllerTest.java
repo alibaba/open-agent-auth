@@ -27,9 +27,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.util.Map;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,7 +60,7 @@ class TokenRevocationControllerTest {
             when(request.getParameter("token")).thenReturn("valid-access-token");
             when(request.getParameter("token_type_hint")).thenReturn("access_token");
 
-            ResponseEntity<Map<String, Object>> response = controller.revoke(request);
+            ResponseEntity<Void> response = controller.revoke(request);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             verify(tokenRevocationService).revoke("valid-access-token");
@@ -73,7 +72,7 @@ class TokenRevocationControllerTest {
             when(request.getParameter("token")).thenReturn("valid-access-token");
             when(request.getParameter("token_type_hint")).thenReturn(null);
 
-            ResponseEntity<Map<String, Object>> response = controller.revoke(request);
+            ResponseEntity<Void> response = controller.revoke(request);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             verify(tokenRevocationService).revoke("valid-access-token");
@@ -85,7 +84,7 @@ class TokenRevocationControllerTest {
             when(request.getParameter("token")).thenReturn("already-revoked-token");
             when(request.getParameter("token_type_hint")).thenReturn(null);
 
-            ResponseEntity<Map<String, Object>> response = controller.revoke(request);
+            ResponseEntity<Void> response = controller.revoke(request);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         }
@@ -96,49 +95,45 @@ class TokenRevocationControllerTest {
     class ErrorScenarios {
 
         @Test
-        @DisplayName("Should return 400 when token parameter is missing")
-        void shouldReturn400WhenTokenMissing() {
+        @DisplayName("Should throw IllegalArgumentException when token parameter is missing")
+        void shouldThrowWhenTokenMissing() {
             when(request.getParameter("token")).thenReturn(null);
 
-            ResponseEntity<Map<String, Object>> response = controller.revoke(request);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).containsEntry("error", "invalid_request");
+            assertThatThrownBy(() -> controller.revoke(request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Token parameter is required");
         }
 
         @Test
-        @DisplayName("Should return 400 when token parameter is empty")
-        void shouldReturn400WhenTokenEmpty() {
+        @DisplayName("Should throw IllegalArgumentException when token parameter is empty")
+        void shouldThrowWhenTokenEmpty() {
             when(request.getParameter("token")).thenReturn("");
 
-            ResponseEntity<Map<String, Object>> response = controller.revoke(request);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).containsEntry("error", "invalid_request");
+            assertThatThrownBy(() -> controller.revoke(request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Token parameter is required");
         }
 
         @Test
-        @DisplayName("Should return 400 when token parameter is blank")
-        void shouldReturn400WhenTokenBlank() {
+        @DisplayName("Should throw IllegalArgumentException when token parameter is blank")
+        void shouldThrowWhenTokenBlank() {
             when(request.getParameter("token")).thenReturn("   ");
 
-            ResponseEntity<Map<String, Object>> response = controller.revoke(request);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).containsEntry("error", "invalid_request");
+            assertThatThrownBy(() -> controller.revoke(request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Token parameter is required");
         }
 
         @Test
-        @DisplayName("Should return 500 when service throws exception")
-        void shouldReturn500WhenServiceThrowsException() {
+        @DisplayName("Should propagate RuntimeException when service throws exception")
+        void shouldPropagateExceptionWhenServiceThrows() {
             when(request.getParameter("token")).thenReturn("valid-token");
             when(request.getParameter("token_type_hint")).thenReturn(null);
             doThrow(new RuntimeException("Storage error")).when(tokenRevocationService).revoke("valid-token");
 
-            ResponseEntity<Map<String, Object>> response = controller.revoke(request);
-
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(response.getBody()).containsEntry("error", "server_error");
+            assertThatThrownBy(() -> controller.revoke(request))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Storage error");
         }
     }
 }
