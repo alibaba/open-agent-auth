@@ -354,6 +354,107 @@
             color: var(--color-text-secondary);
         }
 
+        .user-prompt-quote {
+            position: relative;
+            padding: var(--space-4) var(--space-5);
+            background: linear-gradient(135deg, var(--color-primary-bg-soft), transparent 60%);
+            border-left: 3px solid var(--color-primary);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin-bottom: var(--space-2);
+        }
+
+        .user-prompt-quote::before {
+            content: '\201C';
+            position: absolute;
+            top: -4px;
+            left: 10px;
+            font-size: 2.5rem;
+            color: var(--color-primary-light);
+            font-family: Georgia, 'Times New Roman', serif;
+            line-height: 1;
+            opacity: 0.6;
+        }
+
+        .user-prompt-text {
+            color: var(--color-text-primary);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+            line-height: 1.7;
+            font-style: italic;
+            padding-left: var(--space-4);
+        }
+
+        .user-prompt-meta {
+            display: flex;
+            gap: var(--space-4);
+            margin-top: var(--space-2);
+            padding-left: var(--space-4);
+            font-size: var(--font-size-xs);
+            color: var(--color-text-tertiary);
+        }
+
+        .user-prompt-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .context-flow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-2);
+        }
+
+        .context-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--color-surface-warm);
+            border: 1px solid var(--color-border);
+            padding: 5px 12px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+            font-weight: var(--font-weight-medium);
+            transition: all var(--transition-fast);
+        }
+
+        .context-chip i {
+            color: var(--color-primary-light);
+            font-size: 11px;
+        }
+
+        .context-chip .chip-label {
+            color: var(--color-text-tertiary);
+            font-weight: normal;
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: baseline;
+            padding: 6px 0;
+            font-size: var(--font-size-sm);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .meta-row:last-child {
+            border-bottom: none;
+        }
+
+        .meta-row .meta-key {
+            color: var(--color-text-tertiary);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+            min-width: 100px;
+            flex-shrink: 0;
+        }
+
+        .meta-row .meta-val {
+            color: var(--color-text-primary);
+            font-weight: var(--font-weight-medium);
+            word-break: break-word;
+        }
+
         .collapsible {
             margin-top: var(--space-3);
         }
@@ -607,11 +708,27 @@
                     
                     <div class="auth-section" th:if="${parClaims.evidence != null and parClaims.evidence.sourcePromptCredential != null}">
                         <div class="auth-section-title">
-                            <i class="bi bi-file-text"></i> User Original Input (JWT-VC)
+                            <i class="bi bi-chat-quote"></i> User Original Input
                         </div>
+                        
+                        <!-- Human-readable original prompt with quotation styling -->
+                        <div th:if="${originalUserPrompt != null}">
+                            <div class="user-prompt-quote">
+                                <div class="user-prompt-text" th:text="${originalUserPrompt}">Buy something cheap on Nov 11 night</div>
+                                <div class="user-prompt-meta">
+                                    <span th:if="${inputChannel != null}"><i class="bi bi-broadcast"></i> <span th:text="${inputChannel}">voice</span></span>
+                                    <span th:if="${inputTimestamp != null}"><i class="bi bi-clock"></i> <span th:text="${inputTimestamp}">Nov 11, 2025, 10:30 AM UTC</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Fallback: show raw JWT-VC if decoding failed -->
+                        <div th:if="${originalUserPrompt == null}" class="jwt-block" th:text="${parClaims.evidence.sourcePromptCredential}">jwt-vc</div>
+                        
+                        <!-- Collapsible raw JWT-VC for technical verification -->
                         <div class="collapsible">
                             <div class="collapsible-header" onclick="toggleCollapse(this)">
-                                <span><i class="bi bi-key"></i> Source Prompt Credential</span>
+                                <span><i class="bi bi-key"></i> Source Prompt Credential (JWT-VC)</span>
                                 <span class="arrow"><i class="bi bi-chevron-down"></i></span>
                             </div>
                             <div class="collapsible-content">
@@ -620,66 +737,59 @@
                         </div>
                     </div>
                     
+                    <!-- Unified Execution Context: merges request context, user, and agent info into a compact chip-flow -->
                     <div class="auth-section" th:if="${parClaims.context != null}">
                         <div class="auth-section-title">
-                            <i class="bi bi-globe"></i> Request Context
+                            <i class="bi bi-diagram-3"></i> Execution Context
                         </div>
-                        <div class="info-grid">
-                            <div class="info-item" th:if="${parClaims.context.channel != null}">
-                                <div class="info-label">Channel</div>
-                                <div class="info-value" th:text="${parClaims.context.channel}">web</div>
+                        <div class="context-flow">
+                            <div class="context-chip" th:if="${parClaims.context.channel != null}">
+                                <i class="bi bi-broadcast"></i>
+                                <span class="chip-label">Channel</span>
+                                <span th:text="${parClaims.context.channel}">web</span>
                             </div>
-                            <div class="info-item" th:if="${parClaims.context.language != null}">
-                                <div class="info-label">Language</div>
-                                <div class="info-value" th:text="${parClaims.context.language}">en-US</div>
+                            <div class="context-chip" th:if="${parClaims.context.language != null}">
+                                <i class="bi bi-translate"></i>
+                                <span class="chip-label">Lang</span>
+                                <span th:text="${parClaims.context.language}">en-US</span>
                             </div>
-                            <div class="info-item" th:if="${parClaims.context.deviceFingerprint != null}">
-                                <div class="info-label">Device Fingerprint</div>
-                                <div class="info-value" th:text="${parClaims.context.deviceFingerprint}">device-id</div>
+                            <div class="context-chip" th:if="${parClaims.context.user != null and parClaims.context.user.id != null}">
+                                <i class="bi bi-person"></i>
+                                <span class="chip-label">User</span>
+                                <span th:text="${parClaims.context.user.id}">user-id</span>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="auth-section" th:if="${parClaims.context != null and parClaims.context.user != null}">
-                        <div class="auth-section-title">
-                            <i class="bi bi-person"></i> User Information
-                        </div>
-                        <div class="info-grid">
-                            <div class="info-item" th:if="${parClaims.context.user.id != null}">
-                                <div class="info-label">User ID</div>
-                                <div class="info-value" th:text="${parClaims.context.user.id}">user-id</div>
+                            <div class="context-chip" th:if="${parClaims.context.agent != null and parClaims.context.agent.instance != null}">
+                                <i class="bi bi-robot"></i>
+                                <span class="chip-label">Agent</span>
+                                <span th:text="${parClaims.context.agent.instance}">agent-instance</span>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="auth-section" th:if="${parClaims.context != null and parClaims.context.agent != null}">
-                        <div class="auth-section-title">
-                            <i class="bi bi-robot"></i> Agent Information
-                        </div>
-                        <div class="info-grid">
-                            <div class="info-item" th:if="${parClaims.context.agent.instance != null}">
-                                <div class="info-label">Instance</div>
-                                <div class="info-value" th:text="${parClaims.context.agent.instance}">agent-instance</div>
+                            <div class="context-chip" th:if="${parClaims.context.agent != null and parClaims.context.agent.platform != null}">
+                                <i class="bi bi-layers"></i>
+                                <span class="chip-label">Platform</span>
+                                <span th:text="${parClaims.context.agent.platform}">platform</span>
                             </div>
-                            <div class="info-item" th:if="${parClaims.context.agent.platform != null}">
-                                <div class="info-label">Platform</div>
-                                <div class="info-value" th:text="${parClaims.context.agent.platform}">platform</div>
+                            <div class="context-chip" th:if="${parClaims.context.agent != null and parClaims.context.agent.client != null}">
+                                <i class="bi bi-app"></i>
+                                <span class="chip-label">Client</span>
+                                <span th:text="${parClaims.context.agent.client}">client</span>
                             </div>
-                            <div class="info-item" th:if="${parClaims.context.agent.client != null}">
-                                <div class="info-label">Client</div>
-                                <div class="info-value" th:text="${parClaims.context.agent.client}">client</div>
+                            <div class="context-chip" th:if="${parClaims.context.deviceFingerprint != null}">
+                                <i class="bi bi-fingerprint"></i>
+                                <span class="chip-label">Device</span>
+                                <span th:text="${parClaims.context.deviceFingerprint}">device-id</span>
                             </div>
                         </div>
                     </div>
                     
+                    <!-- Identity Binding: collapsible JWT tokens -->
                     <div class="auth-section" th:if="${parClaims.agentUserBindingProposal != null}">
                         <div class="auth-section-title">
-                            <i class="bi bi-link-45deg"></i> Identity Binding Proposal
+                            <i class="bi bi-link-45deg"></i> Identity Binding
                         </div>
                         
                         <div class="collapsible" th:if="${parClaims.agentUserBindingProposal.userIdentityToken != null}">
                             <div class="collapsible-header" onclick="toggleCollapse(this)">
-                                <span><i class="bi bi-key"></i> User Identity Token (JWT)</span>
+                                <span><i class="bi bi-key"></i> User Identity Token</span>
                                 <span class="arrow"><i class="bi bi-chevron-down"></i></span>
                             </div>
                             <div class="collapsible-content">
@@ -689,7 +799,7 @@
                         
                         <div class="collapsible" th:if="${parClaims.agentUserBindingProposal.agentWorkloadToken != null}">
                             <div class="collapsible-header" onclick="toggleCollapse(this)">
-                                <span><i class="bi bi-lightning"></i> Agent Workload Token (JWT)</span>
+                                <span><i class="bi bi-lightning"></i> Agent Workload Token</span>
                                 <span class="arrow"><i class="bi bi-chevron-down"></i></span>
                             </div>
                             <div class="collapsible-content">
@@ -697,29 +807,31 @@
                             </div>
                         </div>
                         
-                        <div class="info-item" th:if="${parClaims.agentUserBindingProposal.deviceFingerprint != null}">
-                            <div class="info-label">Device Fingerprint</div>
-                            <div class="info-value" th:text="${parClaims.agentUserBindingProposal.deviceFingerprint}">device-fingerprint</div>
+                        <div class="context-flow" style="margin-top: var(--space-3);" th:if="${parClaims.agentUserBindingProposal.deviceFingerprint != null}">
+                            <div class="context-chip">
+                                <i class="bi bi-fingerprint"></i>
+                                <span class="chip-label">Device</span>
+                                <span th:text="${parClaims.agentUserBindingProposal.deviceFingerprint}">device-fingerprint</span>
+                            </div>
                         </div>
                     </div>
                     
+                    <!-- Request Metadata: compact key-value rows -->
                     <div class="auth-section" style="margin-bottom: 0;">
                         <div class="auth-section-title">
                             <i class="bi bi-info-circle"></i> Request Metadata
                         </div>
-                        <div class="info-grid">
-                            <div class="info-item" th:if="${parClaims.issuer != null}">
-                                <div class="info-label">Issuer</div>
-                                <div class="info-value" th:text="${parClaims.issuer}">issuer</div>
-                            </div>
-                            <div class="info-item" th:if="${parClaims.subject != null}">
-                                <div class="info-label">Subject</div>
-                                <div class="info-value" th:text="${parClaims.subject}">subject</div>
-                            </div>
-                            <div class="info-item" th:if="${parClaims.jwtId != null}">
-                                <div class="info-label">Request ID</div>
-                                <div class="info-value" th:text="${parClaims.jwtId}">jti</div>
-                            </div>
+                        <div th:if="${parClaims.issuer != null}" class="meta-row">
+                            <span class="meta-key">Issuer</span>
+                            <span class="meta-val" th:text="${parClaims.issuer}">issuer</span>
+                        </div>
+                        <div th:if="${parClaims.subject != null}" class="meta-row">
+                            <span class="meta-key">Subject</span>
+                            <span class="meta-val" th:text="${parClaims.subject}">subject</span>
+                        </div>
+                        <div th:if="${parClaims.jwtId != null}" class="meta-row">
+                            <span class="meta-key">Request ID</span>
+                            <span class="meta-val" th:text="${parClaims.jwtId}">jti</span>
                         </div>
                     </div>
                 </div>

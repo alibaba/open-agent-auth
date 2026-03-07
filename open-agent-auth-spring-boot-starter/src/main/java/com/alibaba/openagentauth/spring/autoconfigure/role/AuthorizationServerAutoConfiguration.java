@@ -54,6 +54,8 @@ import com.alibaba.openagentauth.core.protocol.oauth2.token.server.TokenGenerato
 import com.alibaba.openagentauth.core.protocol.vc.DefaultVcVerifier;
 import com.alibaba.openagentauth.core.protocol.vc.VcVerificationPolicy;
 import com.alibaba.openagentauth.core.protocol.vc.VcVerifier;
+import com.alibaba.openagentauth.core.audit.api.OperationTextRenderer;
+import com.alibaba.openagentauth.core.audit.impl.PatternBasedOperationTextRenderer;
 import com.alibaba.openagentauth.core.protocol.vc.jwe.PromptDecryptionService;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.core.token.aoat.AoatGenerator;
@@ -507,12 +509,28 @@ public class AuthorizationServerAutoConfiguration {
         private static final Logger logger = LoggerFactory.getLogger(AuthorizationCoreConfiguration.class);
 
         @Bean
+        @ConditionalOnMissingBean(OperationTextRenderer.class)
+        public OperationTextRenderer operationTextRenderer() {
+            logger.info("Creating default PatternBasedOperationTextRenderer bean");
+            return new PatternBasedOperationTextRenderer();
+        }
+
+        @Bean
         @ConditionalOnMissingBean
-        public AoatTokenGenerator aoatTokenGenerator(AoatGenerator aoatGenerator, VcVerifier vcVerifier, PolicyRegistry policyRegistry, BindingInstanceStore bindingInstanceStore, PromptDecryptionService promptDecryptionService, OpenAgentAuthProperties openAgentAuthProperties) {
+        public AoatTokenGenerator aoatTokenGenerator(
+                AoatGenerator aoatGenerator,
+                VcVerifier vcVerifier,
+                PolicyRegistry policyRegistry,
+                BindingInstanceStore bindingInstanceStore,
+                PromptDecryptionService promptDecryptionService,
+                OperationTextRenderer operationTextRenderer,
+                OpenAgentAuthProperties openAgentAuthProperties) {
             logger.info("Creating AoatTokenGenerator bean");
             var tokenProps = openAgentAuthProperties.getCapabilities().getOAuth2Server().getToken();
             long tokenExpiration = tokenProps.getAccessTokenExpiry();
-            return new DefaultAoatTokenGenerator(aoatGenerator, vcVerifier, policyRegistry, bindingInstanceStore, promptDecryptionService, tokenExpiration);
+            return new DefaultAoatTokenGenerator(
+                    aoatGenerator, vcVerifier, policyRegistry, bindingInstanceStore,
+                    promptDecryptionService, operationTextRenderer, tokenExpiration);
         }
 
         @Bean
@@ -593,9 +611,9 @@ public class AuthorizationServerAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        public ConsentPageProvider consentPageProvider() {
+        public ConsentPageProvider consentPageProvider(PromptDecryptionService promptDecryptionService) {
             logger.info("Creating ConsentPageProvider bean with DefaultConsentPageProvider for Authorization Server");
-            return new DefaultConsentPageProvider(CONSENT_TEMPLATE_AOA);
+            return new DefaultConsentPageProvider(CONSENT_TEMPLATE_AOA, "Authorization Server", promptDecryptionService);
         }
     }
 }

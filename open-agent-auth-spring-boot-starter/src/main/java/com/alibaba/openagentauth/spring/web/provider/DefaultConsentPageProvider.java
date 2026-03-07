@@ -17,13 +17,22 @@ package com.alibaba.openagentauth.spring.web.provider;
 
 import com.alibaba.openagentauth.core.model.context.OperationRequestContext;
 import com.alibaba.openagentauth.core.model.evidence.Evidence;
+import com.alibaba.openagentauth.core.model.evidence.VerifiableCredential;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParJwtClaims;
 import com.alibaba.openagentauth.core.model.proposal.AgentUserBindingProposal;
+import com.alibaba.openagentauth.core.protocol.vc.jwe.PromptDecryptionService;
+import com.alibaba.openagentauth.core.protocol.vc.jwt.JwtVcDecoder;
 import com.alibaba.openagentauth.framework.web.provider.ConsentPageProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.ModelAndView;
+
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 /**
  * Default implementation of {@link ConsentPageProvider}.
@@ -78,10 +87,19 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
     private final String displayName;
 
     /**
+     * Service for decrypting JWE-encrypted user prompts.
+     * <p>
+     * When the source prompt credential is JWE-encrypted, this service decrypts it
+     * so the consent page can display the human-readable original user input.
+     * </p>
+     */
+    private final PromptDecryptionService promptDecryptionService;
+
+    /**
      * Creates a new DefaultConsentPageProvider with default view name.
      */
     public DefaultConsentPageProvider() {
-        this(DEFAULT_VIEW_NAME, "Identity Provider");
+        this(DEFAULT_VIEW_NAME, "Identity Provider", null);
     }
 
     /**
@@ -90,7 +108,7 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
      * @param viewName the Thymeleaf template view name
      */
     public DefaultConsentPageProvider(String viewName) {
-        this(viewName, "Identity Provider");
+        this(viewName, "Identity Provider", null);
     }
 
     /**
@@ -100,8 +118,22 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
      * @param displayName the display name for the IDP
      */
     public DefaultConsentPageProvider(String viewName, String displayName) {
+        this(viewName, displayName, null);
+    }
+
+    /**
+     * Creates a new DefaultConsentPageProvider with custom view name, display name,
+     * and prompt decryption service.
+     *
+     * @param viewName the Thymeleaf template view name
+     * @param displayName the display name for the IDP
+     * @param promptDecryptionService the service for decrypting JWE-encrypted prompts (nullable)
+     */
+    public DefaultConsentPageProvider(String viewName, String displayName,
+                                      PromptDecryptionService promptDecryptionService) {
         this.viewName = viewName;
         this.displayName = displayName;
+        this.promptDecryptionService = promptDecryptionService;
     }
 
     @Override
@@ -151,6 +183,9 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
             if (evidence != null) {
                 mv.addObject("evidence", evidence);
                 mv.addObject("sourcePromptCredential", evidence.getSourcePromptCredential());
+                
+                // Decode JWT-VC to extract human-readable original user input
+                decodeAndAddUserInput(mv, evidence.getSourcePromptCredential());
             }
 
             String operationProposal = parClaims.getOperationProposal();
@@ -182,6 +217,148 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
 
         logger.info("User consent action: {}, approved: {}", action, approved);
         return approved;
+    }
+
+    /**
+     * Decodes the JWT-VC source prompt credential and adds human-readable user input to the model.
+     * <p>
+     * According to draft-liu-agent-operation-authorization-01 Section 3, the evidence field
+     * contains a JWT-VC with the user's original natural-language instruction. The prompt
+     * inside the JWT-VC's {@code credentialSubject} may itself be JWE-encrypted for privacy
+     * protection. This method handles two layers of protection:
+     * </p>
+     * <ol>
+     *   <li><b>Outer layer:</b> The entire {@code sourcePromptCredential} may be JWE-wrapped.
+     *       If so, it is decrypted first to obtain the signed JWT-VC.</li>
+     *   <li><b>Inner layer:</b> The {@code prompt} field inside the JWT-VC's credential subject
+     *       may be JWE-encrypted. After JWT-VC decoding, the prompt is decrypted to obtain
+     *       the human-readable text.</li>
+     * </ol>
+     *
+     * @param modelAndView the ModelAndView to add decoded information to
+     * @param sourcePromptCredential the JWT-VC string (possibly JWE-encrypted)
+     */
+    private void decodeAndAddUserInput(ModelAndView modelAndView, String sourcePromptCredential) {
+        if (sourcePromptCredential == null || sourcePromptCredential.isEmpty()) {
+            return;
+        }
+
+        try {
+            // The sourcePromptCredential may be either a JWE-encrypted JWT-VC or a plain JWT-VC.
+            // Attempt outer-level decryption first (handles JWE-wrapped JWT-VC).
+            String jwtVcString = tryDecryptOrPassthrough(sourcePromptCredential);
+
+            // If the string is still in JWE format (5 dot-separated segments) after
+            // decryption attempt, it cannot be parsed as a signed JWT — skip decoding.
+            if (isJweFormat(jwtVcString)) {
+                logger.warn("Source prompt credential is JWE-encrypted and could not be decrypted. "
+                        + "The raw credential will be shown on the consent page.");
+                return;
+            }
+
+            VerifiableCredential verifiableCredential = JwtVcDecoder.decode(jwtVcString);
+            populateModelFromCredential(modelAndView, verifiableCredential);
+            logger.debug("Successfully decoded JWT-VC for consent page display");
+        } catch (Exception e) {
+            logger.warn("Failed to decode source prompt credential for consent page display. "
+                    + "The raw JWT-VC will still be shown. Error: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Checks whether the given string is in JWE compact serialization format.
+     * <p>
+     * JWE compact serialization consists of 5 Base64url-encoded parts separated by dots:
+     * {@code header.encryptedKey.iv.ciphertext.tag}
+     * </p>
+     *
+     * @param token the token string to check
+     * @return true if the string has exactly 5 dot-separated segments (JWE format)
+     */
+    private boolean isJweFormat(String token) {
+        if (token == null || token.isEmpty()) {
+            return false;
+        }
+        long dotCount = token.chars().filter(ch -> ch == '.').count();
+        return dotCount == 4;
+    }
+
+    /**
+     * Attempts to decrypt the credential string. If decryption fails (e.g., missing JWK),
+     * returns the original string unchanged so that direct JWT parsing can be attempted.
+     *
+     * @param sourcePromptCredential the credential string (JWE or plain JWT)
+     * @return the decrypted JWT string, or the original string if decryption is unavailable or fails
+     */
+    private String tryDecryptOrPassthrough(String sourcePromptCredential) {
+        if (promptDecryptionService == null) {
+            return sourcePromptCredential;
+        }
+        try {
+            return promptDecryptionService.decryptPrompt(sourcePromptCredential);
+        } catch (Exception decryptionError) {
+            logger.debug("JWE decryption failed ({}), attempting direct JWT parsing",
+                    decryptionError.getMessage());
+            return sourcePromptCredential;
+        }
+    }
+
+    /**
+     * Populates the ModelAndView with human-readable fields extracted from the decoded credential.
+     *
+     * @param modelAndView the ModelAndView to populate
+     * @param credential the decoded VerifiableCredential
+     */
+    private void populateModelFromCredential(ModelAndView modelAndView, VerifiableCredential credential) {
+        modelAndView.addObject("decodedCredential", credential);
+
+        if (credential.getCredentialSubject() == null) {
+            return;
+        }
+
+        String originalPrompt = credential.getCredentialSubject().getPrompt();
+        if (originalPrompt != null && !originalPrompt.isEmpty()) {
+            // The prompt field inside the JWT-VC may itself be JWE-encrypted.
+            // Attempt decryption so the consent page shows the human-readable text.
+            String decryptedPrompt = tryDecryptOrPassthrough(originalPrompt);
+            if (isJweFormat(decryptedPrompt)) {
+                logger.warn("Prompt inside JWT-VC credential is JWE-encrypted and could not be decrypted.");
+            } else {
+                modelAndView.addObject("originalUserPrompt", decryptedPrompt);
+            }
+        }
+
+        String inputChannel = credential.getCredentialSubject().getChannel();
+        if (inputChannel != null && !inputChannel.isEmpty()) {
+            modelAndView.addObject("inputChannel", inputChannel);
+        }
+
+        String inputTimestamp = credential.getCredentialSubject().getTimestamp();
+        if (inputTimestamp != null && !inputTimestamp.isEmpty()) {
+            modelAndView.addObject("inputTimestamp", formatTimestamp(inputTimestamp));
+        }
+    }
+
+    /**
+     * Formats an ISO 8601 UTC timestamp into a human-readable local date-time string.
+     * <p>
+     * Converts timestamps like {@code 2025-11-11T10:30:00Z} into {@code 2025-11-11 10:30:00 UTC}.
+     * If parsing fails, returns the original string unchanged.
+     * </p>
+     *
+     * @param isoTimestamp the ISO 8601 timestamp string
+     * @return the formatted timestamp, or the original string if parsing fails
+     */
+    private String formatTimestamp(String isoTimestamp) {
+        try {
+            Instant instant = Instant.parse(isoTimestamp);
+            ZonedDateTime zonedDateTime = instant.atZone(ZoneOffset.UTC);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy, h:mm a 'UTC'", Locale.ENGLISH);
+            return zonedDateTime.format(formatter);
+        } catch (Exception e) {
+            logger.debug("Failed to parse timestamp '{}', using original value", isoTimestamp);
+            return isoTimestamp;
+        }
     }
 
     @Override
