@@ -158,8 +158,8 @@ class OAuth2ParControllerTest {
             // When
             ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
 
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            // Then (RFC 9126 Section 2.2 requires 201 Created)
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().get("request_uri")).isEqualTo(REQUEST_URI);
             assertThat(response.getBody().get("expires_in")).isEqualTo(EXPIRES_IN);
@@ -184,8 +184,8 @@ class OAuth2ParControllerTest {
             // When
             ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
 
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            // Then (RFC 9126 Section 2.2 requires 201 Created)
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().get("request_uri")).isEqualTo(REQUEST_URI);
             assertThat(response.getBody().get("expires_in")).isEqualTo(EXPIRES_IN);
@@ -390,8 +390,8 @@ class OAuth2ParControllerTest {
             // When
             ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
 
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            // Then (RFC 9126 Section 2.2 requires 201 Created)
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         }
 
         @Test
@@ -413,8 +413,8 @@ class OAuth2ParControllerTest {
             // When
             ResponseEntity<Map<String, Object>> response = controller.par(requestBody, authHeader);
 
-            // Then
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            // Then (RFC 9126 Section 2.2 requires 201 Created)
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         }
     }
 }
