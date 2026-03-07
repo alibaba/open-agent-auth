@@ -38,14 +38,16 @@ import com.alibaba.openagentauth.core.policy.api.PolicyRegistry;
 import com.alibaba.openagentauth.core.protocol.vc.VcVerifier;
 import com.alibaba.openagentauth.core.token.aoat.AoatGenerator;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
+import com.alibaba.openagentauth.core.audit.model.OperationTextRenderContext;
+import com.alibaba.openagentauth.core.audit.model.OperationTextRenderResult;
+import com.alibaba.openagentauth.core.audit.api.OperationTextRenderer;
+import com.alibaba.openagentauth.core.audit.impl.PatternBasedOperationTextRenderer;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -92,12 +94,27 @@ public class DefaultAoatTokenGenerator implements AoatTokenGenerator {
     private final PromptDecryptionService promptDecryptionService;
 
     /**
+     * Strategy for rendering human-readable operation text from agent operation proposals.
+     * <p>
+     * This follows the Strategy Pattern (GoF) to decouple the rendering logic from
+     * the token generation process, enabling pluggable rendering strategies such as
+     * pattern-based, LLM-based, or custom implementations.
+     * </p>
+     *
+     * @see OperationTextRenderer
+     */
+    private final OperationTextRenderer operationTextRenderer;
+
+    /**
      * Default token expiration time in seconds.
      */
     private final long defaultTokenExpirationSeconds;
 
     /**
-     * Creates a new DefaultAoatTokenGenerator.
+     * Creates a new DefaultAoatTokenGenerator with minimal dependencies.
+     * <p>
+     * Uses the default {@link PatternBasedOperationTextRenderer} for rendering operation text.
+     * </p>
      *
      * @param aoatGenerator the AOAT generator
      * @param vcVerifier the VC verifier
@@ -115,21 +132,16 @@ public class DefaultAoatTokenGenerator implements AoatTokenGenerator {
         this.policyRegistry = Objects.requireNonNull(policyRegistry, "Policy registry cannot be null");
         this.bindingInstanceStore = null;
         this.promptDecryptionService = null;
+        this.operationTextRenderer = new PatternBasedOperationTextRenderer();
         this.defaultTokenExpirationSeconds = defaultTokenExpirationSeconds;
         logger.info("DefaultAoatTokenGenerator initialized with expiration: {} seconds", defaultTokenExpirationSeconds);
     }
 
     /**
-     * Creates a new DefaultAoatTokenGenerator with binding instance store.
-     *
-     * @param aoatGenerator the AOAT generator
-     * @param vcVerifier the VC verifier
-     * @param policyRegistry the policy registry
-     * @param bindingInstanceStore the binding instance store
-     * @param defaultTokenExpirationSeconds the default expiration time in seconds
-     */
-    /**
-     * Constructs a new DefaultAoatTokenGenerator.
+     * Constructs a new DefaultAoatTokenGenerator with full dependencies.
+     * <p>
+     * Uses the default {@link PatternBasedOperationTextRenderer} for rendering operation text.
+     * </p>
      *
      * @param aoatGenerator              the AOAT generator
      * @param vcVerifier                 the VC verifier
@@ -147,11 +159,42 @@ public class DefaultAoatTokenGenerator implements AoatTokenGenerator {
             PromptDecryptionService promptDecryptionService,
             long defaultTokenExpirationSeconds
     ) {
+        this(aoatGenerator, vcVerifier, policyRegistry, bindingInstanceStore,
+                promptDecryptionService, new PatternBasedOperationTextRenderer(),
+                defaultTokenExpirationSeconds);
+    }
+
+    /**
+     * Constructs a new DefaultAoatTokenGenerator with a custom {@link OperationTextRenderer}.
+     * <p>
+     * This constructor enables developers to inject their own rendering strategy,
+     * following the Strategy Pattern for maximum flexibility.
+     * </p>
+     *
+     * @param aoatGenerator              the AOAT generator
+     * @param vcVerifier                 the VC verifier
+     * @param policyRegistry             the policy registry
+     * @param bindingInstanceStore       the binding instance store
+     * @param promptDecryptionService    the prompt decryption service for JWE protection (optional)
+     * @param operationTextRenderer      the strategy for rendering operation text
+     * @param defaultTokenExpirationSeconds the default token expiration time in seconds
+     * @throws NullPointerException if any required parameter is null
+     */
+    public DefaultAoatTokenGenerator(
+            AoatGenerator aoatGenerator,
+            VcVerifier vcVerifier,
+            PolicyRegistry policyRegistry,
+            BindingInstanceStore bindingInstanceStore,
+            PromptDecryptionService promptDecryptionService,
+            OperationTextRenderer operationTextRenderer,
+            long defaultTokenExpirationSeconds
+    ) {
         this.aoatGenerator = ValidationUtils.validateNotNull(aoatGenerator, "aoatGenerator");
         this.vcVerifier = ValidationUtils.validateNotNull(vcVerifier, "vcVerifier");
         this.policyRegistry = ValidationUtils.validateNotNull(policyRegistry, "policyRegistry");
         this.bindingInstanceStore = ValidationUtils.validateNotNull(bindingInstanceStore, "bindingInstanceStore");
         this.promptDecryptionService = promptDecryptionService;
+        this.operationTextRenderer = Objects.requireNonNull(operationTextRenderer, "operationTextRenderer must not be null");
         this.defaultTokenExpirationSeconds = defaultTokenExpirationSeconds;
     }
 
@@ -502,6 +545,10 @@ public class DefaultAoatTokenGenerator implements AoatTokenGenerator {
 
     /**
      * Builds TokenAuthorizationContext from PAR claims.
+     * <p>
+     * Delegates the rendering of human-readable operation text to the configured
+     * {@link OperationTextRenderer} strategy, following the Strategy Pattern.
+     * </p>
      *
      * @param parClaims the PAR claims
      * @param verifiedVc the verified (and possibly decrypted) evidence VC
@@ -513,14 +560,14 @@ public class DefaultAoatTokenGenerator implements AoatTokenGenerator {
             return null;
         }
 
-        String renderedText = buildRenderedText(parClaims, verifiedVc);
+        OperationTextRenderResult renderResult = renderOperationText(parClaims, verifiedVc);
         return TokenAuthorizationContext.builder()
-                .renderedText(renderedText)
+                .renderedText(renderResult.getRenderedText())
                 .build();
     }
 
     /**
-     * Builds rendered text for the authorization context.
+     * Renders human-readable operation text using the configured {@link OperationTextRenderer} strategy.
      * <p>
      * According to draft-liu-agent-operation-authorization-01 Section 4, the renderedText
      * should provide a human-readable description of the authorized operation that users
@@ -528,62 +575,31 @@ public class DefaultAoatTokenGenerator implements AoatTokenGenerator {
      * "Purchase items under $50 during the Nov 11 promotion (valid until 23:59)"
      * </p>
      * <p>
-     * This method generates user-friendly rendered text by:
+     * This method constructs an {@link OperationTextRenderContext} from the PAR claims
+     * and delegates the actual rendering to the injected {@link OperationTextRenderer} strategy.
      * </p>
-     * <ul>
-     *   <li>Extracting the original user prompt from the evidence VC (if available)</li>
-     *   <li>Creating a clear, readable description of the authorized operation</li>
-     *   <li>Using a user-friendly time format for expiration</li>
-     * </ul>
      *
      * @param parClaims the PAR claims
      * @param verifiedVc the verified (and possibly decrypted) evidence VC
-     * @return the rendered text
+     * @return the render result containing the text and semantic expansion level
      */
-    private String buildRenderedText(ParJwtClaims parClaims, VerifiableCredential verifiedVc) {
-
-        // Extract operation proposal and context
-        String operationProposal = parClaims.getOperationProposal();
-        OperationRequestContext context = parClaims.getContext();
-
-        // Extract original user prompt from verified (and decrypted) VC for better readability
+    private OperationTextRenderResult renderOperationText(ParJwtClaims parClaims, VerifiableCredential verifiedVc) {
         String originalPrompt = null;
         if (verifiedVc != null && verifiedVc.getCredentialSubject() != null) {
             originalPrompt = verifiedVc.getCredentialSubject().getPrompt();
         }
 
-        StringBuilder rendered = new StringBuilder();
+        Instant tokenExpiration = Instant.now().plusSeconds(defaultTokenExpirationSeconds);
 
-        // Build user-friendly description based on available context
-        if (originalPrompt != null && !originalPrompt.isEmpty()) {
-            // Use original prompt as base for better readability
-            rendered.append("Authorized: ").append(originalPrompt);
-        } else if (!ValidationUtils.isNullOrEmpty(operationProposal)) {
-            // Fallback to generic description if no original prompt available
-            rendered.append("Authorized agent operation per policy: ").append(operationProposal.length() > 50
-                ? operationProposal.substring(0, 50) + "..."
-                : operationProposal);
-        } else {
-            rendered.append("Authorized agent operation");
-        }
+        OperationTextRenderContext renderContext = OperationTextRenderContext.builder()
+                .operationProposal(parClaims.getOperationProposal())
+                .originalPrompt(originalPrompt)
+                .requestContext(parClaims.getContext())
+                .verifiedCredential(verifiedVc)
+                .tokenExpiration(tokenExpiration)
+                .build();
 
-        // Add context information if available
-        if (context != null) {
-            if (context.getChannel() != null && !context.getChannel().isEmpty()) {
-                rendered.append(" via ").append(context.getChannel());
-            }
-            if (context.getAgent() != null && context.getAgent().getPlatform() != null) {
-                rendered.append(" on ").append(context.getAgent().getPlatform());
-            }
-        }
-
-        // Add expiration time in user-friendly format
-        Instant expires = Instant.now().plusSeconds(defaultTokenExpirationSeconds);
-        String expiresTime = expires.atZone(ZoneId.systemDefault())
-                .format(DateTimeFormatter.ofPattern("HH:mm"));
-        rendered.append(" (valid until ").append(expiresTime).append(")");
-
-        return rendered.toString();
+        return operationTextRenderer.render(renderContext);
     }
 
     /**
@@ -652,29 +668,32 @@ public class DefaultAoatTokenGenerator implements AoatTokenGenerator {
 
     /**
      * Builds AuditTrail from PAR claims and verified VC.
+     * <p>
+     * According to draft-liu-agent-operation-authorization-01 Section 4, the auditTrail
+     * establishes a complete, semantically traceable chain from the user's original intent
+     * to the system's final executed action. The semantic expansion level is determined
+     * by the configured {@link OperationTextRenderer} strategy.
+     * </p>
      *
      * @param parClaims the PAR claims
      * @param verifiedVc the verified VerifiableCredential (may be null)
      * @return the built AuditTrail
      */
     private AuditTrail buildAuditTrail(ParJwtClaims parClaims, VerifiableCredential verifiedVc) {
-
         String originalPromptText = null;
         if (verifiedVc != null && verifiedVc.getCredentialSubject() != null) {
             originalPromptText = verifiedVc.getCredentialSubject().getPrompt();
         }
 
-        String renderedOperationText = buildRenderedText(parClaims, verifiedVc);
-        String semanticExpansionLevel = "low";
+        OperationTextRenderResult renderResult = renderOperationText(parClaims, verifiedVc);
         String userAcknowledgeTimestamp = Instant.now().toString();
-        String consentInterfaceVersion = "1.0";
 
         return AuditTrail.builder()
                 .originalPromptText(originalPromptText)
-                .renderedOperationText(renderedOperationText)
-                .semanticExpansionLevel(semanticExpansionLevel)
+                .renderedOperationText(renderResult.getRenderedText())
+                .semanticExpansionLevel(renderResult.getSemanticExpansionLevel().getValue())
                 .userAcknowledgeTimestamp(userAcknowledgeTimestamp)
-                .consentInterfaceVersion(consentInterfaceVersion)
+                .consentInterfaceVersion("1.0")
                 .build();
     }
 
