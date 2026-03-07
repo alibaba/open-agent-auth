@@ -19,12 +19,14 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpRequest;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -192,12 +194,13 @@ class ClientAssertionAuthenticationTest {
         @Test
         @DisplayName("Should throw runtime exception when assertion generation fails")
         void shouldThrowRuntimeExceptionWhenAssertionGenerationFails() throws JOSEException {
-            // Create a generator that will fail
+            // Create a generator that will fail — override the three-arg method since
+            // applyAuthentication now delegates to generateAssertion(endpoint, clientId, expiration)
             RSAKey invalidKey = new RSAKeyGenerator(2048).keyID("key").generate();
             ClientAssertionGenerator failingGenerator = new ClientAssertionGenerator(
                     clientId, invalidKey, JWSAlgorithm.RS256) {
                 @Override
-                public String generateAssertion(String tokenEndpoint) {
+                public String generateAssertion(String tokenEndpoint, String effectiveClientId, long expirationSeconds) {
                     throw new RuntimeException("Simulated failure");
                 }
             };
@@ -272,16 +275,47 @@ class ClientAssertionAuthenticationTest {
         }
 
         @Test
-        @DisplayName("Should overwrite existing client_id parameter")
-        void shouldOverwriteExistingClientIdParameter() {
+        @DisplayName("Should respect existing client_id in request body (DCR dynamic client_id)")
+        void shouldRespectExistingClientIdInRequestBody() throws ParseException {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
-            requestBody.put("client_id", "old-client-id");
+            String dcrClientId = "dcr-dynamic-client-id-12345";
+            requestBody.put("client_id", dcrClientId);
             
             authentication.applyAuthentication(requestBuilder, requestBody);
             
+            // The DCR-registered dynamic client_id should be preserved
+            assertThat(requestBody.get("client_id")).isEqualTo(dcrClientId);
+            // Other assertion parameters should still be added
+            assertThat(requestBody).containsKey("client_assertion_type");
+            assertThat(requestBody).containsKey("client_assertion");
+            
+            // Verify that the JWT's iss and sub claims use the DCR client_id, not the default one
+            String assertion = requestBody.get("client_assertion");
+            SignedJWT signedJwt = SignedJWT.parse(assertion);
+            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isEqualTo(dcrClientId);
+            assertThat(signedJwt.getJWTClaimsSet().getSubject()).isEqualTo(dcrClientId);
+            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isNotEqualTo(clientId);
+        }
+
+        @Test
+        @DisplayName("Should use default client_id when none is present in request body")
+        void shouldUseDefaultClientIdWhenNonePresent() throws ParseException {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://example.com/token"));
+            Map<String, String> requestBody = new HashMap<>();
+            
+            authentication.applyAuthentication(requestBuilder, requestBody);
+            
+            // When no client_id is pre-set, the default static client_id should be used
             assertThat(requestBody.get("client_id")).isEqualTo(clientId);
+            
+            // Verify that the JWT's iss and sub claims use the default client_id
+            String assertion = requestBody.get("client_assertion");
+            SignedJWT signedJwt = SignedJWT.parse(assertion);
+            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isEqualTo(clientId);
+            assertThat(signedJwt.getJWTClaimsSet().getSubject()).isEqualTo(clientId);
         }
     }
 }

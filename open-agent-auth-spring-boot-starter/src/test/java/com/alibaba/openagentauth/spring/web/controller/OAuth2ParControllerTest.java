@@ -22,6 +22,7 @@ import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2Registe
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
+import com.alibaba.openagentauth.spring.util.OAuth2ClientAuthenticator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -42,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -69,6 +71,9 @@ class OAuth2ParControllerTest {
 
     @Mock
     private OAuth2ClientStore clientStore;
+
+    @Mock
+    private OAuth2ClientAuthenticator clientAuthenticator;
 
     private OAuth2ParController controller;
 
@@ -103,7 +108,11 @@ class OAuth2ParControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new OAuth2ParController(parServer, clientStore);
+        controller = new OAuth2ParController(parServer, clientStore, clientAuthenticator);
+        
+        // Mock client authenticator to return valid client ID
+        Mockito.lenient().when(clientAuthenticator.authenticateClient(any(), any(), eq(clientStore)))
+                .thenReturn(CLIENT_ID);
         
         // Mock client store to return a valid client
         OAuth2RegisteredClient mockClient = OAuth2RegisteredClient.builder()
@@ -267,6 +276,9 @@ class OAuth2ParControllerTest {
             requestBody.add("request", REQUEST_JWT);
             requestBody.add("client_id", CLIENT_ID);
             requestBody.add("redirect_uri", REDIRECT_URI);
+            
+            when(clientAuthenticator.authenticateClient(isNull(), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Authorization header is missing"));
 
             // When & Then
             assertThatThrownBy(() -> controller.par(requestBody, null))
@@ -283,6 +295,9 @@ class OAuth2ParControllerTest {
             requestBody.add("request", REQUEST_JWT);
             requestBody.add("client_id", CLIENT_ID);
             requestBody.add("redirect_uri", REDIRECT_URI);
+            
+            when(clientAuthenticator.authenticateClient(eq(invalidAuthHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Only Basic authentication is supported"));
 
             // When & Then
             assertThatThrownBy(() -> controller.par(requestBody, invalidAuthHeader))
@@ -299,6 +314,9 @@ class OAuth2ParControllerTest {
             requestBody.add("request", REQUEST_JWT);
             requestBody.add("client_id", CLIENT_ID);
             requestBody.add("redirect_uri", REDIRECT_URI);
+            
+            when(clientAuthenticator.authenticateClient(eq(authHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Invalid client secret"));
 
             // When & Then
             assertThatThrownBy(() -> controller.par(requestBody, authHeader))
@@ -315,6 +333,9 @@ class OAuth2ParControllerTest {
             requestBody.add("request", REQUEST_JWT);
             requestBody.add("client_id", "unknown-client");
             requestBody.add("redirect_uri", REDIRECT_URI);
+            
+            when(clientAuthenticator.authenticateClient(eq(authHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Client not registered"));
 
             // When & Then
             assertThatThrownBy(() -> controller.par(requestBody, authHeader))

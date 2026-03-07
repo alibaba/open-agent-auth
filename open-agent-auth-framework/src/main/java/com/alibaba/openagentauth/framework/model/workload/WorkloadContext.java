@@ -49,6 +49,17 @@ public class WorkloadContext {
     
     @JsonProperty("expiresAt")
     private final Instant expiresAt;
+
+    /**
+     * The OAuth 2.0 client_id obtained from Dynamic Client Registration (DCR).
+     * <p>
+     * This field stores the client_id returned by the Authorization Server after
+     * a successful DCR request (RFC 7591). It is used for subsequent PAR and Token
+     * requests to identify this workload as a registered OAuth client.
+     * </p>
+     */
+    @JsonProperty("oauthClientId")
+    private final String oauthClientId;
     
     @JsonCreator
     public WorkloadContext(
@@ -57,7 +68,8 @@ public class WorkloadContext {
             @JsonProperty("wit") String wit,
             @JsonProperty("publicKey") String publicKey,
             @JsonProperty("privateKey") String privateKey,
-            @JsonProperty("expiresAt") Instant expiresAt
+            @JsonProperty("expiresAt") Instant expiresAt,
+            @JsonProperty("oauthClientId") String oauthClientId
     ) {
         this.workloadId = workloadId;
         this.userId = userId;
@@ -65,6 +77,7 @@ public class WorkloadContext {
         this.publicKey = publicKey;
         this.privateKey = privateKey;
         this.expiresAt = expiresAt;
+        this.oauthClientId = oauthClientId;
     }
     
     public String getWorkloadId() { return workloadId; }
@@ -74,6 +87,7 @@ public class WorkloadContext {
     @JsonIgnore
     public String getPrivateKey() { return privateKey; }
     public Instant getExpiresAt() { return expiresAt; }
+    public String getOauthClientId() { return oauthClientId; }
     
     public boolean isExpired() {
         if (expiresAt == null) {
@@ -91,6 +105,7 @@ public class WorkloadContext {
                 + ", publicKey='" + (publicKey != null ? publicKey.substring(0, Math.min(publicKey.length(), 8)) + "..." : "null") + '\''
                 + ", privateKey='[REDACTED]'"
                 + ", expiresAt=" + expiresAt
+                + ", oauthClientId='" + oauthClientId + '\''
                 + '}';
     }
 
@@ -105,6 +120,7 @@ public class WorkloadContext {
         private String publicKey;
         private String privateKey;
         private Instant expiresAt;
+        private String oauthClientId;
         
         public Builder workloadId(String workloadId) {
             this.workloadId = workloadId;
@@ -130,15 +146,19 @@ public class WorkloadContext {
             this.privateKey = privateKey;
             return this;
         }
-
         
         public Builder expiresAt(Instant expiresAt) {
             this.expiresAt = expiresAt;
             return this;
         }
+
+        public Builder oauthClientId(String oauthClientId) {
+            this.oauthClientId = oauthClientId;
+            return this;
+        }
         
         public WorkloadContext build() {
-            return new WorkloadContext(workloadId, userId, wit, publicKey, privateKey, expiresAt);
+            return new WorkloadContext(workloadId, userId, wit, publicKey, privateKey, expiresAt, oauthClientId);
         }
     }
 }

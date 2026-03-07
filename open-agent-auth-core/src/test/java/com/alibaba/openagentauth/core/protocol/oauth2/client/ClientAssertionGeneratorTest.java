@@ -279,4 +279,115 @@ class ClientAssertionGeneratorTest {
             assertThat(signedJwt.getJWTClaimsSet().getAudience()).containsExactly(tokenEndpoint);
         }
     }
+
+    @Nested
+    @DisplayName("DCR Dynamic Client ID Tests")
+    class DcrDynamicClientIdTests {
+
+        @Test
+        @DisplayName("Should generate assertion with dynamic client_id (two-parameter overload)")
+        void shouldGenerateAssertionWithDynamicClientId() throws ClientAssertionException, JOSEException, ParseException {
+            String tokenEndpoint = "https://example.com/token";
+            String dcrClientId = "dcr-dynamic-client-456";
+            
+            String assertion = generator.generateAssertion(tokenEndpoint, dcrClientId);
+            
+            assertThat(assertion).isNotNull();
+            
+            SignedJWT signedJwt = SignedJWT.parse(assertion);
+            // Verify that iss and sub use the dynamic client_id, not the default one
+            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isEqualTo(dcrClientId);
+            assertThat(signedJwt.getJWTClaimsSet().getSubject()).isEqualTo(dcrClientId);
+            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isNotEqualTo(clientId);
+            assertThat(signedJwt.getJWTClaimsSet().getAudience()).containsExactly(tokenEndpoint);
+        }
+
+        @Test
+        @DisplayName("Should generate assertion with dynamic client_id and custom expiration (three-parameter overload)")
+        void shouldGenerateAssertionWithDynamicClientIdAndCustomExpiration() throws ClientAssertionException, JOSEException, ParseException {
+            String tokenEndpoint = "https://example.com/token";
+            String dcrClientId = "dcr-dynamic-client-789";
+            long customExpiration = 900; // 15 minutes
+            
+            String assertion = generator.generateAssertion(tokenEndpoint, dcrClientId, customExpiration);
+            
+            assertThat(assertion).isNotNull();
+            
+            SignedJWT signedJwt = SignedJWT.parse(assertion);
+            // Verify dynamic client_id is used
+            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isEqualTo(dcrClientId);
+            assertThat(signedJwt.getJWTClaimsSet().getSubject()).isEqualTo(dcrClientId);
+            // Verify custom expiration time
+            long expTime = signedJwt.getJWTClaimsSet().getExpirationTime().getTime();
+            long iatTime = signedJwt.getJWTClaimsSet().getIssueTime().getTime();
+            assertThat(expTime - iatTime).isEqualTo(customExpiration * 1000);
+        }
+
+        @Test
+        @DisplayName("Should throw exception when effectiveClientId is null")
+        void shouldThrowExceptionWhenEffectiveClientIdIsNull() {
+            assertThatThrownBy(() -> generator.generateAssertion("https://example.com/token", (String) null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Effective client ID");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when effectiveClientId is empty")
+        void shouldThrowExceptionWhenEffectiveClientIdIsEmpty() {
+            assertThatThrownBy(() -> generator.generateAssertion("https://example.com/token", ""))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Effective client ID");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when effectiveClientId is whitespace")
+        void shouldThrowExceptionWhenEffectiveClientIdIsWhitespace() {
+            assertThatThrownBy(() -> generator.generateAssertion("https://example.com/token", "   "))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Effective client ID");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when effectiveClientId is null with custom expiration")
+        void shouldThrowExceptionWhenEffectiveClientIdIsNullWithCustomExpiration() {
+            assertThatThrownBy(() -> generator.generateAssertion("https://example.com/token", null, 300))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Effective client ID");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when effectiveClientId is empty with custom expiration")
+        void shouldThrowExceptionWhenEffectiveClientIdIsEmptyWithCustomExpiration() {
+            assertThatThrownBy(() -> generator.generateAssertion("https://example.com/token", "", 300))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Effective client ID");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when expiration is negative with dynamic client_id")
+        void shouldThrowExceptionWhenExpirationIsNegativeWithDynamicClientId() {
+            assertThatThrownBy(() -> generator.generateAssertion("https://example.com/token", "dynamic-client", -1))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Expiration seconds must be positive");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when expiration is zero with dynamic client_id")
+        void shouldThrowExceptionWhenExpirationIsZeroWithDynamicClientId() {
+            assertThatThrownBy(() -> generator.generateAssertion("https://example.com/token", "dynamic-client", 0))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Expiration seconds must be positive");
+        }
+
+        @Test
+        @DisplayName("Should verify signature with dynamic client_id assertion")
+        void shouldVerifySignatureWithDynamicClientId() throws ClientAssertionException, JOSEException, ParseException {
+            String dcrClientId = "dcr-dynamic-client-123";
+            String assertion = generator.generateAssertion("https://example.com/token", dcrClientId);
+            
+            SignedJWT signedJwt = SignedJWT.parse(assertion);
+            RSASSAVerifier verifier = new RSASSAVerifier(signingKey);
+            assertThat(signedJwt.verify(verifier)).isTrue();
+        }
+    }
 }

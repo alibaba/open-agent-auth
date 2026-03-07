@@ -20,6 +20,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -319,6 +321,107 @@ class UriQueryBuilderTest {
 
             // Assert
             assertThat(query).isEqualTo("p1=v1&p2=v2&p3=v3&p4=v4&p5=v5");
+        }
+    }
+
+    @Nested
+    @DisplayName("Parse Tests")
+    class ParseTests {
+
+        @Test
+        @DisplayName("Should return empty map for null input")
+        void shouldReturnEmptyMapForNullInput() {
+            Map<String, String> result = UriQueryBuilder.parse(null);
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should return empty map for empty string")
+        void shouldReturnEmptyMapForEmptyString() {
+            Map<String, String> result = UriQueryBuilder.parse("");
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should parse single parameter")
+        void shouldParseSingleParameter() {
+            Map<String, String> result = UriQueryBuilder.parse("client_id=my-client");
+            assertThat(result).containsEntry("client_id", "my-client");
+            assertThat(result).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Should parse multiple parameters")
+        void shouldParseMultipleParameters() {
+            Map<String, String> result = UriQueryBuilder.parse("client_id=my-client&scope=openid&state=xyz");
+            assertThat(result)
+                    .containsEntry("client_id", "my-client")
+                    .containsEntry("scope", "openid")
+                    .containsEntry("state", "xyz")
+                    .hasSize(3);
+        }
+
+        @Test
+        @DisplayName("Should URL-decode parameter values")
+        void shouldUrlDecodeParameterValues() {
+            Map<String, String> result = UriQueryBuilder.parse(
+                    "redirect_uri=https%3A%2F%2Fexample.com%2Fcallback");
+            assertThat(result).containsEntry("redirect_uri", "https://example.com/callback");
+        }
+
+        @Test
+        @DisplayName("Should URL-decode parameter names")
+        void shouldUrlDecodeParameterNames() {
+            Map<String, String> result = UriQueryBuilder.parse("client+id=my-client");
+            assertThat(result).containsEntry("client id", "my-client");
+        }
+
+        @Test
+        @DisplayName("Should handle empty value after equals sign")
+        void shouldHandleEmptyValueAfterEqualsSign() {
+            Map<String, String> result = UriQueryBuilder.parse("param=");
+            assertThat(result).containsEntry("param", "");
+        }
+
+        @Test
+        @DisplayName("Should skip pairs without equals sign")
+        void shouldSkipPairsWithoutEqualsSign() {
+            Map<String, String> result = UriQueryBuilder.parse("invalid&client_id=my-client");
+            assertThat(result).containsEntry("client_id", "my-client");
+            assertThat(result).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Should return mutable map")
+        void shouldReturnMutableMap() {
+            Map<String, String> result = UriQueryBuilder.parse("client_id=my-client");
+            result.put("new_key", "new_value");
+            assertThat(result).containsEntry("new_key", "new_value");
+        }
+
+        @Test
+        @DisplayName("Should be inverse of addEncoded + build")
+        void shouldBeInverseOfAddEncodedAndBuild() {
+            // Build a query string with encoded values
+            String encoded = new UriQueryBuilder()
+                    .addEncoded("redirect_uri", "https://example.com/callback?param=value")
+                    .addEncoded("client_id", "my-client")
+                    .build();
+
+            // Parse it back
+            Map<String, String> parsed = UriQueryBuilder.parse(encoded);
+
+            assertThat(parsed)
+                    .containsEntry("redirect_uri", "https://example.com/callback?param=value")
+                    .containsEntry("client_id", "my-client");
+        }
+
+        @Test
+        @DisplayName("Should handle value containing equals sign")
+        void shouldHandleValueContainingEqualsSign() {
+            // "token=abc=def" should parse key="token", value="abc=def"
+            Map<String, String> result = UriQueryBuilder.parse("token=abc%3Ddef");
+            assertThat(result).containsEntry("token", "abc=def");
         }
     }
 

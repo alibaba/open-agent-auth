@@ -39,6 +39,7 @@ class WorkloadContextTest {
     private static final String TEST_WIT = "workload-identity-token";
     private static final String TEST_PUBLIC_KEY = "public-key-abc";
     private static final String TEST_PRIVATE_KEY = "private-key-def";
+    private static final String TEST_OAUTH_CLIENT_ID = "dcr-client-789";
 
     @Test
     @DisplayName("Should build instance with all fields when all setters are called")
@@ -331,5 +332,117 @@ class WorkloadContextTest {
         // Then - should not throw NPE and should contain redacted marker
         assertThat(toStringResult).contains("[REDACTED]");
         assertThat(toStringResult).contains("null");
+    }
+
+    @Test
+    @DisplayName("Should build instance with oauthClientId when set via builder")
+    void shouldBuildInstanceWithOauthClientIdWhenSetViaBuilder() {
+        // Given
+        WorkloadContext context = WorkloadContext.builder()
+                .workloadId(TEST_WORKLOAD_ID)
+                .userId(TEST_USER_ID)
+                .oauthClientId(TEST_OAUTH_CLIENT_ID)
+                .build();
+
+        // Then
+        assertThat(context).isNotNull();
+        assertThat(context.getOauthClientId()).isEqualTo(TEST_OAUTH_CLIENT_ID);
+        assertThat(context.getWorkloadId()).isEqualTo(TEST_WORKLOAD_ID);
+    }
+
+    @Test
+    @DisplayName("Should return null oauthClientId when not set")
+    void shouldReturnNullOauthClientIdWhenNotSet() {
+        // Given
+        WorkloadContext context = WorkloadContext.builder()
+                .workloadId(TEST_WORKLOAD_ID)
+                .userId(TEST_USER_ID)
+                .build();
+
+        // Then
+        assertThat(context.getOauthClientId()).isNull();
+    }
+
+    @Test
+    @DisplayName("Should include oauthClientId in toString output")
+    void shouldIncludeOauthClientIdInToStringOutput() {
+        // Given
+        WorkloadContext context = WorkloadContext.builder()
+                .workloadId(TEST_WORKLOAD_ID)
+                .userId(TEST_USER_ID)
+                .oauthClientId(TEST_OAUTH_CLIENT_ID)
+                .build();
+
+        // When
+        String toStringResult = context.toString();
+
+        // Then
+        assertThat(toStringResult).contains(TEST_OAUTH_CLIENT_ID);
+    }
+
+    @Test
+    @DisplayName("Should include oauthClientId in JSON serialization")
+    void shouldIncludeOauthClientIdInJsonSerialization() throws Exception {
+        // Given
+        WorkloadContext context = WorkloadContext.builder()
+                .workloadId(TEST_WORKLOAD_ID)
+                .userId(TEST_USER_ID)
+                .oauthClientId(TEST_OAUTH_CLIENT_ID)
+                .build();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+
+        // When
+        String json = objectMapper.writeValueAsString(context);
+
+        // Then
+        assertThat(json).contains("oauthClientId");
+        assertThat(json).contains(TEST_OAUTH_CLIENT_ID);
+    }
+
+    @Test
+    @DisplayName("Should deserialize oauthClientId from JSON")
+    void shouldDeserializeOauthClientIdFromJson() throws Exception {
+        // Given
+        String json = "{\"workloadId\":\"" + TEST_WORKLOAD_ID + "\","
+                + "\"userId\":\"" + TEST_USER_ID + "\","
+                + "\"oauthClientId\":\"" + TEST_OAUTH_CLIENT_ID + "\"}";
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+
+        // When
+        WorkloadContext context = objectMapper.readValue(json, WorkloadContext.class);
+
+        // Then
+        assertThat(context.getOauthClientId()).isEqualTo(TEST_OAUTH_CLIENT_ID);
+        assertThat(context.getWorkloadId()).isEqualTo(TEST_WORKLOAD_ID);
+    }
+
+    @Test
+    @DisplayName("Should build instance with all fields including oauthClientId")
+    void shouldBuildInstanceWithAllFieldsIncludingOauthClientId() {
+        // Given
+        Instant expiresAt = Instant.now().plusSeconds(3600);
+
+        WorkloadContext context = WorkloadContext.builder()
+                .workloadId(TEST_WORKLOAD_ID)
+                .userId(TEST_USER_ID)
+                .wit(TEST_WIT)
+                .publicKey(TEST_PUBLIC_KEY)
+                .privateKey(TEST_PRIVATE_KEY)
+                .expiresAt(expiresAt)
+                .oauthClientId(TEST_OAUTH_CLIENT_ID)
+                .build();
+
+        // Then
+        assertThat(context.getWorkloadId()).isEqualTo(TEST_WORKLOAD_ID);
+        assertThat(context.getUserId()).isEqualTo(TEST_USER_ID);
+        assertThat(context.getWit()).isEqualTo(TEST_WIT);
+        assertThat(context.getPublicKey()).isEqualTo(TEST_PUBLIC_KEY);
+        assertThat(context.getPrivateKey()).isEqualTo(TEST_PRIVATE_KEY);
+        assertThat(context.getExpiresAt()).isEqualTo(expiresAt);
+        assertThat(context.getOauthClientId()).isEqualTo(TEST_OAUTH_CLIENT_ID);
     }
 }

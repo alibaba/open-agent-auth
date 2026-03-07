@@ -51,6 +51,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import org.slf4j.LoggerFactory;
+
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -144,8 +152,8 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
             logger.debug("Workload context created: workloadId={}, userId={}",
                     workloadContext.getWorkloadId(), workloadContext.getUserId());
 
-            // Step 2: Register OAuth client
-            registerOAuthClient(workloadContext);
+            // Step 2: Register OAuth client (DCR) and update workload context with client_id
+            workloadContext = registerOAuthClient(workloadContext);
 
             // Step 3: Build authorization components
             AuthorizationComponents components = buildAuthorizationComponents(workloadContext, request);
@@ -288,13 +296,20 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
     }
 
     /**
-     * Registers OAuth client for the workload.
+     * Registers OAuth client for the workload via DCR (RFC 7591).
+     * <p>
+     * Returns a new {@link WorkloadContext} with the DCR-assigned {@code oauthClientId}
+     * populated, and updates the internal {@code currentWorkloadContext} reference.
+     * </p>
      *
      * @param workloadContext the workload context
+     * @return a new WorkloadContext with the DCR-assigned oauthClientId
      */
-    private void registerOAuthClient(WorkloadContext workloadContext) {
-        DcrResponse dcrResponse = agent.registerOAuthClient(workloadContext);
-        logger.debug("OAuth client registered: clientId={}", dcrResponse.getClientId());
+    private WorkloadContext registerOAuthClient(WorkloadContext workloadContext) {
+        WorkloadContext updatedContext = agent.registerOAuthClient(workloadContext);
+        this.currentWorkloadContext = updatedContext;
+        logger.debug("OAuth client registered: clientId={}", updatedContext.getOauthClientId());
+        return updatedContext;
     }
 
     // ===== Authorization Component Building Methods =====
@@ -323,11 +338,16 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
         // Store authorization request with flow type and session metadata in the storage.
         // This follows the RFC 6749-compliant opaque state pattern where flow routing
         // metadata is stored server-side rather than encoded in the state parameter.
+        // The DCR-registered client_id is stored in additionalParameters so the callback
+        // flow can use it for token exchange (matching the authorization code binding).
         OAuth2AuthorizationRequestStorage requestStorage = config.getAuthorizationRequestStorage();
+        Map<String, Object> additionalParams = new HashMap<>();
+        additionalParams.put("dcr_client_id", workloadContext.getOauthClientId());
         OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.builder()
                 .state(state)
                 .flowType(OAuth2AuthorizationRequest.FlowType.AGENT_OPERATION_AUTH)
                 .sessionId(request.getSessionId())
+                .additionalParameters(additionalParams)
                 .build();
         requestStorage.save(authorizationRequest);
 

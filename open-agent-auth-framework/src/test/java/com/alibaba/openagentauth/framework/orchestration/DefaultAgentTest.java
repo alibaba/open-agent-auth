@@ -894,11 +894,11 @@ class DefaultAgentTest {
                     .thenReturn(expectedResponse);
 
             // Act
-            DcrResponse result = agent.registerOAuthClient(workloadContext);
+            WorkloadContext result = agent.registerOAuthClient(workloadContext);
 
             // Assert
             assertThat(result).isNotNull();
-            assertThat(result.getClientId()).isEqualTo(CLIENT_ID);
+            assertThat(result.getOauthClientId()).isEqualTo(CLIENT_ID);
 
             verify(mockDcrClient, times(1)).registerClient(any());
         }

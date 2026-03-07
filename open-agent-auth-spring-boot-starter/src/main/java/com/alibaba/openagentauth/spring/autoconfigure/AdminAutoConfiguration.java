@@ -17,6 +17,7 @@ package com.alibaba.openagentauth.spring.autoconfigure;
 
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenRequest;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.BasicAuthAuthentication;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.client.DefaultOAuth2TokenClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.client.OAuth2TokenClient;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
@@ -375,8 +376,9 @@ public class AdminAutoConfiguration implements WebMvcConfigurer {
             // Determine which User IDP service to use for token exchange
             String serviceName = resolveUserIdpServiceName(openAgentAuthProperties);
 
+            var authentication = new BasicAuthAuthentication(clientId, clientSecret);
             OAuth2TokenClient coreTokenClient = new DefaultOAuth2TokenClient(
-                    serviceEndpointResolver, serviceName, clientId, clientSecret);
+                    serviceEndpointResolver, serviceName, authentication);
 
             return new AdminFrameworkOAuth2TokenClientAdapter(coreTokenClient);
         }

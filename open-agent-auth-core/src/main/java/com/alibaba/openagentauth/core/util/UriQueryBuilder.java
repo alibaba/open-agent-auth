@@ -15,8 +15,11 @@
  */
 package com.alibaba.openagentauth.core.util;
 
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A builder for constructing URL query strings.
@@ -142,6 +145,41 @@ public class UriQueryBuilder {
      */
     public String build() {
         return builder.toString();
+    }
+
+    /**
+     * Parses a URL-encoded form body (or query string) into a mutable map of decoded values.
+     * <p>
+     * Both parameter names and values are URL-decoded so that the resulting map
+     * contains raw (unencoded) strings. This is the inverse operation of building
+     * a query string with {@link #addEncoded(String, String)}.
+     * </p>
+     * <p>
+     * <b>Usage Example:</b></p>
+     * <pre>{@code
+     * Map<String, String> params = UriQueryBuilder.parse("client_id=my-client&redirect_uri=https%3A%2F%2Fexample.com");
+     * // params = {"client_id": "my-client", "redirect_uri": "https://example.com"}
+     * }</pre>
+     *
+     * @param formBody the URL-encoded form body or query string (may be null or empty)
+     * @return a mutable map of decoded parameter name-value pairs
+     */
+    public static Map<String, String> parse(String formBody) {
+        Map<String, String> parameters = new HashMap<>();
+        if (formBody == null || formBody.isEmpty()) {
+            return parameters;
+        }
+        for (String pair : formBody.split("&")) {
+            int equalsIndex = pair.indexOf('=');
+            if (equalsIndex > 0) {
+                String key = URLDecoder.decode(pair.substring(0, equalsIndex), StandardCharsets.UTF_8);
+                String value = equalsIndex < pair.length() - 1
+                        ? URLDecoder.decode(pair.substring(equalsIndex + 1), StandardCharsets.UTF_8)
+                        : "";
+                parameters.put(key, value);
+            }
+        }
+        return parameters;
     }
 
 }

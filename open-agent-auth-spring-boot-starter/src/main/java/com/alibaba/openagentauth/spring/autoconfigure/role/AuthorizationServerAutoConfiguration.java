@@ -31,10 +31,10 @@ import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.Defau
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.server.OAuth2AuthorizationServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMemoryOAuth2AuthorizationCodeStorage;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.BasicAuthAuthentication;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.DefaultOAuth2DcrServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.InMemoryOAuth2DcrClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParRequestValidator;
@@ -45,6 +45,7 @@ import com.alibaba.openagentauth.core.protocol.oauth2.par.store.OAuth2ParRequest
 import com.alibaba.openagentauth.core.protocol.oauth2.token.aoat.AoatTokenGenerator;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.aoat.AoatTokenGeneratorAdapter;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.aoat.DefaultAoatTokenGenerator;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.BasicAuthAuthentication;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.client.DefaultOAuth2TokenClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.client.OAuth2TokenClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.server.DefaultOAuth2TokenServer;
@@ -76,6 +77,7 @@ import com.alibaba.openagentauth.spring.autoconfigure.properties.ServiceProperti
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.JwksConsumerProperties;
 import com.alibaba.openagentauth.spring.autoconfigure.properties.infrastructures.KeyDefinitionProperties;
 import com.alibaba.openagentauth.spring.util.DefaultServiceEndpointResolver;
+import com.alibaba.openagentauth.spring.util.OAuth2ClientAuthenticator;
 import com.alibaba.openagentauth.spring.web.controller.OAuth2CallbackController;
 import com.alibaba.openagentauth.spring.web.provider.DefaultConsentPageProvider;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -247,16 +249,15 @@ public class AuthorizationServerAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        public OAuth2DcrServer dcrServer(OAuth2DcrClientStore dcrClientStore) {
+        public OAuth2DcrServer dcrServer(OAuth2ClientStore clientStore) {
             logger.info("Creating OAuth2DcrServer bean");
-            return new DefaultOAuth2DcrServer(dcrClientStore);
-        }
-
-        @Bean
-        @ConditionalOnMissingBean
-        public OAuth2DcrClientStore dcrClientStore() {
-            logger.info("Creating OAuth2DcrClientStore bean");
-            return new InMemoryOAuth2DcrClientStore();
+            if (!(clientStore instanceof OAuth2DcrClientStore)) {
+                throw new IllegalStateException(
+                    "OAuth2ClientStore must implement OAuth2DcrClientStore for DCR support. " +
+                    "Actual type: " + clientStore.getClass().getName()
+                );
+            }
+            return new DefaultOAuth2DcrServer((OAuth2DcrClientStore) clientStore);
         }
 
         @Bean
@@ -311,7 +312,8 @@ public class AuthorizationServerAutoConfiguration {
             }
             
             logger.info("Creating userAuthenticationTokenClient bean with clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AS_USER_IDP, clientId, clientSecret);
+            var authentication = new BasicAuthAuthentication(clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AS_USER_IDP, authentication);
         }
 
         @Bean(name = "agentOperationAuthorizationTokenClient")
@@ -332,7 +334,8 @@ public class AuthorizationServerAutoConfiguration {
             }
             
             logger.info("Creating agentOperationAuthorizationTokenClient bean with clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AUTHORIZATION_SERVER, clientId, clientSecret);
+            var authentication = new BasicAuthAuthentication(clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AUTHORIZATION_SERVER, authentication);
         }
 
         @Bean
@@ -454,25 +457,31 @@ public class AuthorizationServerAutoConfiguration {
             return keys;
         }
 
+        /**
+         * Creates the {@link JwksProvider} bean for verifying Agent IDP signatures.
+         * <p>
+         * This provider is shared by both {@link VcVerifier} and {@link OAuth2ClientAuthenticator}
+         * to ensure consistent key management. It supports both remote JWKS endpoints
+         * (when Agent IDP base URL is configured) and local fallback.
+         * </p>
+         */
         @Bean
         @ConditionalOnMissingBean
-        @Lazy
-        public VcVerifier vcVerifier(OpenAgentAuthProperties openAgentAuthProperties) {
-            logger.info("Creating VcVerifier bean");
+        public JwksProvider agentIdpJwksProvider(OpenAgentAuthProperties openAgentAuthProperties) {
+            logger.info("Creating JwksProvider bean for Agent IDP");
             try {
                 String agentBaseUrl = openAgentAuthProperties.getServiceUrl(SERVICE_AGENT);
                 String agentJwksEndpoint = null;
                 if (agentBaseUrl != null && !agentBaseUrl.isBlank()) {
                     agentJwksEndpoint = agentBaseUrl + JWKS_WELL_KNOWN_PATH;
                 }
-                
-                JwksProvider jwksProvider;
+
                 if (agentJwksEndpoint != null && !agentJwksEndpoint.isBlank()) {
-                    logger.info("Using remote JWKS provider for VcVerifier: {}", agentJwksEndpoint);
-                    jwksProvider = new RemoteJwksProvider(agentJwksEndpoint);
+                    logger.info("Using remote JWKS provider for Agent IDP: {}", agentJwksEndpoint);
+                    return new RemoteJwksProvider(agentJwksEndpoint);
                 } else {
-                    logger.info("Using local JWKS provider for VcVerifier");
-                    jwksProvider = new JwksProvider() {
+                    logger.info("Using local (empty) JWKS provider for Agent IDP");
+                    return new JwksProvider() {
                         @Override
                         public JWKSource<SecurityContext> getJwkSource() {
                             return (jwkSelector, context) -> new ArrayList<>();
@@ -488,11 +497,32 @@ public class AuthorizationServerAutoConfiguration {
                         }
                     };
                 }
-                return new DefaultVcVerifier(jwksProvider, new VcVerificationPolicy());
             } catch (Exception e) {
-                logger.error("Failed to create VcVerifier: {}", e.getMessage(), e);
-                throw new IllegalStateException("Failed to initialize VcVerifier", e);
+                logger.error("Failed to create JwksProvider: {}", e.getMessage(), e);
+                throw new IllegalStateException("Failed to initialize JwksProvider", e);
             }
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        @Lazy
+        public VcVerifier vcVerifier(JwksProvider agentIdpJwksProvider) {
+            logger.info("Creating VcVerifier bean");
+            return new DefaultVcVerifier(agentIdpJwksProvider, new VcVerificationPolicy());
+        }
+
+        /**
+         * Creates the {@link OAuth2ClientAuthenticator} bean for server-side client authentication.
+         * <p>
+         * This authenticator uses the shared {@link JwksProvider} to verify client assertion
+         * JWT signatures (RFC 7523), ensuring consistent key management with the VcVerifier.
+         * </p>
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2ClientAuthenticator oauth2ClientAuthenticator(JwksProvider agentIdpJwksProvider) {
+            logger.info("Creating OAuth2ClientAuthenticator bean");
+            return new OAuth2ClientAuthenticator(agentIdpJwksProvider);
         }
     }
 
@@ -544,19 +574,25 @@ public class AuthorizationServerAutoConfiguration {
         @ConditionalOnMissingBean
         public AuthorizationServer authorizationServerProvider(
                 OAuth2ParServer parServer,
-                OAuth2DcrClientStore dcrClientStore,
+                OAuth2ClientStore clientStore,
                 @Qualifier("userAuthenticationTokenClient") OAuth2TokenClient userAuthenticationTokenClient,
                 OAuth2TokenServer oauth2TokenServer,
                 KeyManager keyManager,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
             logger.info("Creating AuthorizationServer (Framework layer) bean");
+            if (!(clientStore instanceof OAuth2DcrClientStore)) {
+                throw new IllegalStateException(
+                    "OAuth2ClientStore must implement OAuth2DcrClientStore for Authorization Server. " +
+                    "Actual type: " + clientStore.getClass().getName()
+                );
+            }
             String verificationKeyId = openAgentAuthProperties.getKeyDefinition(KEY_WIT_VERIFICATION).getKeyId();
             String trustDomain = openAgentAuthProperties.getTrustDomain();
             
             return new DefaultAuthorizationServer(
                     parServer,
-                    dcrClientStore,
+                    (OAuth2DcrClientStore) clientStore,
                     userAuthenticationTokenClient,
                     oauth2TokenServer,
                     keyManager,

@@ -19,11 +19,15 @@ import com.alibaba.openagentauth.core.audit.api.AuditService;
 import com.alibaba.openagentauth.core.audit.impl.RemoteAuditService;
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
 import com.alibaba.openagentauth.core.binding.RemoteBindingInstanceStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.ClientAssertionAuthentication;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.ClientAssertionGenerator;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.store.RemoteWorkloadRegistry;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.store.WorkloadRegistry;
 import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
 import com.alibaba.openagentauth.core.exception.crypto.KeyManagementException;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.BasicAuthAuthentication;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.OAuth2ClientAuthentication;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.client.DefaultOAuth2DcrClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.client.OAuth2DcrClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.client.DefaultOAuth2ParClient;
@@ -343,7 +347,8 @@ public class AgentAutoConfiguration {
             }
             logger.info("Creating userAuthenticationTokenClient bean with ServiceEndpointResolver, " +
                     "serviceName: agent-user-idp, clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AGENT_USER_IDP, clientId, clientSecret);
+            OAuth2ClientAuthentication userIdpAuthentication = new BasicAuthAuthentication(clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AGENT_USER_IDP, userIdpAuthentication);
         }
 
         /**
@@ -374,7 +379,8 @@ public class AgentAutoConfiguration {
             }
             logger.info("Creating agentOperationAuthorizationTokenClient bean with ServiceEndpointResolver, " +
                     "serviceName: authorization-server, clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AUTHORIZATION_SERVER, clientId, clientSecret);
+            OAuth2ClientAuthentication authServerAuthentication = new BasicAuthAuthentication(clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AUTHORIZATION_SERVER, authServerAuthentication);
         }
 
         /**
@@ -513,11 +519,34 @@ public class AgentAutoConfiguration {
         @ConditionalOnMissingBean
         public OAuth2ParClient agentOperationAuthorizationParClient(
                 ServiceEndpointResolver serviceEndpointResolver,
-                OpenAgentAuthProperties openAgentAuthProperties
+                OpenAgentAuthProperties openAgentAuthProperties,
+                KeyManager keyManager
         ) {
             String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
-            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientSecret();
-            return new DefaultOAuth2ParClient(serviceEndpointResolver, clientId, clientSecret);
+
+            // Resolve the PAR endpoint URL (used as audience for the client assertion JWT)
+            String parEndpoint = serviceEndpointResolver.resolveConsumer("authorization-server", "oauth2.par");
+
+            // Reuse the PAR-JWT signing key for client assertion signing (same key pair)
+            String keyId = openAgentAuthProperties.getKeyDefinition(KEY_PAR_JWT_SIGNING).getKeyId();
+            KeyAlgorithm keyAlgorithm = KeyAlgorithm.fromValue(
+                    openAgentAuthProperties.getKeyDefinition(KEY_PAR_JWT_SIGNING).getAlgorithm());
+
+            RSAKey signingKey;
+            try {
+                signingKey = (RSAKey) keyManager.getOrGenerateKey(keyId, keyAlgorithm);
+            } catch (KeyManagementException e) {
+                throw new IllegalStateException("Failed to obtain PAR client assertion signing key", e);
+            }
+
+            // Use ClientAssertionAuthentication (private_key_jwt) instead of BasicAuth
+            // so that DCR-registered dynamic client_id can be propagated through the
+            // JWT assertion's iss/sub claims (RFC 7523 Section 3)
+            ClientAssertionGenerator assertionGenerator = new ClientAssertionGenerator(clientId, signingKey, JWSAlgorithm.RS256);
+            OAuth2ClientAuthentication parAuthentication = new ClientAssertionAuthentication(clientId, assertionGenerator, parEndpoint);
+
+            logger.info("Creating PAR client with private_key_jwt authentication, clientId: {}", clientId);
+            return new DefaultOAuth2ParClient(serviceEndpointResolver, parAuthentication);
         }
 
         /**

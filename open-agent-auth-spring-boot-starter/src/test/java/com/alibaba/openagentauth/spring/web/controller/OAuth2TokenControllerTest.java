@@ -19,8 +19,8 @@ import com.alibaba.openagentauth.core.model.oauth2.token.TokenRequest;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
+import com.alibaba.openagentauth.spring.util.OAuth2ClientAuthenticator;
 import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +31,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.util.Base64;
 import java.util.Map;
@@ -39,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,6 +72,9 @@ class OAuth2TokenControllerTest {
     @Mock
     private OAuth2ClientStore clientStore;
 
+    @Mock
+    private OAuth2ClientAuthenticator clientAuthenticator;
+
     private OAuth2TokenController controller;
 
     private static final String GRANT_TYPE = "authorization_code";
@@ -83,7 +89,11 @@ class OAuth2TokenControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new OAuth2TokenController(tokenServer, clientStore);
+        controller = new OAuth2TokenController(tokenServer, clientStore, clientAuthenticator);
+        
+        // Mock client authenticator to return valid client ID
+        lenient().when(clientAuthenticator.authenticateClient(any(), any(), eq(clientStore)))
+                .thenReturn(CLIENT_ID);
         
         // Setup default client in DCR store with lenient() to avoid UnnecessaryStubbingException
         // for tests that don't use this client (e.g., missing auth header tests)
@@ -101,6 +111,17 @@ class OAuth2TokenControllerTest {
         return "Basic " + encoded;
     }
 
+    /**
+     * Builds a MultiValueMap representing a standard token request body.
+     */
+    private MultiValueMap<String, String> buildTokenRequestBody(String grantType, String code, String redirectUri) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        if (grantType != null) body.add("grant_type", grantType);
+        if (code != null) body.add("code", code);
+        if (redirectUri != null) body.add("redirect_uri", redirectUri);
+        return body;
+    }
+
     @Nested
     @DisplayName("Token Endpoint Tests")
     class TokenEndpointTests {
@@ -110,6 +131,7 @@ class OAuth2TokenControllerTest {
         void shouldIssueTokenSuccessfullyWithValidBasicAuth() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
             
             TokenResponse tokenResponse = TokenResponse.builder()
                     .accessToken(ACCESS_TOKEN)
@@ -121,9 +143,7 @@ class OAuth2TokenControllerTest {
                     .thenReturn(tokenResponse);
 
             // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
+            ResponseEntity<Map<String, Object>> response = controller.token(requestBody, authHeader);
 
             // Then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -134,7 +154,6 @@ class OAuth2TokenControllerTest {
             assertThat(response.getBody().get("scope")).isEqualTo(SCOPE);
             
             verify(tokenServer).issueToken(any(TokenRequest.class), eq(CLIENT_ID));
-            verify(clientStore).retrieve(CLIENT_ID);
         }
 
         @Test
@@ -142,7 +161,8 @@ class OAuth2TokenControllerTest {
         void shouldIncludeIdTokenInResponseWhenPresent() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
-            String idToken = "eyJhbGciOiJSUzI1NiJ9.id-token-value";
+            String idToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.id_token";
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
             
             TokenResponse tokenResponse = TokenResponse.builder()
                     .accessToken(ACCESS_TOKEN)
@@ -155,9 +175,7 @@ class OAuth2TokenControllerTest {
                     .thenReturn(tokenResponse);
 
             // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
+            ResponseEntity<Map<String, Object>> response = controller.token(requestBody, authHeader);
 
             // Then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -171,6 +189,7 @@ class OAuth2TokenControllerTest {
         void shouldNotIncludeIdTokenInResponseWhenNotPresent() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
             
             TokenResponse tokenResponse = TokenResponse.builder()
                     .accessToken(ACCESS_TOKEN)
@@ -182,9 +201,7 @@ class OAuth2TokenControllerTest {
                     .thenReturn(tokenResponse);
 
             // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
+            ResponseEntity<Map<String, Object>> response = controller.token(requestBody, authHeader);
 
             // Then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -197,6 +214,7 @@ class OAuth2TokenControllerTest {
         void shouldIssueTokenWithNullScopeWhenScopeIsNotProvided() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
             
             TokenResponse tokenResponse = TokenResponse.builder()
                     .accessToken(ACCESS_TOKEN)
@@ -208,9 +226,7 @@ class OAuth2TokenControllerTest {
                     .thenReturn(tokenResponse);
 
             // When
-            ResponseEntity<Map<String, Object>> response = controller.token(
-                    GRANT_TYPE, CODE, REDIRECT_URI, authHeader
-            );
+            ResponseEntity<Map<String, Object>> response = controller.token(requestBody, authHeader);
 
             // Then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -226,12 +242,13 @@ class OAuth2TokenControllerTest {
         void shouldReturnBadRequestWhenOAuth2ExceptionOccurs() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
             
             when(tokenServer.issueToken(any(TokenRequest.class), eq(CLIENT_ID)))
                     .thenThrow(new FrameworkOAuth2TokenException("invalid_grant", "Invalid authorization code"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_grant")
                     .hasFieldOrPropertyWithValue("errorDescription", "Invalid authorization code");
@@ -242,12 +259,13 @@ class OAuth2TokenControllerTest {
         void shouldReturnInternalServerErrorWhenUnexpectedExceptionOccurs() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
             
             when(tokenServer.issueToken(any(TokenRequest.class), eq(CLIENT_ID)))
                     .thenThrow(new RuntimeException("Unexpected error"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("Unexpected error");
         }
@@ -260,8 +278,13 @@ class OAuth2TokenControllerTest {
         @Test
         @DisplayName("Should throw FrameworkOAuth2TokenException when Authorization header is missing")
         void shouldReturnBadRequestWhenAuthorizationHeaderIsMissing() {
+            // Given
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(isNull(), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Authorization header is missing"));
+            
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, null))
+            assertThatThrownBy(() -> controller.token(requestBody, null))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Authorization header is missing");
@@ -272,9 +295,12 @@ class OAuth2TokenControllerTest {
         void shouldReturnBadRequestWhenAuthorizationHeaderHasInvalidScheme() {
             // Given
             String invalidAuthHeader = "Bearer " + buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET).substring(6);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(eq(invalidAuthHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Only Basic authentication is supported"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, invalidAuthHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, invalidAuthHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Only Basic authentication is supported");
@@ -285,9 +311,12 @@ class OAuth2TokenControllerTest {
         void shouldReturnBadRequestWhenAuthorizationHeaderHasInvalidBase64() {
             // Given
             String invalidAuthHeader = "Basic invalid_base64!!!";
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(eq(invalidAuthHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Invalid Base64 encoding"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, invalidAuthHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, invalidAuthHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Invalid Base64 encoding");
@@ -300,9 +329,12 @@ class OAuth2TokenControllerTest {
             String credentials = "invalid_credentials_without_colon";
             String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             String authHeader = "Basic " + encoded;
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(eq(authHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Invalid credentials format"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Invalid credentials format");
@@ -315,9 +347,12 @@ class OAuth2TokenControllerTest {
             String credentials = ":" + CLIENT_SECRET;
             String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             String authHeader = "Basic " + encoded;
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(eq(authHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Client ID is required"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Client ID is required");
@@ -329,11 +364,12 @@ class OAuth2TokenControllerTest {
             // Given
             String unregisteredClientId = "unregistered-client";
             String authHeader = buildBasicAuthHeader(unregisteredClientId, CLIENT_SECRET);
-            
-            when(clientStore.retrieve(unregisteredClientId)).thenReturn(null);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(eq(authHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Client not registered"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Client not registered");
@@ -345,9 +381,12 @@ class OAuth2TokenControllerTest {
             // Given
             String wrongSecret = "wrong-secret";
             String authHeader = buildBasicAuthHeader(CLIENT_ID, wrongSecret);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(eq(authHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Invalid client secret"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Invalid client secret");
@@ -359,16 +398,12 @@ class OAuth2TokenControllerTest {
             // Given
             String publicClientId = "public-client";
             String authHeader = buildBasicAuthHeader(publicClientId, "any-secret");
-            
-            OAuth2RegisteredClient publicClient = OAuth2RegisteredClient.builder()
-                    .clientId(publicClientId)
-                    .clientSecret(null)
-                    .tokenEndpointAuthMethod("none")
-                    .build();
-            when(clientStore.retrieve(publicClientId)).thenReturn(publicClient);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(eq(authHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Client is not configured for authentication"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Client is not configured for authentication");
@@ -380,19 +415,77 @@ class OAuth2TokenControllerTest {
             // Given
             String jwtAuthClientId = "jwt-auth-client";
             String authHeader = buildBasicAuthHeader(jwtAuthClientId, CLIENT_SECRET);
-            
-            OAuth2RegisteredClient jwtClient = OAuth2RegisteredClient.builder()
-                    .clientId(jwtAuthClientId)
-                    .clientSecret(CLIENT_SECRET)
-                    .tokenEndpointAuthMethod("private_key_jwt")
-                    .build();
-            when(clientStore.retrieve(jwtAuthClientId)).thenReturn(jwtClient);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+            when(clientAuthenticator.authenticateClient(eq(authHeader), any(), eq(clientStore)))
+                    .thenThrow(new FrameworkOAuth2TokenException("invalid_client", "Client authentication failed: Unsupported authentication method: private_key_jwt"));
 
             // When & Then
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "invalid_client")
                     .hasFieldOrPropertyWithValue("errorDescription", "Client authentication failed: Unsupported authentication method: private_key_jwt");
+        }
+    }
+
+    @Nested
+    @DisplayName("Basic Auth Fallback Tests (null clientAuthenticator)")
+    class BasicAuthFallbackTests {
+
+        private OAuth2TokenController controllerWithoutAuthenticator;
+
+        @BeforeEach
+        void setUp() {
+            controllerWithoutAuthenticator = new OAuth2TokenController(tokenServer, clientStore, null);
+        }
+
+        @Test
+        @DisplayName("Should authenticate via Basic Auth when clientAuthenticator is null")
+        void shouldAuthenticateViaBasicAuthWhenClientAuthenticatorIsNull() {
+            // Given
+            String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+
+            TokenResponse tokenResponse = TokenResponse.builder()
+                    .accessToken(ACCESS_TOKEN)
+                    .tokenType(TOKEN_TYPE)
+                    .expiresIn((long) EXPIRES_IN)
+                    .scope(SCOPE)
+                    .build();
+            when(tokenServer.issueToken(any(TokenRequest.class), eq(CLIENT_ID)))
+                    .thenReturn(tokenResponse);
+
+            // When
+            ResponseEntity<Map<String, Object>> response = controllerWithoutAuthenticator.token(requestBody, authHeader);
+
+            // Then
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().get("access_token")).isEqualTo(ACCESS_TOKEN);
+        }
+
+        @Test
+        @DisplayName("Should throw exception when Basic Auth header is missing and clientAuthenticator is null")
+        void shouldThrowExceptionWhenBasicAuthHeaderIsMissingAndClientAuthenticatorIsNull() {
+            // Given
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+
+            // When & Then
+            assertThatThrownBy(() -> controllerWithoutAuthenticator.token(requestBody, null))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when client secret is wrong and clientAuthenticator is null")
+        void shouldThrowExceptionWhenClientSecretIsWrongAndClientAuthenticatorIsNull() {
+            // Given
+            String authHeader = buildBasicAuthHeader(CLIENT_ID, "wrong-secret");
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
+
+            // When & Then
+            assertThatThrownBy(() -> controllerWithoutAuthenticator.token(requestBody, authHeader))
+                    .isInstanceOf(FrameworkOAuth2TokenException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "invalid_client");
         }
     }
 
@@ -405,6 +498,7 @@ class OAuth2TokenControllerTest {
         void shouldBuildTokenRequestWithAllParameters() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, REDIRECT_URI);
             
             TokenResponse tokenResponse = TokenResponse.builder()
                     .accessToken(ACCESS_TOKEN)
@@ -416,7 +510,7 @@ class OAuth2TokenControllerTest {
                     .thenReturn(tokenResponse);
 
             // When
-            controller.token(GRANT_TYPE, CODE, REDIRECT_URI, authHeader);
+            controller.token(requestBody, authHeader);
 
             // Then
             verify(tokenServer).issueToken(any(TokenRequest.class), eq(CLIENT_ID));
@@ -427,9 +521,10 @@ class OAuth2TokenControllerTest {
         void shouldHandleTokenRequestWithNullCode() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, null, REDIRECT_URI);
 
             // When & Then - TokenRequest.Builder throws IllegalStateException for null code
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, null, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -438,9 +533,10 @@ class OAuth2TokenControllerTest {
         void shouldHandleTokenRequestWithNullRedirectUri() {
             // Given
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody(GRANT_TYPE, CODE, null);
 
             // When & Then - TokenRequest.Builder throws IllegalStateException for null redirectUri
-            assertThatThrownBy(() -> controller.token(GRANT_TYPE, CODE, null, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -448,11 +544,11 @@ class OAuth2TokenControllerTest {
         @DisplayName("Should throw IllegalStateException when grant type is not authorization_code")
         void shouldHandleTokenRequestWithDifferentGrantTypes() {
             // Given
-            String grantType = "refresh_token";
             String authHeader = buildBasicAuthHeader(CLIENT_ID, CLIENT_SECRET);
+            MultiValueMap<String, String> requestBody = buildTokenRequestBody("refresh_token", CODE, REDIRECT_URI);
 
             // When & Then - TokenRequest.Builder throws IllegalStateException for non-authorization_code grant type
-            assertThatThrownBy(() -> controller.token(grantType, CODE, REDIRECT_URI, authHeader))
+            assertThatThrownBy(() -> controller.token(requestBody, authHeader))
                     .isInstanceOf(IllegalStateException.class);
         }
     }

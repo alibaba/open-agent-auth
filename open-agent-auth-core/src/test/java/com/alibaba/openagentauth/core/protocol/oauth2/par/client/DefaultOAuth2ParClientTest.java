@@ -19,16 +19,18 @@ import com.alibaba.openagentauth.core.exception.oauth2.ParException;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.BasicAuthAuthentication;
-import com.alibaba.openagentauth.core.protocol.oauth2.client.ParClientAuthentication;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.OAuth2ClientAuthentication;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,6 +39,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentCaptor.forClass;
 
 /**
  * Unit tests for {@link DefaultOAuth2ParClient}.
@@ -59,7 +62,7 @@ class DefaultOAuth2ParClientTest {
 
     private HttpClient mockHttpClient;
     private HttpResponse<String> mockHttpResponse;
-    private ParClientAuthentication mockAuthentication;
+    private OAuth2ClientAuthentication mockAuthentication;
     private DefaultOAuth2ParClient client;
     
     private ServiceEndpointResolver mockServiceEndpointResolver;
@@ -72,113 +75,13 @@ class DefaultOAuth2ParClientTest {
     }
 
     @Nested
-    @DisplayName("Constructor with Basic Authentication")
-    class ConstructorWithBasicAuth {
+    @DisplayName("Constructor with OAuth2ClientAuthentication")
+    class ConstructorWithOAuth2ClientAuthentication {
 
         @Test
         @DisplayName("Should create client with valid parameters")
         void shouldCreateClientWithValidParameters() {
-            client = new DefaultOAuth2ParClient(mockServiceEndpointResolver, CLIENT_ID, CLIENT_SECRET);
-            assertThat(client).isNotNull();
-        }
-
-        @Test
-        @DisplayName("Should throw exception when service endpoint resolver is null")
-        void shouldThrowExceptionWhenServiceEndpointResolverIsNull() {
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(null, CLIENT_ID, CLIENT_SECRET))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Service endpoint resolver");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when clientId is null")
-        void shouldThrowExceptionWhenClientIdIsNull() {
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockServiceEndpointResolver, null, CLIENT_SECRET))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client ID");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when clientId is blank")
-        void shouldThrowExceptionWhenClientIdIsBlank() {
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockServiceEndpointResolver, "   ", CLIENT_SECRET))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client ID");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when clientSecret is null")
-        void shouldThrowExceptionWhenClientSecretIsNull() {
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockServiceEndpointResolver, CLIENT_ID, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client secret");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when clientSecret is blank")
-        void shouldThrowExceptionWhenClientSecretIsBlank() {
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockServiceEndpointResolver, CLIENT_ID, "   "))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client secret");
-        }
-    }
-
-    @Nested
-    @DisplayName("Constructor with HttpClient and Basic Authentication")
-    class ConstructorWithHttpClientAndBasicAuth {
-
-        @Test
-        @DisplayName("Should create client with valid parameters")
-        void shouldCreateClientWithValidParameters() {
-            mockHttpClient = HttpClient.newHttpClient();
-            client = new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, CLIENT_ID, CLIENT_SECRET);
-            assertThat(client).isNotNull();
-        }
-
-        @Test
-        @DisplayName("Should throw exception when httpClient is null")
-        void shouldThrowExceptionWhenHttpClientIsNull() {
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(null, mockServiceEndpointResolver, CLIENT_ID, CLIENT_SECRET))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("HTTP client");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when service endpoint resolver is null")
-        void shouldThrowExceptionWhenServiceEndpointResolverIsNull() {
-            mockHttpClient = HttpClient.newHttpClient();
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockHttpClient, null, CLIENT_ID, CLIENT_SECRET))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Service endpoint resolver");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when clientId is null")
-        void shouldThrowExceptionWhenClientIdIsNull() {
-            mockHttpClient = HttpClient.newHttpClient();
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, null, CLIENT_SECRET))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client ID");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when clientSecret is null")
-        void shouldThrowExceptionWhenClientSecretIsNull() {
-            mockHttpClient = HttpClient.newHttpClient();
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, CLIENT_ID, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client secret");
-        }
-    }
-
-    @Nested
-    @DisplayName("Constructor with ParClientAuthentication")
-    class ConstructorWithParClientAuthentication {
-
-        @Test
-        @DisplayName("Should create client with valid parameters")
-        void shouldCreateClientWithValidParameters() {
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.getAuthenticationMethod()).thenReturn("client_secret_basic");
             client = new DefaultOAuth2ParClient(mockServiceEndpointResolver, mockAuthentication);
@@ -188,7 +91,7 @@ class DefaultOAuth2ParClientTest {
         @Test
         @DisplayName("Should throw exception when service endpoint resolver is null")
         void shouldThrowExceptionWhenServiceEndpointResolverIsNull() {
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             assertThatThrownBy(() -> new DefaultOAuth2ParClient(null, mockAuthentication))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Service endpoint resolver");
@@ -197,21 +100,21 @@ class DefaultOAuth2ParClientTest {
         @Test
         @DisplayName("Should throw exception when authentication is null")
         void shouldThrowExceptionWhenAuthenticationIsNull() {
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockServiceEndpointResolver, (ParClientAuthentication) null))
+            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockServiceEndpointResolver, (OAuth2ClientAuthentication) null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Authentication strategy");
         }
     }
 
     @Nested
-    @DisplayName("Constructor with custom HttpClient and ParClientAuthentication")
-    class ConstructorWithHttpClientAndParClientAuthentication {
+    @DisplayName("Constructor with custom HttpClient and OAuth2ClientAuthentication")
+    class ConstructorWithHttpClientAndOAuth2ClientAuthentication {
 
         @Test
         @DisplayName("Should create client with valid parameters")
         void shouldCreateClientWithValidParameters() {
             mockHttpClient = HttpClient.newHttpClient();
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             client = new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, mockAuthentication);
             assertThat(client).isNotNull();
@@ -220,7 +123,7 @@ class DefaultOAuth2ParClientTest {
         @Test
         @DisplayName("Should throw exception when httpClient is null")
         void shouldThrowExceptionWhenHttpClientIsNull() {
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             assertThatThrownBy(() -> new DefaultOAuth2ParClient(null, mockServiceEndpointResolver, mockAuthentication))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("HTTP client");
@@ -230,7 +133,7 @@ class DefaultOAuth2ParClientTest {
         @DisplayName("Should throw exception when service endpoint resolver is null")
         void shouldThrowExceptionWhenServiceEndpointResolverIsNull() {
             mockHttpClient = HttpClient.newHttpClient();
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockHttpClient, null, mockAuthentication))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Service endpoint resolver");
@@ -240,7 +143,7 @@ class DefaultOAuth2ParClientTest {
         @DisplayName("Should throw exception when authentication is null")
         void shouldThrowExceptionWhenAuthenticationIsNull() {
             mockHttpClient = HttpClient.newHttpClient();
-            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, (ParClientAuthentication) null))
+            assertThatThrownBy(() -> new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, (OAuth2ClientAuthentication) null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Authentication strategy");
         }
@@ -289,7 +192,7 @@ class DefaultOAuth2ParClientTest {
         @DisplayName("Should throw exception when request is null")
         void shouldThrowExceptionWhenRequestIsNull() throws Exception {
             mockHttpClient = mock(HttpClient.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             client = new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, mockAuthentication);
 
@@ -302,7 +205,7 @@ class DefaultOAuth2ParClientTest {
         @DisplayName("Should throw ParException when HTTP request fails")
         void shouldThrowParExceptionWhenHttpRequestFails() throws Exception {
             mockHttpClient = mock(HttpClient.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -363,7 +266,7 @@ class DefaultOAuth2ParClientTest {
         void shouldThrowParExceptionWhenResponseBodyIsInvalidJson() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -385,7 +288,7 @@ class DefaultOAuth2ParClientTest {
         void shouldThrowParExceptionWhenRequestUriIsMissingFromResponse() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -408,7 +311,7 @@ class DefaultOAuth2ParClientTest {
         void shouldThrowParExceptionWhenExpiresInIsMissingFromResponse() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -430,7 +333,7 @@ class DefaultOAuth2ParClientTest {
         void shouldApplyAuthenticationHeadersToRequest() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -449,22 +352,97 @@ class DefaultOAuth2ParClientTest {
         }
 
         @Test
-        @DisplayName("Should use BasicAuthAuthentication when using basic auth constructor")
-        void shouldUseBasicAuthAuthenticationWhenUsingBasicAuthConstructor() throws Exception {
+        @DisplayName("Should use BasicAuthAuthentication with OAuth2ClientAuthentication constructor")
+        void shouldUseBasicAuthAuthenticationWithOAuth2ClientAuthenticationConstructor() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
             when(mockHttpResponse.statusCode()).thenReturn(200);
             when(mockHttpResponse.body()).thenReturn(buildSuccessResponseBody());
             when(mockHttpClient.send(any(HttpRequest.class), any(BodyHandler.class)))
                     .thenReturn(mockHttpResponse);
 
-            client = new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, CLIENT_ID, CLIENT_SECRET);
+            BasicAuthAuthentication basicAuth = new BasicAuthAuthentication(CLIENT_ID, CLIENT_SECRET);
+            client = new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, basicAuth);
 
             ParRequest request = createParRequest();
             ParResponse response = client.submitParRequest(request);
 
             assertThat(response).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Should propagate client_id from ParRequest to request body")
+        void shouldPropagateClientIdFromParRequestToRequestBody() throws Exception {
+            mockHttpClient = mock(HttpClient.class);
+            mockHttpResponse = mock(HttpResponse.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
+            
+            String dynamicClientId = "dynamic_client_12345";
+            when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
+            when(mockAuthentication.applyAuthentication(any(), any()))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            when(mockHttpResponse.statusCode()).thenReturn(200);
+            when(mockHttpResponse.body()).thenReturn(buildSuccessResponseBody());
+            when(mockHttpClient.send(any(HttpRequest.class), any(BodyHandler.class)))
+                    .thenReturn(mockHttpResponse);
+
+            client = new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, mockAuthentication);
+
+            ParRequest request = ParRequest.builder()
+                    .responseType("code")
+                    .clientId(dynamicClientId)
+                    .redirectUri("https://example.com/callback")
+                    .scope("openid")
+                    .requestJwt(REQUEST_JWT)
+                    .build();
+
+            client.submitParRequest(request);
+
+            ArgumentCaptor<Map> requestBodyCaptor = forClass(Map.class);
+            verify(mockAuthentication).applyAuthentication(any(), requestBodyCaptor.capture());
+            
+            Map<String, String> requestBody = requestBodyCaptor.getValue();
+            assertThat(requestBody).containsKey("client_id");
+            assertThat(requestBody.get("client_id")).isEqualTo(dynamicClientId);
+        }
+
+        @Test
+        @DisplayName("Should propagate different client_id than authentication default")
+        void shouldPropagateDifferentClientIdThanAuthenticationDefault() throws Exception {
+            mockHttpClient = mock(HttpClient.class);
+            mockHttpResponse = mock(HttpResponse.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
+            String authDefaultClientId = "static-default-client";
+            String dcrRegisteredClientId = "dcr-registered-uuid-12345";
+            
+            when(mockAuthentication.getClientId()).thenReturn(authDefaultClientId);
+            when(mockAuthentication.applyAuthentication(any(), any()))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            when(mockHttpResponse.statusCode()).thenReturn(200);
+            when(mockHttpResponse.body()).thenReturn(buildSuccessResponseBody());
+            when(mockHttpClient.send(any(HttpRequest.class), any(BodyHandler.class)))
+                    .thenReturn(mockHttpResponse);
+
+            client = new DefaultOAuth2ParClient(mockHttpClient, mockServiceEndpointResolver, mockAuthentication);
+
+            // Use DCR-registered client_id which differs from the authentication default
+            ParRequest request = ParRequest.builder()
+                    .responseType("code")
+                    .clientId(dcrRegisteredClientId)
+                    .redirectUri("https://example.com/callback")
+                    .scope("openid")
+                    .requestJwt(REQUEST_JWT)
+                    .build();
+
+            client.submitParRequest(request);
+
+            ArgumentCaptor<Map> requestBodyCaptor = forClass(Map.class);
+            verify(mockAuthentication).applyAuthentication(any(), requestBodyCaptor.capture());
+            
+            Map<String, String> requestBody = requestBodyCaptor.getValue();
+            // The DCR-registered client_id should be in the request body, not the auth default
+            assertThat(requestBody).containsKey("client_id");
+            assertThat(requestBody.get("client_id")).isEqualTo(dcrRegisteredClientId);
         }
     }
 
@@ -477,7 +455,7 @@ class DefaultOAuth2ParClientTest {
         void shouldWorkEndToEndWithRealBasicAuthAuthentication() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockHttpResponse.statusCode()).thenReturn(200);
             when(mockHttpResponse.body()).thenReturn(buildSuccessResponseBody());
             when(mockHttpClient.send(any(HttpRequest.class), any(BodyHandler.class)))
@@ -546,7 +524,7 @@ class DefaultOAuth2ParClientTest {
         void shouldHandleSpecialCharactersInRequestJwt() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             String specialJwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIn0.signature";
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
@@ -576,7 +554,7 @@ class DefaultOAuth2ParClientTest {
         void shouldHandleVeryLongRequestJwt() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             String longJwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." + "a".repeat(10000) + ".signature";
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
@@ -606,7 +584,7 @@ class DefaultOAuth2ParClientTest {
         void shouldHandleZeroExpiresInValue() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -629,7 +607,7 @@ class DefaultOAuth2ParClientTest {
         void shouldHandleLargeExpiresInValue() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -652,7 +630,7 @@ class DefaultOAuth2ParClientTest {
         void shouldHandleErrorResponseWithEmptyErrorDescription() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -674,7 +652,7 @@ class DefaultOAuth2ParClientTest {
         void shouldHandleErrorResponseWithUnknownErrorCode() throws Exception {
             mockHttpClient = mock(HttpClient.class);
             mockHttpResponse = mock(HttpResponse.class);
-            mockAuthentication = mock(ParClientAuthentication.class);
+            mockAuthentication = mock(OAuth2ClientAuthentication.class);
             when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
             when(mockAuthentication.applyAuthentication(any(), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -697,7 +675,7 @@ class DefaultOAuth2ParClientTest {
     private void setupMockHttpClientForSuccess() throws Exception {
         mockHttpClient = mock(HttpClient.class);
         mockHttpResponse = mock(HttpResponse.class);
-        mockAuthentication = mock(ParClientAuthentication.class);
+        mockAuthentication = mock(OAuth2ClientAuthentication.class);
         
         when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
         when(mockAuthentication.applyAuthentication(any(), any()))
@@ -711,7 +689,7 @@ class DefaultOAuth2ParClientTest {
     private void setupMockHttpClientForError(int statusCode, String error, String description) throws Exception {
         mockHttpClient = mock(HttpClient.class);
         mockHttpResponse = mock(HttpResponse.class);
-        mockAuthentication = mock(ParClientAuthentication.class);
+        mockAuthentication = mock(OAuth2ClientAuthentication.class);
         
         when(mockAuthentication.getClientId()).thenReturn(CLIENT_ID);
         when(mockAuthentication.applyAuthentication(any(), any()))

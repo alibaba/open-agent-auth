@@ -103,17 +103,19 @@ public class ClientAssertionGenerator {
 
     /**
      * Generates a client assertion JWT for the specified token endpoint.
+     * Uses the default client_id configured at construction time.
      *
      * @param tokenEndpoint the token endpoint URL (audience)
      * @return the client assertion JWT string
      * @throws ClientAssertionException if generation fails
      */
     public String generateAssertion(String tokenEndpoint) {
-        return generateAssertion(tokenEndpoint, DEFAULT_EXPIRATION_SECONDS);
+        return generateAssertion(tokenEndpoint, clientId, DEFAULT_EXPIRATION_SECONDS);
     }
 
     /**
      * Generates a client assertion JWT with custom expiration.
+     * Uses the default client_id configured at construction time.
      *
      * @param tokenEndpoint the token endpoint URL (audience)
      * @param expirationSeconds the assertion expiration time in seconds
@@ -121,26 +123,66 @@ public class ClientAssertionGenerator {
      * @throws ClientAssertionException if generation fails
      */
     public String generateAssertion(String tokenEndpoint, long expirationSeconds) {
+        return generateAssertion(tokenEndpoint, clientId, expirationSeconds);
+    }
+
+    /**
+     * Generates a client assertion JWT with a dynamic client_id override and default expiration.
+     * <p>
+     * This overload supports DCR (Dynamic Client Registration) scenarios where the
+     * effective {@code client_id} differs from the static default configured at
+     * construction time.
+     * </p>
+     *
+     * @param tokenEndpoint the token endpoint URL (audience)
+     * @param effectiveClientId the client_id to use as {@code iss} and {@code sub} in the JWT
+     * @return the client assertion JWT string
+     * @throws ClientAssertionException if generation fails
+     */
+    public String generateAssertion(String tokenEndpoint, String effectiveClientId) {
+        return generateAssertion(tokenEndpoint, effectiveClientId, DEFAULT_EXPIRATION_SECONDS);
+    }
+
+    /**
+     * Generates a client assertion JWT with a dynamic client_id override and custom expiration.
+     * <p>
+     * This overload supports DCR (Dynamic Client Registration) scenarios where the
+     * effective {@code client_id} differs from the static default configured at
+     * construction time. Per RFC 7523 Section 3, the {@code iss} and {@code sub}
+     * claims in the assertion JWT MUST match the {@code client_id} that the
+     * Authorization Server will use for authentication.
+     * </p>
+     *
+     * @param tokenEndpoint the token endpoint URL (audience)
+     * @param effectiveClientId the client_id to use as {@code iss} and {@code sub} in the JWT
+     * @param expirationSeconds the assertion expiration time in seconds
+     * @return the client assertion JWT string
+     * @throws ClientAssertionException if generation fails
+     * @throws IllegalArgumentException if any parameter is null/blank or expirationSeconds is not positive
+     */
+    public String generateAssertion(String tokenEndpoint, String effectiveClientId, long expirationSeconds) {
         requireNotBlank(tokenEndpoint, "Token endpoint cannot be null or blank");
+        requireNotBlank(effectiveClientId, "Effective client ID cannot be null or blank");
         
         if (expirationSeconds <= 0) {
             throw new IllegalArgumentException("Expiration seconds must be positive");
         }
 
-        logger.debug("Generating client assertion for client: {}, audience: {}", clientId, tokenEndpoint);
+        logger.debug("Generating client assertion for client: {}, audience: {}", effectiveClientId, tokenEndpoint);
 
         try {
             Instant now = Instant.now();
             Instant expirationTime = now.plusSeconds(expirationSeconds);
             
             // Build JWT claims set according to RFC 7523
+            // iss and sub MUST match the client_id used for authentication
             JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                    .issuer(clientId)                    // iss: client_id
-                    .subject(clientId)                   // sub: client_id
-                    .audience(tokenEndpoint)            // aud: token endpoint
-                    .expirationTime(Date.from(expirationTime))  // exp
-                    .issueTime(Date.from(now))          // iat
-                    .jwtID(UUID.randomUUID().toString()) // jti
+                    .issuer(effectiveClientId)                    // iss: effective client_id
+                    .subject(effectiveClientId)                   // sub: effective client_id
+                    .audience(tokenEndpoint)                      // aud: token endpoint
+                    .expirationTime(Date.from(expirationTime))    // exp
+                    .issueTime(Date.from(now))                    // iat
+                    .jwtID(UUID.randomUUID().toString())           // jti
                     .build();
             
             // Build JWS header
@@ -153,12 +195,12 @@ public class ClientAssertionGenerator {
             signedJwt.sign(new RSASSASigner(signingKey));
             
             String assertion = signedJwt.serialize();
-            logger.debug("Successfully generated client assertion for client: {}", clientId);
+            logger.debug("Successfully generated client assertion for client: {}", effectiveClientId);
             
             return assertion;
             
         } catch (JOSEException e) {
-            logger.error("Failed to generate client assertion for client: {}", clientId, e);
+            logger.error("Failed to generate client assertion for client: {}", effectiveClientId, e);
             throw new ClientAssertionException("Failed to generate client assertion: " + e.getMessage(), e);
         }
     }

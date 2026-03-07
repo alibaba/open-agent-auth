@@ -113,6 +113,17 @@ public class AuthorizationResponse {
     @JsonProperty("error_uri")
     private final String errorUri;
 
+    /**
+     * The DCR-registered client identifier.
+     * <p>
+     * When using Dynamic Client Registration (RFC 7591), this field carries the
+     * DCR-assigned client_id through the callback flow, ensuring the token exchange
+     * uses the correct client identity that matches the authorization code binding.
+     * </p>
+     */
+    @JsonProperty("client_id")
+    private final String clientId;
+
     private AuthorizationResponse(Builder builder) {
         this.redirectUri = builder.redirectUri;
         this.authorizationCode = builder.authorizationCode;
@@ -120,6 +131,7 @@ public class AuthorizationResponse {
         this.error = builder.error;
         this.errorDescription = builder.errorDescription;
         this.errorUri = builder.errorUri;
+        this.clientId = builder.clientId;
     }
 
     public String getRedirectUri() {
@@ -147,6 +159,15 @@ public class AuthorizationResponse {
     }
 
     /**
+     * Returns the DCR-registered client identifier.
+     *
+     * @return the DCR client_id, or null if not using DCR
+     */
+    public String getClientId() {
+        return clientId;
+    }
+
+    /**
      * Checks if this is a successful authorization response.
      *
      * @return true if the response is successful (no error), false otherwise
@@ -165,12 +186,13 @@ public class AuthorizationResponse {
                 Objects.equals(state, that.state) &&
                 Objects.equals(error, that.error) &&
                 Objects.equals(errorDescription, that.errorDescription) &&
-                Objects.equals(errorUri, that.errorUri);
+                Objects.equals(errorUri, that.errorUri) &&
+                Objects.equals(clientId, that.clientId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(redirectUri, authorizationCode, state, error, errorDescription, errorUri);
+        return Objects.hash(redirectUri, authorizationCode, state, error, errorDescription, errorUri, clientId);
     }
 
     @Override
@@ -182,6 +204,7 @@ public class AuthorizationResponse {
                 ", error='" + error + '\'' +
                 ", errorDescription='" + errorDescription + '\'' +
                 ", errorUri='" + errorUri + '\'' +
+                ", clientId='" + clientId + '\'' +
                 '}';
     }
 
@@ -204,6 +227,7 @@ public class AuthorizationResponse {
         private String error;
         private String errorDescription;
         private String errorUri;
+        private String clientId;
 
         /**
          * Sets the redirect URI.
@@ -268,6 +292,17 @@ public class AuthorizationResponse {
          */
         public Builder errorUri(String errorUri) {
             this.errorUri = errorUri;
+            return this;
+        }
+
+        /**
+         * Sets the DCR-registered client identifier.
+         *
+         * @param clientId the DCR client_id
+         * @return this builder instance
+         */
+        public Builder clientId(String clientId) {
+            this.clientId = clientId;
             return this;
         }
 

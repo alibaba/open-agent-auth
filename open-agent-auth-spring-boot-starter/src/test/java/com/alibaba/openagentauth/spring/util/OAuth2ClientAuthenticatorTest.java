@@ -17,7 +17,6 @@ package com.alibaba.openagentauth.spring.util;
 
 import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -308,7 +307,7 @@ class OAuth2ClientAuthenticatorTest {
             assertThatThrownBy(() -> OAuth2ClientAuthenticator.authenticateWithBasicAuth(
                     authHeader, clientStore))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
-                    .hasMessageContaining("Client is not configured for authentication");
+                    .hasMessageContaining("Client is not configured for Basic authentication");
         }
 
         @Test
@@ -370,7 +369,7 @@ class OAuth2ClientAuthenticatorTest {
             assertThatThrownBy(() -> OAuth2ClientAuthenticator.authenticateWithBasicAuth(
                     authHeader, clientStore))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
-                    .hasMessageContaining("Client is not configured for authentication");
+                    .hasMessageContaining("Client is not configured for Basic authentication");
         }
 
         @Test
@@ -390,7 +389,7 @@ class OAuth2ClientAuthenticatorTest {
             assertThatThrownBy(() -> OAuth2ClientAuthenticator.authenticateWithBasicAuth(
                     authHeader, clientStore))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
-                    .hasMessageContaining("Client is not configured for authentication");
+                    .hasMessageContaining("Client is not configured for Basic authentication");
         }
     }
 
@@ -461,7 +460,7 @@ class OAuth2ClientAuthenticatorTest {
             assertThatThrownBy(() -> OAuth2ClientAuthenticator.authenticateWithBasicAuth(
                     authHeader, clientStore))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
-                    .hasMessageContaining("Unsupported authentication method: private_key_jwt");
+                    .hasMessageContaining("Client is not configured for Basic authentication");
         }
 
         @Test
@@ -481,7 +480,7 @@ class OAuth2ClientAuthenticatorTest {
             assertThatThrownBy(() -> OAuth2ClientAuthenticator.authenticateWithBasicAuth(
                     authHeader, clientStore))
                     .isInstanceOf(FrameworkOAuth2TokenException.class)
-                    .hasMessageContaining("Unsupported authentication method: client_secret_post");
+                    .hasMessageContaining("Client is not configured for Basic authentication");
         }
 
         @Test

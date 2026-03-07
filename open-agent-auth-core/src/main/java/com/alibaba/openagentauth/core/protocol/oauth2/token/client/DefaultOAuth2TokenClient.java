@@ -18,6 +18,7 @@ package com.alibaba.openagentauth.core.protocol.oauth2.token.client;
 import com.alibaba.openagentauth.core.exception.oauth2.OAuth2TokenException;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenRequest;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.OAuth2ClientAuthentication;
 import com.alibaba.openagentauth.core.util.UriQueryBuilder;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
@@ -28,13 +29,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Default implementation of {@link OAuth2TokenClient}.
@@ -48,7 +49,8 @@ import java.util.Base64;
  *   <li>Authorization code exchange for access tokens</li>
  *   <li>Refresh token support</li>
  *   <li>Token revocation support (RFC 7009)</li>
- *   <li>Basic authentication for confidential clients</li>
+ *   <li>Pluggable client authentication via {@link OAuth2ClientAuthentication} strategy</li>
+ *   <li>Supports client_secret_basic, private_key_jwt, and custom authentication methods</li>
  *   <li>Configurable timeout and connection settings</li>
  *   <li>Comprehensive error handling</li>
  * </ul>
@@ -77,41 +79,57 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
     private final HttpClient httpClient;
 
     /**
-     * The client ID for authentication.
-     */
-    private final String clientId;
-
-    /**
-     * The client secret for authentication (null for public clients).
-     */
-    private final String clientSecret;
-
-    /**
      * The service name for resolving consumer endpoints (e.g., "agent-user-idp", "authorization-server").
      */
     private final String serviceName;
 
     /**
-     * Creates a new DefaultTokenClient for confidential clients.
+     * The pluggable client authentication strategy.
      * <p>
-     * Confidential clients use Basic authentication with client credentials.
+     * This follows the Strategy pattern to support multiple OAuth 2.0 client authentication
+     * methods (client_secret_basic, private_key_jwt, etc.) as defined in RFC 6749 Section 2.3
+     * and RFC 7523.
      * </p>
+     */
+    private final OAuth2ClientAuthentication authentication;
+
+    /**
+     * Creates a new DefaultTokenClient with pluggable authentication strategy.
+     * <p>
+     * This is the preferred constructor that supports any OAuth 2.0 client authentication
+     * method through the {@link OAuth2ClientAuthentication} strategy interface. Per RFC 6749
+     * Section 2.3, clients MUST authenticate to the token endpoint using one of the
+     * supported methods.
+     * </p>
+     * <p>
+     * <b>Usage Example:</b></p>
+     * <pre>{@code
+     * // Basic Authentication
+     * OAuth2ClientAuthentication auth = new BasicAuthAuthentication(clientId, clientSecret);
+     * OAuth2TokenClient client = new DefaultOAuth2TokenClient(resolver, "authorization-server", auth);
+     *
+     * // Private Key JWT Authentication
+     * ClientAssertionGenerator generator = new ClientAssertionGenerator(clientId, signingKey, JWSAlgorithm.RS256);
+     * OAuth2ClientAuthentication auth = new ClientAssertionAuthentication(clientId, generator, tokenEndpoint);
+     * OAuth2TokenClient client = new DefaultOAuth2TokenClient(resolver, "authorization-server", auth);
+     * }</pre>
      *
      * @param serviceEndpointResolver the service endpoint resolver
      * @param serviceName the service name for resolving consumer endpoints
-     * @param clientId the client ID
-     * @param clientSecret the client secret (null for public clients)
+     * @param authentication the client authentication strategy
      */
-    public DefaultOAuth2TokenClient(ServiceEndpointResolver serviceEndpointResolver, String serviceName, String clientId, String clientSecret) {
+    public DefaultOAuth2TokenClient(
+            ServiceEndpointResolver serviceEndpointResolver,
+            String serviceName,
+            OAuth2ClientAuthentication authentication) {
 
         this.serviceEndpointResolver = ValidationUtils.validateNotNull(serviceEndpointResolver, "Service endpoint resolver");
         this.serviceName = ValidationUtils.validateNotEmpty(serviceName, "Service name");
-        this.clientId = ValidationUtils.validateNotNull(clientId, "Client ID");
-        this.clientSecret = ValidationUtils.validateNotNull(clientSecret, "Client secret");
+        this.authentication = ValidationUtils.validateNotNull(authentication, "Client authentication");
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-        
-        logger.info("DefaultTokenClient initialized with service endpoint resolver, service_name: {}, client_id: {}", 
-                serviceName, clientId);
+
+        logger.info("DefaultTokenClient initialized with {} authentication, service_name: {}, client_id: {}",
+                authentication.getAuthenticationMethod(), serviceName, authentication.getClientId());
     }
 
     @Override
@@ -157,11 +175,11 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
         logger.info("Refreshing access token");
 
         try {
-            // Build request body
-            String requestBody = String.format(
-                    "grant_type=refresh_token&refresh_token=%s",
-                    URLEncoder.encode(refreshToken, StandardCharsets.UTF_8)
-            );
+            // Build request body using UriQueryBuilder
+            String requestBody = new UriQueryBuilder()
+                    .addEncoded("grant_type", "refresh_token")
+                    .addEncoded("refresh_token", refreshToken)
+                    .build();
 
             // Build HTTP request
             HttpRequest.Builder httpRequestBuilder = buildHttpRequestBuilder(requestBody);
@@ -194,12 +212,11 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
         logger.info("Revoking token of type: {}", tokenType);
 
         try {
-            // Build request body
-            String requestBody = String.format(
-                    "token=%s&token_type_hint=%s",
-                    URLEncoder.encode(token, StandardCharsets.UTF_8),
-                    URLEncoder.encode(tokenType, StandardCharsets.UTF_8)
-            );
+            // Build request body using UriQueryBuilder
+            String requestBody = new UriQueryBuilder()
+                    .addEncoded("token", token)
+                    .addEncoded("token_type_hint", tokenType)
+                    .build();
 
             // Build HTTP request
             HttpRequest.Builder httpRequestBuilder = buildHttpRequestBuilder(requestBody);
@@ -226,31 +243,31 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
         }
     }
     /**
-     * Builds the token request body from a TokenRequest object.
+     * Builds the token request body from a TokenRequest object using {@link UriQueryBuilder}.
      *
      * @param request the token request
      * @return the URL-encoded request body
      */
     private String buildTokenRequestBody(TokenRequest request) {
 
-        // Build request body with required parameters
+        // Build request body with required parameters using addEncoded to avoid double-encoding
         UriQueryBuilder builder = new UriQueryBuilder()
-                .add("grant_type", "authorization_code")
-                .add("code", URLEncoder.encode(request.getCode(), StandardCharsets.UTF_8));
+                .addEncoded("grant_type", "authorization_code")
+                .addEncoded("code", request.getCode());
 
         // Add optional parameters
         if (request.getRedirectUri() != null && !request.getRedirectUri().isEmpty()) {
-            builder.add("redirect_uri", URLEncoder.encode(request.getRedirectUri(), StandardCharsets.UTF_8));
+            builder.addEncoded("redirect_uri", request.getRedirectUri());
         }
         if (request.getClientId() != null && !request.getClientId().isEmpty()) {
-            builder.add("client_id", URLEncoder.encode(request.getClientId(), StandardCharsets.UTF_8));
+            builder.addEncoded("client_id", request.getClientId());
         }
 
         // Extract scope from additional parameters if present
         if (request.getAdditionalParameters() != null && request.getAdditionalParameters().containsKey("scope")) {
             Object scope = request.getAdditionalParameters().get("scope");
             if (scope != null) {
-                builder.add("scope", URLEncoder.encode(scope.toString(), StandardCharsets.UTF_8));
+                builder.addEncoded("scope", scope.toString());
             }
         }
 
@@ -334,16 +351,21 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
         logger.error(logMessage, cause);
         return OAuth2TokenException.serverError(errorMessage + ": " + cause.getMessage(), cause);
     }
-
     /**
-     * Builds HTTP request builder with common headers and authentication.
+     * Builds HTTP request builder with common headers and pluggable authentication.
+     * <p>
+     * This method delegates client authentication to the configured
+     * {@link OAuth2ClientAuthentication} strategy, which may add headers
+     * (e.g., Authorization for Basic Auth) or modify the request body
+     * (e.g., client_assertion parameters for private_key_jwt).
+     * </p>
      *
      * @param requestBody the request body
      * @return the HTTP request builder
      */
     private HttpRequest.Builder buildHttpRequestBuilder(String requestBody) {
 
-        // Build HTTP request - use consumer endpoint instead of provider endpoint
+        // Resolve token endpoint URL
         String tokenEndpoint = serviceEndpointResolver.resolveConsumer(serviceName, "oauth2.token");
         if (tokenEndpoint == null) {
             throw new IllegalStateException(
@@ -351,41 +373,79 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
                 ". Please check your configuration under 'open-agent-auth.services.consumers." + serviceName + "'."
             );
         }
-        
+
+        // Build mutable request body map for authentication strategy to modify
+        Map<String, String> requestBodyMap = parseFormUrlEncodedBody(requestBody);
+
+        // Build HTTP request
         HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(tokenEndpoint))
                 .header("Content-Type", "application/x-www-form-urlencoded")
-                .header("Accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody));
+                .header("Accept", "application/json");
 
-        // Add Basic authentication for confidential clients
-        String credentials = clientId + ":" + clientSecret;
-        byte[] credentialsBytes = credentials.getBytes(StandardCharsets.UTF_8);
-        String encodedCredentials = Base64.getEncoder().encodeToString(credentialsBytes);
-        httpRequestBuilder.header("Authorization", "Basic " + encodedCredentials);
-        logger.debug("Basic authentication header added");
+        // Apply pluggable client authentication strategy (RFC 6749 Section 2.3)
+        httpRequestBuilder = authentication.applyAuthentication(httpRequestBuilder, requestBodyMap);
+        logger.debug("{} authentication applied for client: {}",
+                authentication.getAuthenticationMethod(), authentication.getClientId());
+
+        // Rebuild request body from potentially modified map
+        String authenticatedRequestBody = buildFormUrlEncodedBody(requestBodyMap);
+        httpRequestBuilder.POST(HttpRequest.BodyPublishers.ofString(authenticatedRequestBody));
 
         return httpRequestBuilder;
     }
 
-
+    /**
+     * Parses a URL-encoded form body into a mutable map of decoded values.
+     * <p>
+     * Delegates to {@link UriQueryBuilder#parse(String)} which URL-decodes both
+     * parameter names and values. This ensures consistency when the map is later
+     * modified by {@link OAuth2ClientAuthentication#applyAuthentication} (which
+     * adds raw values) and then re-encoded by {@link #buildFormUrlEncodedBody}.
+     * </p>
+     *
+     * @param formBody the URL-encoded form body string
+     * @return a mutable map of decoded parameter name-value pairs
+     */
+    private Map<String, String> parseFormUrlEncodedBody(String formBody) {
+        return UriQueryBuilder.parse(formBody);
+    }
 
     /**
-     * Gets the client ID.
+     * Builds a URL-encoded form body from a map of parameters using {@link UriQueryBuilder}.
+     * <p>
+     * Uses {@link UriQueryBuilder#addEncoded(String, String)} to properly URL-encode
+     * the raw (decoded) values from the map. The map contains decoded values because
+     * {@link #parseFormUrlEncodedBody(String)} decodes them during parsing, ensuring
+     * consistency with raw values added by {@link OAuth2ClientAuthentication#applyAuthentication}.
+     * </p>
+     *
+     * @param parameters the map of raw (decoded) parameters
+     * @return the URL-encoded form body string
+     */
+    private String buildFormUrlEncodedBody(Map<String, String> parameters) {
+        UriQueryBuilder queryBuilder = new UriQueryBuilder();
+        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+            queryBuilder.addEncoded(entry.getKey(), entry.getValue());
+        }
+        return queryBuilder.build();
+    }
+
+    /**
+     * Returns the client authentication strategy used by this token client.
+     *
+     * @return the OAuth2 client authentication strategy
+     */
+    public OAuth2ClientAuthentication getAuthentication() {
+        return authentication;
+    }
+
+    /**
+     * Gets the client ID from the authentication strategy.
      *
      * @return the client ID
      */
     public String getClientId() {
-        return clientId;
+        return authentication.getClientId();
     }
-
-    /**
-     * Gets the client secret.
-     *
-     * @return the client secret, or null if not configured
-     */
-    public String getClientSecret() {
-        return clientSecret;
-    }
-
 }

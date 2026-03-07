@@ -28,7 +28,7 @@ import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrRequest;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.DefaultOAuth2DcrServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.InMemoryOAuth2DcrClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.InMemoryOAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.token.client.OAuth2TokenClient;
@@ -118,7 +118,7 @@ public class DefaultAuthorizationServer implements AuthorizationServer {
         this.aoatParser = new AoatParser();
         
         // Initialize DCR server with in-memory store if not provided
-        OAuth2DcrClientStore clientStore = dcrClientStore != null ? dcrClientStore : new InMemoryOAuth2DcrClientStore();
+        OAuth2DcrClientStore clientStore = dcrClientStore != null ? dcrClientStore : new InMemoryOAuth2ClientStore();
         this.dcrServer = new DefaultOAuth2DcrServer(clientStore);
         
         // Initialize WIT validator if key manager and verification key ID are provided

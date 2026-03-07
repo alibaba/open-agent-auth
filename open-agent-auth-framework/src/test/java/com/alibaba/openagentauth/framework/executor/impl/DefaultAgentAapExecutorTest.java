@@ -149,7 +149,7 @@ class DefaultAgentAapExecutorTest {
         when(mockAgent.issueWorkloadIdentityToken(any(IssueWitRequest.class)))
                 .thenReturn(createMockWorkloadContext());
         when(mockAgent.registerOAuthClient(any(WorkloadContext.class)))
-                .thenReturn(createMockDcrResponse());
+                .thenReturn(createMockWorkloadContextWithOAuthClientId());
         when(mockAgent.submitParRequest(any(ParSubmissionRequest.class)))
                 .thenReturn(createMockParResponse());
         when(mockAgent.generateAuthorizationUrl(anyString(), anyString()))
@@ -571,11 +571,15 @@ class DefaultAgentAapExecutorTest {
                 .build();
     }
 
-    private DcrResponse createMockDcrResponse() {
-        return DcrResponse.builder()
-                .clientId(CLIENT_ID)
-                .clientSecret("secret-123")
-                .clientSecretExpiresAt(0L)
+    private WorkloadContext createMockWorkloadContextWithOAuthClientId() {
+        return WorkloadContext.builder()
+                .workloadId(WORKLOAD_ID)
+                .userId(USER_ID)
+                .wit("test-wit")
+                .publicKey("test-public-key")
+                .privateKey("test-private-key")
+                .oauthClientId(CLIENT_ID)
+                .expiresAt(java.time.Instant.now().plusSeconds(3600))
                 .build();
     }
 

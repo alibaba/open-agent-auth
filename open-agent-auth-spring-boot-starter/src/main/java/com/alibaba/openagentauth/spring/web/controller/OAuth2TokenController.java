@@ -23,14 +23,18 @@ import com.alibaba.openagentauth.framework.oauth2.FrameworkOAuth2TokenServer;
 import com.alibaba.openagentauth.spring.util.OAuth2ClientAuthenticator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -38,6 +42,12 @@ import java.util.Map;
  * <p>
  * This controller handles token requests according to OAuth 2.0 specification.
  * It is enabled for authorization-server, agent-user-idp, and as-user-idp roles.
+ * </p>
+ * <p>
+ * <b>Client Authentication:</b> When {@link OAuth2ClientAuthenticator} is available
+ * (e.g., in the authorization-server role), both {@code client_secret_basic} and
+ * {@code private_key_jwt} authentication methods are supported. When it is not
+ * available (e.g., in User IDP roles), only {@code client_secret_basic} is supported.
  * </p>
  *
  * @see <a href="https://www.rfc-editor.org/rfc/rfc6749">RFC 6749 - OAuth 2.0</a>
@@ -63,15 +73,42 @@ public class OAuth2TokenController {
     private final OAuth2ClientStore clientStore;
 
     /**
-     * Creates a new Token controller.
+     * The client authenticator for verifying client credentials.
+     * <p>
+     * This is nullable because {@link OAuth2ClientAuthenticator} is only available
+     * in the authorization-server role (where it needs a {@code JwksProvider} for
+     * verifying client assertion signatures). In User IDP roles, this field is null
+     * and the controller falls back to Basic Auth only.
+     * </p>
+     */
+    private final OAuth2ClientAuthenticator clientAuthenticator;
+
+    /**
+     * Creates a new Token controller with full client authentication support.
+     * <p>
+     * This constructor is used when {@link OAuth2ClientAuthenticator} is available
+     * (typically in the authorization-server role), enabling both {@code client_secret_basic}
+     * and {@code private_key_jwt} authentication methods.
+     * </p>
      *
      * @param tokenServer the token server
      * @param clientStore the client store for client authentication
+     * @param clientAuthenticator the client authenticator
      */
-    public OAuth2TokenController(FrameworkOAuth2TokenServer tokenServer, OAuth2ClientStore clientStore) {
+    public OAuth2TokenController(
+            FrameworkOAuth2TokenServer tokenServer,
+            OAuth2ClientStore clientStore,
+            @Autowired(required = false)
+            OAuth2ClientAuthenticator clientAuthenticator) {
         this.tokenServer = ValidationUtils.validateNotNull(tokenServer, "Token server");
         this.clientStore = ValidationUtils.validateNotNull(clientStore, "client store");
-        logger.info("OAuth2TokenController initialized with client store");
+        this.clientAuthenticator = clientAuthenticator;
+
+        if (clientAuthenticator != null) {
+            logger.info("OAuth2TokenController initialized with client store and authenticator (private_key_jwt supported)");
+        } else {
+            logger.info("OAuth2TokenController initialized with client store (Basic Auth only)");
+        }
     }
 
     /**
@@ -83,48 +120,82 @@ public class OAuth2TokenController {
      * <p>
      * <b>Client Authentication (RFC 6749 Section 2.3):</b></p>
      * <ul>
-     *   <li>Confidential clients MUST authenticate using HTTP Basic authentication</li>
-     *   <li>Authorization header format: Basic base64(client_id:client_secret)</li>
-     *   * Client credentials are validated against the client store
+     *   <li>Confidential clients MUST authenticate using a supported method</li>
+     *   <li>Supported methods: client_secret_basic (HTTP Basic), private_key_jwt (RFC 7523)</li>
+     *   <li>Client credentials are validated against the client store</li>
      * </ul>
      *
-     * @param grantType the grant type (e.g., authorization_code, refresh_token)
-     * @param code the authorization code (required for authorization_code grant)
-     * @param redirectUri the redirect URI (required for authorization_code grant)
+     * @param requestBody the token request body as form data
      * @param authorizationHeader the Authorization header for client authentication
      * @return the token response
      * @see <a href="https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3">RFC 6749 - Access Token Request</a>
      * @see <a href="https://www.rfc-editor.org/rfc/rfc6749#section-2.3">RFC 6749 - Client Authentication</a>
      */
-    @PostMapping(value = "${open-agent-auth.capabilities.oauth2-server.endpoints.oauth2.token:/oauth2/token}", consumes = "application/x-www-form-urlencoded")
+    @PostMapping(
+            value = "${open-agent-auth.capabilities.oauth2-server.endpoints.oauth2.token:/oauth2/token}",
+            consumes = "application/x-www-form-urlencoded"
+    )
     public ResponseEntity<Map<String, Object>> token(
-            @RequestParam(value = "grant_type") String grantType,
-            @RequestParam(value = "code", required = false) String code,
-            @RequestParam(value = "redirect_uri", required = false) String redirectUri,
+            @RequestBody MultiValueMap<String, String> requestBody,
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
+        // Step 1: Convert MultiValueMap to Map for processing
+        Map<String, String> requestMap = new HashMap<>();
+        if (requestBody != null) {
+            requestBody.forEach((key, values) -> {
+                if (values != null && !values.isEmpty()) {
+                    requestMap.put(key, values.get(0));
+                }
+            });
+        }
+
+        String grantType = requestMap.get("grant_type");
+        String code = requestMap.get("code");
+        String redirectUri = requestMap.get("redirect_uri");
+        String requestClientId = requestMap.get("client_id");
+
         logger.info("Received token request with grant_type: {}", grantType);
 
-        // Step 1: Authenticate client using Basic Auth (RFC 6749 Section 2.3.1)
-        String authenticatedClientId = OAuth2ClientAuthenticator.authenticateWithBasicAuth(
-                authorizationHeader, clientStore);
+        // Step 2: Authenticate client
+        // When OAuth2ClientAuthenticator is available (authorization-server role), supports both
+        // client_secret_basic and private_key_jwt. Otherwise, falls back to Basic Auth only.
+        String authenticatedClientId;
+        if (clientAuthenticator != null) {
+            authenticatedClientId = clientAuthenticator.authenticateClient(authorizationHeader, requestMap, clientStore);
+        } else {
+            authenticatedClientId = OAuth2ClientAuthenticator.authenticateWithBasicAuth(authorizationHeader, clientStore);
+        }
         logger.debug("Client authenticated: {}", authenticatedClientId);
 
-        // Step 2: Parse the token request
+        // Step 3: Determine the effective client_id for authorization code binding validation.
+        // Per RFC 6749 Section 4.1.3, the token request MAY include a client_id parameter.
+        // In DCR scenarios, the authorization code is bound to the dynamically registered
+        // client_id (UUID), while the HTTP authentication uses the pre-registered agent
+        // credentials. The request body client_id takes precedence for code binding validation
+        // when it differs from the authenticated client_id.
+        String effectiveClientId = (requestClientId != null && !requestClientId.isEmpty())
+                ? requestClientId
+                : authenticatedClientId;
+        if (!effectiveClientId.equals(authenticatedClientId)) {
+            logger.debug("Using request body client_id for code binding: {} (authenticated as: {})",
+                    effectiveClientId, authenticatedClientId);
+        }
+
+        // Step 4: Parse the token request
         TokenRequest request = TokenRequest.builder()
                 .grantType(grantType)
                 .code(code)
                 .redirectUri(redirectUri)
-                .clientId(authenticatedClientId)
+                .clientId(effectiveClientId)
                 .build();
 
-        // Step 3: Submit to token server
-        TokenResponse response = tokenServer.issueToken(request, authenticatedClientId);
+        // Step 5: Submit to token server
+        TokenResponse response = tokenServer.issueToken(request, effectiveClientId);
 
         logger.info("Token issued successfully for grant_type: {}", request.getGrantType());
 
-        // Step 4: Build response body per RFC 6749 Section 5.1 and OIDC Core 1.0 Section 3.1.3.3
-        Map<String, Object> responseBody = new java.util.HashMap<>();
+        // Step 6: Build response body per RFC 6749 Section 5.1 and OIDC Core 1.0 Section 3.1.3.3
+        Map<String, Object> responseBody = new HashMap<>();
         responseBody.put("access_token", response.getAccessToken());
         responseBody.put("token_type", response.getTokenType());
         responseBody.put("expires_in", response.getExpiresIn());

@@ -32,7 +32,7 @@ import java.util.Map;
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc7523">RFC 7523 - JWT Profile for OAuth 2.0 Client Authentication</a>
  * @since 1.0
  */
-public class ClientAssertionAuthentication implements ParClientAuthentication {
+public class ClientAssertionAuthentication implements OAuth2ClientAuthentication {
 
     private static final Logger logger = LoggerFactory.getLogger(ClientAssertionAuthentication.class);
 
@@ -74,15 +74,22 @@ public class ClientAssertionAuthentication implements ParClientAuthentication {
     @Override
     public HttpRequest.Builder applyAuthentication(HttpRequest.Builder requestBuilder, Map<String, String> requestBody) {
         try {
-            // Generate client assertion
-            String assertion = assertionGenerator.generateAssertion(tokenEndpoint);
-            
-            // Add client_assertion parameters to request body
-            requestBody.put("client_id", clientId);
+            // Determine the effective client_id: prefer a DCR-registered client_id already
+            // present in the request body over the static default configured at construction time.
+            String effectiveClientId = requestBody.getOrDefault("client_id", clientId);
+
+            // Ensure client_id is in the request body
+            requestBody.put("client_id", effectiveClientId);
+
+            // Generate client assertion with the effective client_id so that the JWT's
+            // iss/sub claims match the client_id the Authorization Server will authenticate.
+            // This is critical for DCR scenarios where the dynamic client_id differs from
+            // the static default (RFC 7523 Section 3).
+            String assertion = assertionGenerator.generateAssertion(tokenEndpoint, effectiveClientId);
             requestBody.put("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
             requestBody.put("client_assertion", assertion);
             
-            logger.debug("Applied client assertion authentication for client: {}", clientId);
+            logger.debug("Applied client assertion authentication for client: {}", effectiveClientId);
             
             return requestBuilder;
             

@@ -54,6 +54,7 @@ public class OAuth2RegisteredClient {
     private final List<String> responseTypes;
     private final String tokenEndpointAuthMethod;
     private final String scope;
+    private final String jwksUri;
 
     private OAuth2RegisteredClient(Builder builder) {
         this.clientId = builder.clientId;
@@ -64,6 +65,7 @@ public class OAuth2RegisteredClient {
         this.responseTypes = builder.responseTypes;
         this.tokenEndpointAuthMethod = builder.tokenEndpointAuthMethod;
         this.scope = builder.scope;
+        this.jwksUri = builder.jwksUri;
     }
 
     public String getClientId() {
@@ -96,6 +98,10 @@ public class OAuth2RegisteredClient {
 
     public String getScope() {
         return scope;
+    }
+
+    public String getJwksUri() {
+        return jwksUri;
     }
 
     /**
@@ -133,6 +139,7 @@ public class OAuth2RegisteredClient {
         private List<String> responseTypes;
         private String tokenEndpointAuthMethod;
         private String scope;
+        private String jwksUri;
 
         public Builder clientId(String clientId) {
             this.clientId = clientId;
@@ -171,6 +178,11 @@ public class OAuth2RegisteredClient {
 
         public Builder scope(String scope) {
             this.scope = scope;
+            return this;
+        }
+
+        public Builder jwksUri(String jwksUri) {
+            this.jwksUri = jwksUri;
             return this;
         }
 
