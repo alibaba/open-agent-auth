@@ -72,7 +72,7 @@ class WimseOAuth2OAuth2DcrClientAuthenticationTest {
         @Test
         @DisplayName("Should return correct authentication method")
         void shouldReturnCorrectAuthenticationMethod() {
-            assertThat(authentication.getAuthenticationMethod()).isEqualTo("private_key_jwt");
+            assertThat(authentication.getAuthenticationMethod()).isEqualTo("software_statement");
         }
     }
 
@@ -81,7 +81,7 @@ class WimseOAuth2OAuth2DcrClientAuthenticationTest {
     class ApplyAuthenticationHappyPathTests {
 
         @Test
-        @DisplayName("Should add WIT header to request when WIT is present")
+        @DisplayName("Should move WIT to software_statement when WIT is present in additionalParameters")
         void shouldAddWitHeaderToRequestWhenWitIsPresent() {
             // Given
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
@@ -91,11 +91,10 @@ class WimseOAuth2OAuth2DcrClientAuthenticationTest {
             // When
             HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, request);
 
-            // Then - Build the request to verify headers
-            HttpRequest httpRequest = result.build();
-            String witHeader = httpRequest.headers().firstValue(WitConstants.WIT_HEADER_NAME).orElse(null);
-
-            assertThat(witHeader).isEqualTo("valid-wit-token");
+            // Then - WIT should be moved to software_statement in additionalParameters
+            assertThat(result).isNotNull();
+            assertThat(request.getAdditionalParameters()).doesNotContainKey(WitConstants.WIT_PARAM);
+            assertThat(request.getAdditionalParameters()).containsEntry("software_statement", "valid-wit-token");
         }
 
         @Test
@@ -147,23 +146,31 @@ class WimseOAuth2OAuth2DcrClientAuthenticationTest {
         }
 
         @Test
-        @DisplayName("Should preserve existing headers when adding WIT header")
+        @DisplayName("Should preserve existing parameters when moving WIT to software_statement")
         void shouldPreserveExistingHeadersWhenAddingWitHeader() {
             // Given
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create("https://as.example.com/register"))
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json");
-            DcrRequest request = createDcrRequestWithWit("valid-wit-token");
+            Map<String, Object> additionalParams = new HashMap<>();
+            additionalParams.put(WitConstants.WIT_PARAM, "valid-wit-token");
+            additionalParams.put("custom_param", "custom_value");
+            DcrRequest request = DcrRequest.builder()
+                    .redirectUris(List.of("https://example.com/callback"))
+                    .clientName("Test Client")
+                    .tokenEndpointAuthMethod("private_key_jwt")
+                    .additionalParameters(additionalParams)
+                    .build();
 
             // When
             HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, request);
 
             // Then
-            HttpRequest httpRequest = result.build();
-            assertThat(httpRequest.headers().firstValue("Content-Type")).hasValue("application/json");
-            assertThat(httpRequest.headers().firstValue("Accept")).hasValue("application/json");
-            assertThat(httpRequest.headers().firstValue(WitConstants.WIT_HEADER_NAME)).hasValue("valid-wit-token");
+            assertThat(result).isNotNull();
+            assertThat(request.getAdditionalParameters()).containsEntry("software_statement", "valid-wit-token");
+            assertThat(request.getAdditionalParameters()).containsEntry("custom_param", "custom_value");
+            assertThat(request.getAdditionalParameters()).doesNotContainKey(WitConstants.WIT_PARAM);
         }
     }
 
@@ -260,7 +267,7 @@ class WimseOAuth2OAuth2DcrClientAuthenticationTest {
     class WimseProtocolSpecificTests {
 
         @Test
-        @DisplayName("Should use correct header name per WIMSE specification")
+        @DisplayName("Should use software_statement mechanism per RFC 7591")
         void shouldUseCorrectHeaderNamePerWimseSpecification() {
             // Given
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
@@ -270,20 +277,19 @@ class WimseOAuth2OAuth2DcrClientAuthenticationTest {
             // When
             HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, request);
 
-            // Then - Verify header name matches WIMSE specification
-            HttpRequest httpRequest = result.build();
-            assertThat(WitConstants.WIT_HEADER_NAME).isEqualTo("Workload-Identity-Token");
-            assertThat(httpRequest.headers().map()).containsKey("Workload-Identity-Token");
+            // Then - WIT should be placed in software_statement, not in HTTP header
+            assertThat(result).isNotNull();
+            assertThat(request.getAdditionalParameters()).containsKey("software_statement");
         }
 
         @Test
-        @DisplayName("Should return private_key_jwt as authentication method")
+        @DisplayName("Should return software_statement as authentication method")
         void shouldReturnPrivateKeyJwtAsAuthenticationMethod() {
             // When
             String method = authentication.getAuthenticationMethod();
 
             // Then
-            assertThat(method).isEqualTo("private_key_jwt");
+            assertThat(method).isEqualTo("software_statement");
         }
     }
 

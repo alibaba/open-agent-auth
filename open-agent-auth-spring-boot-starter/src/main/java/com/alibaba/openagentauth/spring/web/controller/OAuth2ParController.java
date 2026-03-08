@@ -119,6 +119,7 @@ public class OAuth2ParController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
         logger.info("Received PAR request");
+        logger.debug("PAR request Authorization header present: {}", authorizationHeader != null);
 
         // Step 1: Convert MultiValueMap to Map for processing
         Map<String, String> requestMap = new HashMap<>();
@@ -129,18 +130,25 @@ public class OAuth2ParController {
                 }
             });
         }
+        logger.debug("PAR request parameters: {}", requestMap.keySet());
 
         // Step 2: Authenticate client (supports client_secret_basic and private_key_jwt)
+        logger.debug("Authenticating client for PAR request...");
         String authenticatedClientId = clientAuthenticator.authenticateClient(authorizationHeader, requestMap, clientStore);
-        logger.debug("Client authenticated: {}", authenticatedClientId);
+        logger.info("PAR client authenticated successfully: {}", authenticatedClientId);
 
         // Step 3: Parse the PAR request with authenticated client ID
+        logger.debug("Parsing PAR request for client: {}", authenticatedClientId);
         ParRequest request = parseParRequest(requestMap, authenticatedClientId);
+        logger.debug("PAR request parsed - response_type: {}, redirect_uri: {}, state: {}",
+                request.getResponseType(), request.getRedirectUri(), request.getState());
 
         // Step 4: Submit to PAR server with authenticated client ID
+        logger.debug("Submitting PAR request to server for client: {}", authenticatedClientId);
         ParResponse response = parServer.processParRequest(request, authenticatedClientId);
 
-        logger.info("PAR request processed successfully, request_uri: {}", response.getRequestUri());
+        logger.info("PAR request processed successfully - client: {}, request_uri: {}, expires_in: {}",
+                authenticatedClientId, response.getRequestUri(), response.getExpiresIn());
 
         // Step 5: Return response (RFC 9126 Section 2.2 requires 201 Created)
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(

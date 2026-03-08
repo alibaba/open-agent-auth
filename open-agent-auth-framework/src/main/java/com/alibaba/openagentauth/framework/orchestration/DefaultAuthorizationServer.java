@@ -111,16 +111,47 @@ public class DefaultAuthorizationServer implements AuthorizationServer {
                                       KeyManager keyManager,
                                       String witVerificationKeyId,
                                       String expectedTrustDomain) {
-        // Validate arguments using concise null checks
+        this(parServer, null, dcrClientStore, oAuth2TokenClient, oAuth2TokenServer,
+                keyManager, witVerificationKeyId, expectedTrustDomain);
+    }
+
+    /**
+     * Creates a new AuthorizationServerOrchestrator with an externally configured DCR server.
+     * <p>
+     * This constructor allows injecting a pre-configured {@link OAuth2DcrServer} (e.g., one
+     * with WIMSE authenticators), ensuring consistent DCR behavior across all code paths.
+     * </p>
+     *
+     * @param parServer the PAR server for processing authorization requests
+     * @param dcrServer the pre-configured DCR server (if null, a default one is created from dcrClientStore)
+     * @param dcrClientStore the DCR client store (used only if dcrServer is null)
+     * @param oAuth2TokenClient the OAuth 2.0 token client for code exchange
+     * @param oAuth2TokenServer the OAuth 2.0 token server for AOAT generation
+     * @param keyManager the key manager for WIT verification (optional)
+     * @param witVerificationKeyId the key ID for WIT verification (optional)
+     * @param expectedTrustDomain the expected trust domain for WIT validation (optional)
+     */
+    public DefaultAuthorizationServer(OAuth2ParServer parServer,
+                                      OAuth2DcrServer dcrServer,
+                                      OAuth2DcrClientStore dcrClientStore,
+                                      OAuth2TokenClient oAuth2TokenClient,
+                                      OAuth2TokenServer oAuth2TokenServer,
+                                      KeyManager keyManager,
+                                      String witVerificationKeyId,
+                                      String expectedTrustDomain) {
         this.parServer = ValidationUtils.validateNotNull(parServer, "PAR server");
         this.oAuth2TokenClient = ValidationUtils.validateNotNull(oAuth2TokenClient, "OAuth2TokenClient");
         this.oAuth2TokenServer = ValidationUtils.validateNotNull(oAuth2TokenServer, "OAuth2TokenServer");
         this.aoatParser = new AoatParser();
-        
-        // Initialize DCR server with in-memory store if not provided
-        OAuth2DcrClientStore clientStore = dcrClientStore != null ? dcrClientStore : new InMemoryOAuth2ClientStore();
-        this.dcrServer = new DefaultOAuth2DcrServer(clientStore);
-        
+
+        // Use externally provided DCR server, or create a default one
+        if (dcrServer != null) {
+            this.dcrServer = dcrServer;
+        } else {
+            OAuth2DcrClientStore clientStore = dcrClientStore != null ? dcrClientStore : new InMemoryOAuth2ClientStore();
+            this.dcrServer = new DefaultOAuth2DcrServer(clientStore);
+        }
+
         // Initialize WIT validator if key manager and verification key ID are provided
         if (keyManager != null && !ValidationUtils.isNullOrEmpty(witVerificationKeyId)
                 && !ValidationUtils.isNullOrEmpty(expectedTrustDomain)) {
@@ -129,7 +160,7 @@ public class DefaultAuthorizationServer implements AuthorizationServer {
             this.witValidator = null;
             logger.warn("KeyManager, WIT verification key ID, or trust domain not provided, WIT validation will be disabled");
         }
-        
+
         logger.info("AuthorizationServerOrchestrator initialized");
     }
 

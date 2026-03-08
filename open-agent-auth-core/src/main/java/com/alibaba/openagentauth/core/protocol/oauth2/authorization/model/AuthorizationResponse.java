@@ -18,6 +18,8 @@ package com.alibaba.openagentauth.core.protocol.oauth2.authorization.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -114,15 +116,20 @@ public class AuthorizationResponse {
     private final String errorUri;
 
     /**
-     * The DCR-registered client identifier.
+     * Additional parameters for extensible metadata propagation.
      * <p>
-     * When using Dynamic Client Registration (RFC 7591), this field carries the
-     * DCR-assigned client_id through the callback flow, ensuring the token exchange
-     * uses the correct client identity that matches the authorization code binding.
+     * This map carries flow-specific parameters through the callback chain without
+     * requiring dedicated fields for each protocol extension. Standard OAuth 2.0
+     * parameter names should be used as keys (e.g., {@code client_id},
+     * {@code client_assertion}) to maintain protocol-level abstraction.
+     * </p>
+     * <p>
+     * This design is consistent with {@code ParRequest.additionalParameters},
+     * {@code TokenRequest.additionalParameters}, and
+     * {@code OAuth2AuthorizationRequest.additionalParameters}.
      * </p>
      */
-    @JsonProperty("client_id")
-    private final String clientId;
+    private final Map<String, Object> additionalParameters;
 
     private AuthorizationResponse(Builder builder) {
         this.redirectUri = builder.redirectUri;
@@ -131,7 +138,9 @@ public class AuthorizationResponse {
         this.error = builder.error;
         this.errorDescription = builder.errorDescription;
         this.errorUri = builder.errorUri;
-        this.clientId = builder.clientId;
+        this.additionalParameters = builder.additionalParameters != null
+                ? Collections.unmodifiableMap(builder.additionalParameters)
+                : Collections.emptyMap();
     }
 
     public String getRedirectUri() {
@@ -159,12 +168,17 @@ public class AuthorizationResponse {
     }
 
     /**
-     * Returns the DCR-registered client identifier.
+     * Returns additional parameters associated with this authorization response.
+     * <p>
+     * This extensible map carries flow-specific metadata (e.g., {@code client_id},
+     * {@code client_assertion}) through the callback chain without coupling the
+     * core model to specific protocol extensions.
+     * </p>
      *
-     * @return the DCR client_id, or null if not using DCR
+     * @return an unmodifiable map of additional parameters, never null
      */
-    public String getClientId() {
-        return clientId;
+    public Map<String, Object> getAdditionalParameters() {
+        return additionalParameters;
     }
 
     /**
@@ -187,12 +201,12 @@ public class AuthorizationResponse {
                 Objects.equals(error, that.error) &&
                 Objects.equals(errorDescription, that.errorDescription) &&
                 Objects.equals(errorUri, that.errorUri) &&
-                Objects.equals(clientId, that.clientId);
+                Objects.equals(additionalParameters, that.additionalParameters);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(redirectUri, authorizationCode, state, error, errorDescription, errorUri, clientId);
+        return Objects.hash(redirectUri, authorizationCode, state, error, errorDescription, errorUri, additionalParameters);
     }
 
     @Override
@@ -204,7 +218,7 @@ public class AuthorizationResponse {
                 ", error='" + error + '\'' +
                 ", errorDescription='" + errorDescription + '\'' +
                 ", errorUri='" + errorUri + '\'' +
-                ", clientId='" + clientId + '\'' +
+                ", additionalParameters=" + additionalParameters +
                 '}';
     }
 
@@ -227,7 +241,7 @@ public class AuthorizationResponse {
         private String error;
         private String errorDescription;
         private String errorUri;
-        private String clientId;
+        private Map<String, Object> additionalParameters;
 
         /**
          * Sets the redirect URI.
@@ -296,13 +310,13 @@ public class AuthorizationResponse {
         }
 
         /**
-         * Sets the DCR-registered client identifier.
+         * Sets additional parameters for extensible metadata propagation.
          *
-         * @param clientId the DCR client_id
+         * @param additionalParameters the additional parameters map
          * @return this builder instance
          */
-        public Builder clientId(String clientId) {
-            this.clientId = clientId;
+        public Builder additionalParameters(Map<String, Object> additionalParameters) {
+            this.additionalParameters = additionalParameters;
             return this;
         }
 

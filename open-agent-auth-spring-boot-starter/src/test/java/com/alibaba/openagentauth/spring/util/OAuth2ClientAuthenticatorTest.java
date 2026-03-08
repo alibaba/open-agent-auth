@@ -15,9 +15,16 @@
  */
 package com.alibaba.openagentauth.spring.util;
 
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
+import com.alibaba.openagentauth.core.exception.crypto.KeyManagementException;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,9 +34,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -572,6 +583,729 @@ class OAuth2ClientAuthenticatorTest {
 
             // Then
             assertThat(authenticatedClientId).isEqualTo(utf8ClientId);
+        }
+    }
+
+    @Nested
+    @DisplayName("Client Assertion Authentication Tests")
+    class ClientAssertionAuthenticationTests {
+
+        @Mock
+        private KeyManager keyManager;
+
+        private static final String VERIFICATION_KEY_ID = "wit-verification";
+
+        private OAuth2ClientAuthenticator authenticator;
+        private RSAKey rsaKey;
+        private String clientId = "test-client-jwt";
+        private String clientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+
+        @BeforeEach
+        void setUpForClientAssertion() throws JOSEException, KeyManagementException {
+            authenticator = new OAuth2ClientAuthenticator(keyManager, VERIFICATION_KEY_ID);
+            rsaKey = new RSAKeyGenerator(2048).keyID("test-key-id").generate();
+            
+            // Setup default client for JWT authentication
+            OAuth2RegisteredClient jwtClient = OAuth2RegisteredClient.builder()
+                    .clientId(clientId)
+                    .tokenEndpointAuthMethod("private_key_jwt")
+                    .build();
+            lenient().when(clientStore.retrieve(clientId)).thenReturn(jwtClient);
+            
+            // Mock KeyManager to return the public key for signature verification
+            lenient().when(keyManager.resolveVerificationKey(anyString()))
+                    .thenReturn(rsaKey.toPublicJWK());
+        }
+
+        private String createValidClientAssertion(Date expirationTime) throws JOSEException {
+            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                    .issuer(clientId)
+                    .subject(clientId)
+                    .audience("https://example.com/token")
+                    .expirationTime(expirationTime)
+                    .issueTime(new Date())
+                    .jwtID("test-jwt-id")
+                    .build();
+            
+            SignedJWT signedJWT = new SignedJWT(
+                    new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                            .keyID(rsaKey.getKeyID())
+                            .build(),
+                    claimsSet);
+            signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+            return signedJWT.serialize();
+        }
+
+        @Nested
+        @DisplayName("Successful Authentication Tests")
+        class SuccessfulAuthenticationTests {
+
+            @Test
+            @DisplayName("Should authenticate successfully with valid client assertion")
+            void shouldAuthenticateSuccessfullyWithValidClientAssertion() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, null, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(clientId);
+            }
+
+            @Test
+            @DisplayName("Should authenticate when token endpoint auth method is null")
+            void shouldAuthenticateWhenTokenEndpointAuthMethodIsNull() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+                
+                OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
+                        .clientId(clientId)
+                        .tokenEndpointAuthMethod(null)
+                        .build();
+                when(clientStore.retrieve(clientId)).thenReturn(client);
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, null, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(clientId);
+            }
+
+            @Test
+            @DisplayName("Should authenticate with assertion about to expire soon")
+            void shouldAuthenticateWithAssertionAboutToExpireSoon() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 1000); // 1 second from now
+                String clientAssertion = createValidClientAssertion(expirationTime);
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, null, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(clientId);
+            }
+        }
+
+        @Nested
+        @DisplayName("Assertion Type Validation Tests")
+        class AssertionTypeValidationTests {
+
+            @Test
+            @DisplayName("Should throw exception when client assertion type is null")
+            void shouldThrowExceptionWhenClientAssertionTypeIsNull() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        clientAssertion, null, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Unsupported client_assertion_type");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion type is empty")
+            void shouldThrowExceptionWhenClientAssertionTypeIsEmpty() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        clientAssertion, "", null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Unsupported client_assertion_type");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion type is invalid")
+            void shouldThrowExceptionWhenClientAssertionTypeIsInvalid() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+                String invalidAssertionType = "urn:ietf:params:oauth:client-assertion-type:invalid-type";
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        clientAssertion, invalidAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Unsupported client_assertion_type");
+            }
+        }
+
+        @Nested
+        @DisplayName("JWT Format Validation Tests")
+        class JWTFormatValidationTests {
+
+            @Test
+            @DisplayName("Should throw exception when client assertion is null")
+            void shouldThrowExceptionWhenClientAssertionIsNull() {
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        null, clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Invalid client assertion JWT");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion is empty")
+            void shouldThrowExceptionWhenClientAssertionIsEmpty() {
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        "", clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Invalid client assertion JWT");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion is blank")
+            void shouldThrowExceptionWhenClientAssertionIsBlank() {
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        "   ", clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Invalid client assertion JWT");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion is invalid JWT")
+            void shouldThrowExceptionWhenClientAssertionIsInvalidJWT() {
+                // Given
+                String invalidAssertion = "not.a.valid.jwt";
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        invalidAssertion, clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Invalid client assertion JWT");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion is malformed")
+            void shouldThrowExceptionWhenClientAssertionIsMalformed() {
+                // Given
+                String malformedAssertion = "invalid.jwt.token.with.wrong.format";
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        malformedAssertion, clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Invalid client assertion JWT");
+            }
+        }
+
+        @Nested
+        @DisplayName("JWT Claims Validation Tests")
+        class JWTClaimsValidationTests {
+
+            @Test
+            @DisplayName("Should throw exception when JWT is missing iss claim")
+            void shouldThrowExceptionWhenJWTIsMissingIssClaim() throws JOSEException {
+                // Given
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .subject(clientId)
+                        .audience("https://example.com/token")
+                        .expirationTime(new Date(System.currentTimeMillis() + 3600000))
+                        .issueTime(new Date())
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+
+                // When & Then
+                // When no client_id in request body and no 'iss' in JWT, the authenticator
+                // cannot determine the client identity and throws "Unable to determine client_id"
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Unable to determine client_id");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when JWT iss claim is empty")
+            void shouldThrowExceptionWhenJWTIssClaimIsEmpty() throws JOSEException {
+                // Given
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer("")
+                        .subject(clientId)
+                        .audience("https://example.com/token")
+                        .expirationTime(new Date(System.currentTimeMillis() + 3600000))
+                        .issueTime(new Date())
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+
+                // When & Then
+                // When no client_id in request body and 'iss' is empty, the authenticator
+                // cannot determine the client identity and throws "Unable to determine client_id"
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Unable to determine client_id");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when JWT sub claim does not match iss")
+            void shouldThrowExceptionWhenJWTSubClaimDoesNotMatchIss() throws JOSEException {
+                // Given
+                String differentSubject = "different-subject";
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(clientId)
+                        .subject(differentSubject)
+                        .audience("https://example.com/token")
+                        .expirationTime(new Date(System.currentTimeMillis() + 3600000))
+                        .issueTime(new Date())
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("'sub' must match 'iss'");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when JWT is expired")
+            void shouldThrowExceptionWhenJWTIsExpired() throws JOSEException {
+                // Given
+                Date pastExpirationTime = new Date(System.currentTimeMillis() - 3600000); // 1 hour ago
+                String expiredAssertion = createValidClientAssertion(pastExpirationTime);
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        expiredAssertion, clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("is expired");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when JWT expiration time is null")
+            void shouldThrowExceptionWhenJWTExpirationTimeIsNull() throws JOSEException {
+                // Given
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(clientId)
+                        .subject(clientId)
+                        .audience("https://example.com/token")
+                        .expirationTime(null)
+                        .issueTime(new Date())
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("is expired");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when JWT expired exactly now")
+            void shouldThrowExceptionWhenJWTExpiredExactlyNow() throws JOSEException {
+                // Given
+                Date now = new Date();
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(clientId)
+                        .subject(clientId)
+                        .audience("https://example.com/token")
+                        .expirationTime(now)
+                        .issueTime(new Date(now.getTime() - 1000))
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("is expired");
+            }
+        }
+
+        @Nested
+        @DisplayName("Client Store Validation Tests")
+        class ClientStoreValidationTests {
+
+            @Test
+            @DisplayName("Should throw exception when client is not registered")
+            void shouldThrowExceptionWhenClientIsNotRegistered() throws Exception {
+                // Given
+                String unregisteredClientId = "unregistered-jwt-client";
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(unregisteredClientId)
+                        .subject(unregisteredClientId)
+                        .audience("https://example.com/token")
+                        .expirationTime(expirationTime)
+                        .issueTime(new Date())
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+                
+                when(clientStore.retrieve(unregisteredClientId)).thenReturn(null);
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Client not registered");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client uses wrong auth method")
+            void shouldThrowExceptionWhenClientUsesWrongAuthMethod() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+                
+                OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
+                        .clientId(clientId)
+                        .tokenEndpointAuthMethod("client_secret_basic")
+                        .build();
+                when(clientStore.retrieve(clientId)).thenReturn(client);
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("Client is not configured for private_key_jwt authentication");
+            }
+        }
+
+        @Nested
+        @DisplayName("Signature Verification Tests")
+        class SignatureVerificationTests {
+
+            @Test
+            @DisplayName("Should throw exception when KeyManager throws KeyManagementException")
+            void shouldThrowExceptionWhenKeyManagerThrowsKeyManagementException() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+                
+                when(keyManager.resolveVerificationKey(anyString()))
+                        .thenThrow(new KeyManagementException("Key not found"));
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("signature verification failed");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when verification key does not match signing key")
+            void shouldThrowExceptionWhenVerificationKeyDoesNotMatchSigningKey() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+                
+                // Return a different key that won't verify the signature
+                RSAKey differentKey = new RSAKeyGenerator(2048).keyID("different-key-id").generate();
+                when(keyManager.resolveVerificationKey(anyString()))
+                        .thenReturn(differentKey.toPublicJWK());
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("signature verification failed");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when signature verification fails")
+            void shouldThrowExceptionWhenSignatureVerificationFails() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+                
+                // Modify the assertion to make signature invalid
+                String tamperedAssertion = clientAssertion.substring(0, clientAssertion.length() - 10) + "tampered";
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        tamperedAssertion, clientAssertionType, null, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("signature verification failed");
+            }
+
+            @Test
+            @DisplayName("Should authenticate when KeyManager returns correct verification key")
+            void shouldAuthenticateWhenKeyManagerReturnsCorrectVerificationKey() throws Exception {
+                // Given
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+                
+                // KeyManager returns the correct public key (already set up in @BeforeEach)
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, null, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(clientId);
+            }
+
+            @Test
+            @DisplayName("Should authenticate when JWT header has no key ID")
+            void shouldAuthenticateWhenJWTHeaderHasNoKeyId() throws JOSEException, Exception {
+                // Given
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(clientId)
+                        .subject(clientId)
+                        .audience("https://example.com/token")
+                        .expirationTime(new Date(System.currentTimeMillis() + 3600000))
+                        .issueTime(new Date())
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .build(), // No key ID
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(clientId);
+            }
+        }
+
+        @Nested
+        @DisplayName("Edge Cases Tests")
+        class EdgeCasesTests {
+
+            @Test
+            @DisplayName("Should handle very long client ID in assertion")
+            void shouldHandleVeryLongClientIdInAssertion() throws Exception {
+                // Given
+                String longClientId = "a".repeat(1000);
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(longClientId)
+                        .subject(longClientId)
+                        .audience("https://example.com/token")
+                        .expirationTime(expirationTime)
+                        .issueTime(new Date())
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+                
+                OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
+                        .clientId(longClientId)
+                        .tokenEndpointAuthMethod("private_key_jwt")
+                        .build();
+                when(clientStore.retrieve(longClientId)).thenReturn(client);
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(longClientId);
+            }
+
+            @Test
+            @DisplayName("Should handle special characters in client ID")
+            void shouldHandleSpecialCharactersInClientId() throws Exception {
+                // Given
+                String specialClientId = "client@example.com";
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(specialClientId)
+                        .subject(specialClientId)
+                        .audience("https://example.com/token")
+                        .expirationTime(expirationTime)
+                        .issueTime(new Date())
+                        .build();
+                
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+                
+                OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
+                        .clientId(specialClientId)
+                        .tokenEndpointAuthMethod("private_key_jwt")
+                        .build();
+                when(clientStore.retrieve(specialClientId)).thenReturn(client);
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, null, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(specialClientId);
+            }
+
+            @Test
+            @DisplayName("Should handle assertion with maximum valid expiration time")
+            void shouldHandleAssertionWithMaximumValidExpirationTime() throws Exception {
+                // Given
+                // 24 hours from now (reasonable maximum)
+                Date expirationTime = new Date(System.currentTimeMillis() + 86400000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, null, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(clientId);
+            }
+        }
+
+        @Nested
+        @DisplayName("WIMSE Mode Authentication Tests")
+        class WimseModeAuthenticationTests {
+
+            @Test
+            @DisplayName("Should authenticate with WIMSE WIT where iss differs from sub")
+            void shouldAuthenticateWithWimseWitWhereIssDiffersFromSub() throws Exception {
+                // Given - WIMSE scenario: iss=trust domain, sub=workload ID (used as client_id)
+                String trustDomain = "wimse://default.trust.domain";
+                String workloadId = "wimse://default.trust.domain/workload/test-uuid";
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(trustDomain)
+                        .subject(workloadId)
+                        .audience("https://example.com/token")
+                        .expirationTime(expirationTime)
+                        .issueTime(new Date())
+                        .build();
+
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+
+                // Request body contains client_id = workload ID (from DCR registration)
+                Map<String, String> requestBody = new HashMap<>();
+                requestBody.put("client_id", workloadId);
+                requestBody.put("client_assertion", signedJWT.serialize());
+                requestBody.put("client_assertion_type", clientAssertionType);
+
+                OAuth2RegisteredClient client = OAuth2RegisteredClient.builder()
+                        .clientId(workloadId)
+                        .tokenEndpointAuthMethod("private_key_jwt")
+                        .build();
+                when(clientStore.retrieve(workloadId)).thenReturn(client);
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, requestBody, clientStore);
+
+                // Then
+                assertThat(authenticatedClientId).isEqualTo(workloadId);
+            }
+
+            @Test
+            @DisplayName("Should reject when WIMSE WIT sub does not match request body client_id")
+            void shouldRejectWhenWimseWitSubDoesNotMatchRequestBodyClientId() throws Exception {
+                // Given
+                String trustDomain = "wimse://default.trust.domain";
+                String workloadId = "wimse://default.trust.domain/workload/test-uuid";
+                String differentClientId = "wimse://default.trust.domain/workload/different-uuid";
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+
+                JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                        .issuer(trustDomain)
+                        .subject(workloadId)
+                        .audience("https://example.com/token")
+                        .expirationTime(expirationTime)
+                        .issueTime(new Date())
+                        .build();
+
+                SignedJWT signedJWT = new SignedJWT(
+                        new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                                .keyID(rsaKey.getKeyID())
+                                .build(),
+                        claimsSet);
+                signedJWT.sign(new com.nimbusds.jose.crypto.RSASSASigner(rsaKey));
+
+                // Request body client_id does NOT match JWT sub
+                Map<String, String> requestBody = new HashMap<>();
+                requestBody.put("client_id", differentClientId);
+
+                // When & Then
+                assertThatThrownBy(() -> authenticator.authenticateWithClientAssertion(
+                        signedJWT.serialize(), clientAssertionType, requestBody, clientStore))
+                        .isInstanceOf(FrameworkOAuth2TokenException.class)
+                        .hasMessageContaining("'sub' must match 'client_id'");
+            }
+
+            @Test
+            @DisplayName("Should fall back to iss-based mode when request body has no client_id")
+            void shouldFallBackToIssBasedModeWhenRequestBodyHasNoClientId() throws Exception {
+                // Given - standard mode: no client_id in request body
+                Date expirationTime = new Date(System.currentTimeMillis() + 3600000);
+                String clientAssertion = createValidClientAssertion(expirationTime);
+
+                Map<String, String> requestBody = new HashMap<>();
+                requestBody.put("client_assertion", clientAssertion);
+                requestBody.put("client_assertion_type", clientAssertionType);
+                // No client_id in request body
+
+                // When
+                String authenticatedClientId = authenticator.authenticateWithClientAssertion(
+                        clientAssertion, clientAssertionType, requestBody, clientStore);
+
+                // Then - falls back to iss-based mode
+                assertThat(authenticatedClientId).isEqualTo(clientId);
+            }
         }
     }
 }

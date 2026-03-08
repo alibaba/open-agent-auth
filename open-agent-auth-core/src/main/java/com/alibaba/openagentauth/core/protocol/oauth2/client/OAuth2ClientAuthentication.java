@@ -52,13 +52,14 @@ import java.util.Map;
  * // Basic Authentication
  * OAuth2ClientAuthentication basicAuth = new BasicAuthAuthentication(clientId, clientSecret);
  *
- * // Private Key JWT Authentication
- * ClientAssertionGenerator generator = new ClientAssertionGenerator(clientId, signingKey, JWSAlgorithm.RS256);
- * OAuth2ClientAuthentication jwtAuth = new ClientAssertionAuthentication(clientId, generator, tokenEndpoint);
+ * // WIMSE WIT-based Client Assertion Authentication
+ * // The WIT is passed per-request through additionalParameters in ParRequest/TokenRequest,
+ * // propagated into the request body map, and extracted by ClientAssertionAuthentication.
+ * OAuth2ClientAuthentication witAuth = new ClientAssertionAuthentication();
  *
  * // Use with any OAuth 2.0 client
- * OAuth2TokenClient tokenClient = new DefaultOAuth2TokenClient(resolver, serviceName, jwtAuth);
- * OAuth2ParClient parClient = new DefaultOAuth2ParClient(resolver, jwtAuth);
+ * OAuth2TokenClient tokenClient = new DefaultOAuth2TokenClient(resolver, serviceName, witAuth);
+ * OAuth2ParClient parClient = new DefaultOAuth2ParClient(resolver, witAuth);
  * }</pre>
  *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">RFC 6749 - Client Authentication</a>

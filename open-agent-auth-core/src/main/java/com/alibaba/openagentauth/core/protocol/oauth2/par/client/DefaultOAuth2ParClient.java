@@ -104,9 +104,8 @@ public class DefaultOAuth2ParClient implements OAuth2ParClient {
      * OAuth2ClientAuthentication auth = new BasicAuthAuthentication(clientId, clientSecret);
      * OAuth2ParClient client = new DefaultOAuth2ParClient(resolver, auth);
      *
-     * // Private Key JWT Authentication
-     * ClientAssertionGenerator generator = new ClientAssertionGenerator(clientId, signingKey, JWSAlgorithm.RS256);
-     * OAuth2ClientAuthentication auth = new ClientAssertionAuthentication(clientId, generator, tokenEndpoint);
+     * // Per-request Client Assertion Authentication (e.g., WIMSE WIT)
+     * OAuth2ClientAuthentication auth = new ClientAssertionAuthentication();
      * OAuth2ParClient client = new DefaultOAuth2ParClient(resolver, auth);
      * }</pre>
      *
@@ -209,6 +208,17 @@ public class DefaultOAuth2ParClient implements OAuth2ParClient {
         if (!ValidationUtils.isNullOrEmpty(request.getState())) {
             requestBodyMap.put("state", request.getState());
             logger.debug("State parameter added to PAR request body: {}", request.getState());
+        }
+
+        // Propagate additional parameters (e.g., WIT for client assertion authentication)
+        // into the request body map. This allows the authentication strategy to extract
+        // per-request credentials from the body map without relying on global state.
+        if (request.getAdditionalParameters() != null) {
+            for (Map.Entry<String, Object> entry : request.getAdditionalParameters().entrySet()) {
+                if (entry.getValue() instanceof String stringValue) {
+                    requestBodyMap.put(entry.getKey(), stringValue);
+                }
+            }
         }
 
         // Build HTTP request builder

@@ -18,6 +18,7 @@ package com.alibaba.openagentauth.core.protocol.oauth2.client.model;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -55,6 +56,7 @@ public class OAuth2RegisteredClient {
     private final String tokenEndpointAuthMethod;
     private final String scope;
     private final String jwksUri;
+    private final Map<String, Object> jwks;
 
     private OAuth2RegisteredClient(Builder builder) {
         this.clientId = builder.clientId;
@@ -66,6 +68,7 @@ public class OAuth2RegisteredClient {
         this.tokenEndpointAuthMethod = builder.tokenEndpointAuthMethod;
         this.scope = builder.scope;
         this.jwksUri = builder.jwksUri;
+        this.jwks = builder.jwks;
     }
 
     public String getClientId() {
@@ -105,6 +108,19 @@ public class OAuth2RegisteredClient {
     }
 
     /**
+     * Returns the client's inline JSON Web Key Set (RFC 7517).
+     * <p>
+     * Contains the public keys used for {@code private_key_jwt} client authentication.
+     * Mutually exclusive with {@code jwksUri}.
+     * </p>
+     *
+     * @return the inline JWKS map, or null if not set
+     */
+    public Map<String, Object> getJwks() {
+        return jwks;
+    }
+
+    /**
      * Creates a new builder for OAuth2RegisteredClient.
      *
      * @return a new builder instance
@@ -140,6 +156,7 @@ public class OAuth2RegisteredClient {
         private String tokenEndpointAuthMethod;
         private String scope;
         private String jwksUri;
+        private Map<String, Object> jwks;
 
         public Builder clientId(String clientId) {
             this.clientId = clientId;
@@ -183,6 +200,11 @@ public class OAuth2RegisteredClient {
 
         public Builder jwksUri(String jwksUri) {
             this.jwksUri = jwksUri;
+            return this;
+        }
+
+        public Builder jwks(Map<String, Object> jwks) {
+            this.jwks = jwks;
             return this;
         }
 

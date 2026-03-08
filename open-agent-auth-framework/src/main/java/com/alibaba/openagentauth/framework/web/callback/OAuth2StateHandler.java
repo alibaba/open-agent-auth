@@ -172,8 +172,9 @@ public class OAuth2StateHandler {
         /**
          * Returns additional parameters from the authorization request.
          * <p>
-         * Used to pass metadata such as the DCR-registered client_id
-         * through the callback flow.
+         * Carries flow-specific metadata (e.g., {@code client_id},
+         * {@code client_assertion}) through the callback chain using
+         * standard OAuth 2.0 parameter names as keys.
          * </p>
          *
          * @return an unmodifiable map of additional parameters

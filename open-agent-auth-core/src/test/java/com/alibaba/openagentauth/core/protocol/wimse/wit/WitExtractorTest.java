@@ -39,12 +39,49 @@ class WitExtractorTest {
     class ExtractFromDcrRequestTests {
 
         @Test
-        @DisplayName("Should extract WIT from DCR request with valid WIT")
-        void shouldExtractWitFromDcrRequestWithValidWit() {
+        @DisplayName("Priority 1: Should extract WIT from softwareStatement field")
+        void shouldExtractWitFromSoftwareStatementField() {
+            // Arrange
+            DcrRequest request = DcrRequest.builder()
+                    .redirectUris(List.of("https://callback.example.com"))
+                    .softwareStatement("eyJ.software.statement")
+                    .build();
+
+            // Act
+            String wit = WitExtractor.extractFromDcrRequest(request);
+
+            // Assert
+            assertThat(wit).isEqualTo("eyJ.software.statement");
+        }
+
+        @Test
+        @DisplayName("Priority 1: softwareStatement field takes precedence over additionalParameters")
+        void shouldPreferSoftwareStatementFieldOverAdditionalParameters() {
             // Arrange
             Map<String, Object> additionalParams = new HashMap<>();
-            additionalParams.put(WitConstants.WIT_PARAM, "test.wit.jwt.string");
-            
+            additionalParams.put("software_statement", "from-additional-params");
+            additionalParams.put(WitConstants.WIT_PARAM, "from-legacy-wit");
+
+            DcrRequest request = DcrRequest.builder()
+                    .redirectUris(List.of("https://callback.example.com"))
+                    .softwareStatement("from-field")
+                    .additionalParameters(additionalParams)
+                    .build();
+
+            // Act
+            String wit = WitExtractor.extractFromDcrRequest(request);
+
+            // Assert
+            assertThat(wit).isEqualTo("from-field");
+        }
+
+        @Test
+        @DisplayName("Priority 2: Should extract WIT from software_statement in additionalParameters")
+        void shouldExtractWitFromSoftwareStatementInAdditionalParameters() {
+            // Arrange
+            Map<String, Object> additionalParams = new HashMap<>();
+            additionalParams.put("software_statement", "eyJ.from.additional");
+
             DcrRequest request = DcrRequest.builder()
                     .redirectUris(List.of("https://callback.example.com"))
                     .additionalParameters(additionalParams)
@@ -54,7 +91,45 @@ class WitExtractorTest {
             String wit = WitExtractor.extractFromDcrRequest(request);
 
             // Assert
-            assertThat(wit).isNotNull();
+            assertThat(wit).isEqualTo("eyJ.from.additional");
+        }
+
+        @Test
+        @DisplayName("Priority 2: software_statement in additionalParameters takes precedence over legacy wit")
+        void shouldPreferSoftwareStatementOverLegacyWit() {
+            // Arrange
+            Map<String, Object> additionalParams = new HashMap<>();
+            additionalParams.put("software_statement", "from-software-statement");
+            additionalParams.put(WitConstants.WIT_PARAM, "from-legacy-wit");
+
+            DcrRequest request = DcrRequest.builder()
+                    .redirectUris(List.of("https://callback.example.com"))
+                    .additionalParameters(additionalParams)
+                    .build();
+
+            // Act
+            String wit = WitExtractor.extractFromDcrRequest(request);
+
+            // Assert
+            assertThat(wit).isEqualTo("from-software-statement");
+        }
+
+        @Test
+        @DisplayName("Priority 3: Should fall back to legacy wit parameter")
+        void shouldExtractWitFromLegacyWitParameter() {
+            // Arrange
+            Map<String, Object> additionalParams = new HashMap<>();
+            additionalParams.put(WitConstants.WIT_PARAM, "test.wit.jwt.string");
+
+            DcrRequest request = DcrRequest.builder()
+                    .redirectUris(List.of("https://callback.example.com"))
+                    .additionalParameters(additionalParams)
+                    .build();
+
+            // Act
+            String wit = WitExtractor.extractFromDcrRequest(request);
+
+            // Assert
             assertThat(wit).isEqualTo("test.wit.jwt.string");
         }
 
@@ -64,7 +139,7 @@ class WitExtractorTest {
             // Arrange
             Map<String, Object> additionalParams = new HashMap<>();
             additionalParams.put("other_param", "value");
-            
+
             DcrRequest request = DcrRequest.builder()
                     .redirectUris(List.of("https://callback.example.com"))
                     .additionalParameters(additionalParams)
@@ -78,7 +153,7 @@ class WitExtractorTest {
         }
 
         @Test
-        @DisplayName("Should return null when additional parameters is null")
+        @DisplayName("Should return null when additional parameters is null and no softwareStatement")
         void shouldReturnNullWhenAdditionalParametersIsNull() {
             // Arrange
             DcrRequest request = DcrRequest.builder()
@@ -98,7 +173,7 @@ class WitExtractorTest {
             // Arrange
             Map<String, Object> additionalParams = new HashMap<>();
             additionalParams.put(WitConstants.WIT_PARAM, 12345);
-            
+
             DcrRequest request = DcrRequest.builder()
                     .redirectUris(List.of("https://callback.example.com"))
                     .additionalParameters(additionalParams)
@@ -117,7 +192,7 @@ class WitExtractorTest {
             // Arrange
             Map<String, Object> additionalParams = new HashMap<>();
             additionalParams.put(WitConstants.WIT_PARAM, Map.of("key", "value"));
-            
+
             DcrRequest request = DcrRequest.builder()
                     .redirectUris(List.of("https://callback.example.com"))
                     .additionalParameters(additionalParams)
@@ -140,12 +215,33 @@ class WitExtractorTest {
         }
 
         @Test
-        @DisplayName("Should extract empty string WIT")
-        void shouldExtractEmptyStringWit() {
+        @DisplayName("Should skip blank softwareStatement field and fall back")
+        void shouldSkipBlankSoftwareStatementField() {
             // Arrange
             Map<String, Object> additionalParams = new HashMap<>();
-            additionalParams.put(WitConstants.WIT_PARAM, "");
-            
+            additionalParams.put(WitConstants.WIT_PARAM, "fallback-wit");
+
+            DcrRequest request = DcrRequest.builder()
+                    .redirectUris(List.of("https://callback.example.com"))
+                    .softwareStatement("   ")
+                    .additionalParameters(additionalParams)
+                    .build();
+
+            // Act
+            String wit = WitExtractor.extractFromDcrRequest(request);
+
+            // Assert
+            assertThat(wit).isEqualTo("fallback-wit");
+        }
+
+        @Test
+        @DisplayName("Should skip blank software_statement in additionalParameters and fall back")
+        void shouldSkipBlankSoftwareStatementInAdditionalParameters() {
+            // Arrange
+            Map<String, Object> additionalParams = new HashMap<>();
+            additionalParams.put("software_statement", "  ");
+            additionalParams.put(WitConstants.WIT_PARAM, "fallback-wit");
+
             DcrRequest request = DcrRequest.builder()
                     .redirectUris(List.of("https://callback.example.com"))
                     .additionalParameters(additionalParams)
@@ -155,8 +251,27 @@ class WitExtractorTest {
             String wit = WitExtractor.extractFromDcrRequest(request);
 
             // Assert
-            assertThat(wit).isNotNull();
-            assertThat(wit).isEmpty();
+            assertThat(wit).isEqualTo("fallback-wit");
+        }
+
+        @Test
+        @DisplayName("Should not extract WIT from client_assertion parameter")
+        void shouldNotExtractWitFromClientAssertion() {
+            // Arrange - client_assertion is for OAuth2 client authentication, not WIT
+            Map<String, Object> additionalParams = new HashMap<>();
+            additionalParams.put("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+            additionalParams.put("client_assertion", "eyJ.client.assertion");
+
+            DcrRequest request = DcrRequest.builder()
+                    .redirectUris(List.of("https://callback.example.com"))
+                    .additionalParameters(additionalParams)
+                    .build();
+
+            // Act
+            String wit = WitExtractor.extractFromDcrRequest(request);
+
+            // Assert - client_assertion should NOT be treated as WIT
+            assertThat(wit).isNull();
         }
     }
 

@@ -183,12 +183,8 @@ public class OAuth2CallbackService {
             // Agent Operation Authorization flow: exchanges code for AOAT via Agent.handleAuthorizationCallback()
             return switch (stateInfo.getFlowType()) {
                 case AGENT_OPERATION_AUTH -> {
-                    // Extract DCR client_id from authorization request metadata
-                    String dcrClientId = stateInfo.getAdditionalParameters() != null
-                            ? (String) stateInfo.getAdditionalParameters().get("dcr_client_id")
-                            : null;
                     TokenResponse tokenResponse = performAgentAuthTokenExchange(
-                            request.getCode(), redirectUri, request.getState(), dcrClientId);
+                            request.getCode(), redirectUri, request.getState(), stateInfo);
                     yield handleFlow(stateInfo, tokenResponse, request.getHttpRequest());
                 }
                 default -> {
@@ -412,14 +408,24 @@ public class OAuth2CallbackService {
      * proper semantic separation: user authentication uses {@code exchangeCodeForToken()},
      * while Agent operation authorization uses {@code handleAuthorizationCallback()}.
      * </p>
+     * <p>
+     * All flow-specific metadata (e.g., {@code client_id}, {@code client_assertion}) is
+     * propagated from the {@code stateInfo.additionalParameters} into the
+     * {@code AuthorizationResponse.additionalParameters}, maintaining a clean pass-through
+     * without field-by-field extraction.
+     * </p>
      *
      * @param code the authorization code
      * @param redirectUri the redirect URI
      * @param state the state parameter
+     * @param stateInfo the resolved state info containing flow metadata
      * @return the token response containing the AOAT as access_token
      * @throws OAuth2TokenException if token exchange fails or Agent is not configured
      */
-    private TokenResponse performAgentAuthTokenExchange(String code, String redirectUri, String state, String dcrClientId) throws OAuth2TokenException {
+    private TokenResponse performAgentAuthTokenExchange(String code,
+                                                        String redirectUri,
+                                                        String state,
+                                                        OAuth2StateHandler.StateInfo stateInfo) throws OAuth2TokenException {
 
         if (agent == null) {
             throw OAuth2TokenException.serverError(
@@ -428,14 +434,15 @@ public class OAuth2CallbackService {
         }
 
         try {
-            // Build AuthorizationResponse per RFC 6749 Section 4.1.2
-            // Include the DCR-registered client_id if available, so the Agent can use it
-            // for token exchange (matching the authorization code binding).
+            // Build AuthorizationResponse per RFC 6749 Section 4.1.2.
+            // Flow-specific metadata (client_id, client_assertion, etc.) is transparently
+            // forwarded from the authorization request storage via additionalParameters,
+            // keeping this method decoupled from specific authentication mechanisms.
             AuthorizationResponse authorizationResponse = AuthorizationResponse.builder()
                     .authorizationCode(code)
                     .redirectUri(redirectUri)
                     .state(state)
-                    .clientId(dcrClientId)
+                    .additionalParameters(stateInfo.getAdditionalParameters())
                     .build();
 
             // Delegate to Agent.handleAuthorizationCallback() which returns AOAT

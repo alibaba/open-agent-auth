@@ -15,22 +15,22 @@
  */
 package com.alibaba.openagentauth.spring.util;
 
-import com.alibaba.openagentauth.core.crypto.jwk.JwksProvider;
+import com.alibaba.openagentauth.core.crypto.jwk.JwkUtils;
+import com.alibaba.openagentauth.core.crypto.key.KeyManager;
+import com.alibaba.openagentauth.core.crypto.verify.SignatureVerificationUtils;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.exception.oauth2.FrameworkOAuth2TokenException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
@@ -66,23 +66,38 @@ public class OAuth2ClientAuthenticator {
     private static final String JWT_BEARER_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 
     /**
-     * The JWKS provider for verifying client assertion signatures.
+     * The key manager for resolving verification keys from the JWKS infrastructure.
      * <p>
-     * This provider abstracts the mechanism for retrieving public keys, supporting
-     * both local and remote JWKS sources (e.g., Agent IDP's JWKS endpoint).
+     * This delegates key resolution to the standard {@link KeyManager} infrastructure,
+     * which uses the {@code JwksConsumerKeyResolver} to fetch public keys from configured
+     * JWKS consumers (e.g., Agent IDP's JWKS endpoint). This ensures consistent key management
+     * with WIT verification and other signature validation flows.
      * </p>
      */
-    private final JwksProvider jwksProvider;
+    private final KeyManager keyManager;
 
     /**
-     * Creates a new OAuth2ClientAuthenticator with the specified JWKS provider.
-     *
-     * @param jwksProvider the JWKS provider for verifying client assertion signatures
-     * @throws IllegalArgumentException if jwksProvider is null
+     * The key definition name used to resolve the verification key from the {@link KeyManager}.
+     * <p>
+     * This corresponds to a key definition in the infrastructure configuration
+     * (e.g., {@code wit-verification}), which maps to a JWKS consumer for the Agent IDP.
+     * The same key definition is used by {@code WitValidator} for WIT signature verification,
+     * ensuring consistent key resolution across all Agent IDP signature verification flows.
+     * </p>
      */
-    public OAuth2ClientAuthenticator(JwksProvider jwksProvider) {
-        this.jwksProvider = ValidationUtils.validateNotNull(jwksProvider, "JWKS provider");
-        logger.info("OAuth2ClientAuthenticator initialized with JwksProvider: {}", jwksProvider.getClass().getSimpleName());
+    private final String verificationKeyId;
+
+    /**
+     * Creates a new OAuth2ClientAuthenticator with the specified key manager and verification key ID.
+     *
+     * @param keyManager the key manager for resolving verification keys
+     * @param verificationKeyId the key definition name for resolving the Agent IDP verification key
+     * @throws IllegalArgumentException if any parameter is null
+     */
+    public OAuth2ClientAuthenticator(KeyManager keyManager, String verificationKeyId) {
+        this.keyManager = ValidationUtils.validateNotNull(keyManager, "Key manager");
+        this.verificationKeyId = ValidationUtils.validateNotNull(verificationKeyId, "Verification key ID");
+        logger.info("OAuth2ClientAuthenticator initialized with KeyManager and verificationKeyId: {}", verificationKeyId);
     }
 
     /**
@@ -114,11 +129,14 @@ public class OAuth2ClientAuthenticator {
             String clientAssertionType = requestBody.get("client_assertion_type");
 
             if (!ValidationUtils.isNullOrEmpty(clientAssertion) && !ValidationUtils.isNullOrEmpty(clientAssertionType)) {
-                return authenticateWithClientAssertion(clientAssertion, clientAssertionType, clientStore);
+                logger.debug("Client assertion detected, using private_key_jwt authentication (assertion_type: {})",
+                        clientAssertionType);
+                return authenticateWithClientAssertion(clientAssertion, clientAssertionType, requestBody, clientStore);
             }
         }
 
         // Fall back to Basic Auth
+        logger.debug("No client assertion found, falling back to client_secret_basic authentication");
         return authenticateWithBasicAuth(authorizationHeader, clientStore);
     }
 
@@ -212,25 +230,38 @@ public class OAuth2ClientAuthenticator {
     /**
      * Authenticates the client using JWT-based client assertion (RFC 7523).
      * <p>
-     * The client assertion JWT is verified against the client's published JWKS.
+     * This method supports two modes of client identification:
+     * </p>
+     * <ol>
+     *   <li><b>WIMSE mode</b>: When the request body contains a {@code client_id} parameter,
+     *       it is used as the client identifier. The JWT's {@code sub} claim is validated
+     *       against this {@code client_id}. This supports WIMSE workload identity tokens
+     *       where {@code iss} (trust domain) differs from {@code sub} (workload ID).</li>
+     *   <li><b>Standard RFC 7523 mode</b>: When no {@code client_id} is in the request body,
+     *       the JWT's {@code iss} claim is used as the client identifier, and {@code sub}
+     *       must match {@code iss} per RFC 7523 Section 3.</li>
+     * </ol>
+     * <p>
      * The following claims are validated:
      * </p>
      * <ul>
-     *   <li><b>iss</b>: Must match the client_id</li>
-     *   <li><b>sub</b>: Must match the client_id</li>
+     *   <li><b>sub</b>: Must match the resolved client_id</li>
      *   <li><b>exp</b>: Must not be expired</li>
-     *   <li><b>iat</b>: Must be present</li>
      * </ul>
      *
      * @param clientAssertion the JWT assertion
      * @param clientAssertionType the assertion type (must be urn:ietf:params:oauth:client-assertion-type:jwt-bearer)
+     * @param requestBody the request body parameters containing optional client_id
      * @param clientStore the client store for retrieving client information
      * @return the authenticated client ID
      * @throws FrameworkOAuth2TokenException if authentication fails
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7523">RFC 7523 - JWT Profile for OAuth 2.0 Client Authentication</a>
+     * @see <a href="https://datatracker.ietf.org/doc/draft-ietf-wimse-workload-creds/">draft-ietf-wimse-workload-creds</a>
      */
     public String authenticateWithClientAssertion(
             String clientAssertion,
             String clientAssertionType,
+            Map<String, String> requestBody,
             OAuth2ClientStore clientStore) {
 
         // Validate assertion type
@@ -241,6 +272,7 @@ public class OAuth2ClientAuthenticator {
         }
 
         // Parse the JWT assertion
+        logger.debug("Parsing client assertion JWT...");
         SignedJWT signedJwt;
         JWTClaimsSet claimsSet;
         try {
@@ -252,21 +284,49 @@ public class OAuth2ClientAuthenticator {
                     "Client authentication failed: Invalid client assertion JWT");
         }
 
-        // Extract and validate issuer (must be client_id per RFC 7523 Section 3)
-        String clientId = claimsSet.getIssuer();
-        if (ValidationUtils.isNullOrEmpty(clientId)) {
-            logger.error("Client assertion JWT missing 'iss' claim");
+        // Resolve client_id: prefer request body parameter, fall back to JWT iss claim
+        // In WIMSE scenarios, the client_id in the request body is the workload identity
+        // (e.g., wimse://trust.domain/workload/UUID), which was assigned during DCR.
+        // The JWT iss claim is the trust domain (e.g., wimse://trust.domain), not the client_id.
+        String requestBodyClientId = requestBody != null ? requestBody.get("client_id") : null;
+        String jwtIssuer = claimsSet.getIssuer();
+        String jwtSubject = claimsSet.getSubject();
+
+        // Resolve client_id: prefer request body parameter, fall back to JWT iss claim.
+        // In WIMSE scenarios, the client_id in the request body is the workload identity
+        // (e.g., wimse://trust.domain/workload/UUID) assigned during DCR, which also
+        // matches the JWT sub claim.
+        String clientId;
+        if (!ValidationUtils.isNullOrEmpty(requestBodyClientId)) {
+            clientId = requestBodyClientId;
+            logger.debug("Using client_id from request body: {}", clientId);
+
+            // Validate that JWT sub matches the request body client_id.
+            // In WIMSE, DCR assigns WIT.sub as client_id, so sub must equal client_id.
+            if (!clientId.equals(jwtSubject)) {
+                logger.error("Client assertion JWT 'sub' claim ({}) does not match request body 'client_id' ({})",
+                        jwtSubject, clientId);
+                throw FrameworkOAuth2TokenException.invalidClient(
+                        "Client authentication failed: Client assertion JWT 'sub' must match 'client_id'");
+            }
+        } else if (!ValidationUtils.isNullOrEmpty(jwtIssuer)) {
+            clientId = jwtIssuer;
+            logger.debug("Using client_id from JWT 'iss' claim: {}", clientId);
+
+            // In standard RFC 7523 mode, sub must match iss per Section 3
+            if (!clientId.equals(jwtSubject)) {
+                logger.error("Client assertion JWT 'sub' claim ({}) does not match 'iss' claim ({})",
+                        jwtSubject, clientId);
+                throw FrameworkOAuth2TokenException.invalidClient(
+                        "Client authentication failed: Client assertion JWT 'sub' must match 'iss'");
+            }
+        } else {
+            logger.error("No client_id in request body and no 'iss' claim in JWT");
             throw FrameworkOAuth2TokenException.invalidClient(
-                    "Client authentication failed: Client assertion JWT missing 'iss' claim");
+                    "Client authentication failed: Unable to determine client_id");
         }
 
-        // Validate subject matches issuer (RFC 7523 Section 3)
-        String subject = claimsSet.getSubject();
-        if (!clientId.equals(subject)) {
-            logger.error("Client assertion JWT 'sub' claim ({}) does not match 'iss' claim ({})", subject, clientId);
-            throw FrameworkOAuth2TokenException.invalidClient(
-                    "Client authentication failed: Client assertion JWT 'sub' must match 'iss'");
-        }
+        logger.debug("Client assertion JWT claims - iss: {}, sub: {}, resolved client_id: {}", jwtIssuer, jwtSubject, clientId);
 
         // Validate expiration
         Date expirationTime = claimsSet.getExpirationTime();
@@ -275,6 +335,7 @@ public class OAuth2ClientAuthenticator {
             throw FrameworkOAuth2TokenException.invalidClient(
                     "Client authentication failed: Client assertion JWT is expired");
         }
+        logger.debug("Client assertion JWT claims validated - client_id: {}, exp: {}", clientId, expirationTime);
 
         // Retrieve client from store
         OAuth2RegisteredClient client = clientStore.retrieve(clientId);
@@ -283,6 +344,7 @@ public class OAuth2ClientAuthenticator {
             throw FrameworkOAuth2TokenException.invalidClient(
                     "Client authentication failed: Client not registered");
         }
+        logger.debug("Client '{}' found in store, auth_method: {}", clientId, client.getTokenEndpointAuthMethod());
 
         // Validate auth method
         String authMethod = client.getTokenEndpointAuthMethod();
@@ -292,74 +354,115 @@ public class OAuth2ClientAuthenticator {
                     "Client authentication failed: Client is not configured for private_key_jwt authentication");
         }
 
-        // Verify JWT signature using the injected JwksProvider
+        // Verify JWT signature
+        logger.debug("Verifying client assertion JWT signature for client: {}", clientId);
         verifyClientAssertionSignature(signedJwt, client);
 
-        logger.debug("Client authenticated via private_key_jwt: {}", clientId);
+        logger.info("Client authenticated via private_key_jwt: {}", clientId);
         return clientId;
     }
 
     /**
-     * Verifies the JWT signature using the injected {@link JwksProvider}.
+     * Verifies the JWT signature using client's registered jwks first, falling back to KeyManager.
      * <p>
-     * This method delegates JWKS retrieval to the {@code JwksProvider} infrastructure
-     * from the Core package, which supports both local and remote JWKS sources
-     * (e.g., Agent IDP's JWKS endpoint). This avoids duplicating HTTP client logic
-     * and ensures consistent key management across the system.
+     * This method implements a two-tier verification strategy:
      * </p>
+     * <ol>
+     *   <li><b>Priority 1: Client's registered jwks</b> - If the client has inline jwks
+     *       registered during DCR, use those keys to verify the signature. This is the
+     *       standard Software Statement + private_key_jwt flow.</li>
+     *   <li><b>Priority 2: KeyManager infrastructure</b> - If no inline jwks, fall back
+     *       to the {@link KeyManager} infrastructure for key resolution. This ensures
+     *       backward compatibility with existing deployments.</li>
+     * </ol>
+     * <p>
+     * When using inline jwks:
+     * </p>
+     * <ul>
+     *   <li>Parse the jwks Map into a JWKSet</li>
+     *   <li>Match JWK by kid from JWT header, or use first key if no kid</li>
+     *   <li>Create appropriate verifier based on key type (EC or RSA)</li>
+     *   <li>Verify signature</li>
+     * </ul>
      *
      * @param signedJwt the signed JWT to verify
-     * @param client the registered client (used for logging context)
+     * @param client the registered client
      * @throws FrameworkOAuth2TokenException if signature verification fails
      */
     private void verifyClientAssertionSignature(SignedJWT signedJwt, OAuth2RegisteredClient client) {
-        try {
-            // Retrieve JWKS using the injected JwksProvider (supports local/remote sources)
-            JWKSet jwkSet = jwksProvider.getJwkSet();
 
-            // Find matching key by key ID
-            String keyId = signedJwt.getHeader().getKeyID();
-            JWK matchingKey = null;
+        String headerKeyId = signedJwt.getHeader().getKeyID();
+        String algorithm = signedJwt.getHeader().getAlgorithm().getName();
+        String clientId = client.getClientId();
 
-            if (keyId != null) {
-                matchingKey = jwkSet.getKeyByKeyId(keyId);
-            }
+        logger.debug("Verifying client assertion signature for client '{}' - header kid: {}, algorithm: {}",
+                clientId, headerKeyId, algorithm);
 
-            // If no key ID match, try the first RSA key
-            if (matchingKey == null) {
-                for (JWK jwk : jwkSet.getKeys()) {
-                    if (jwk instanceof RSAKey) {
-                        matchingKey = jwk;
-                        break;
-                    }
-                }
-            }
-
-            if (matchingKey == null) {
-                logger.error("No matching public key found in JWKS for client: {}", client.getClientId());
+        // Priority 1: Try to use client's registered inline jwks
+        Map<String, Object> inlineJwks = client.getJwks();
+        if (inlineJwks != null && !inlineJwks.isEmpty()) {
+            logger.debug("Client '{}' has inline jwks, using them for signature verification", clientId);
+            try {
+                verifyWithInlineJwks(signedJwt, inlineJwks, clientId);
+                logger.debug("Client assertion signature verified successfully using inline jwks for client: {}", clientId);
+                return;
+            } catch (Exception e) {
+                logger.error("Failed to verify signature using inline jwks for client: {}", clientId, e);
                 throw FrameworkOAuth2TokenException.invalidClient(
-                        "Client authentication failed: No matching public key found in client JWKS");
+                        "Client authentication failed: Signature verification using inline jwks failed - " + e.getMessage());
             }
-
-            // Verify signature
-            JWSVerifier verifier = new RSASSAVerifier(((RSAKey) matchingKey).toRSAPublicKey());
-            if (!signedJwt.verify(verifier)) {
-                logger.error("Client assertion JWT signature verification failed for client: {}", client.getClientId());
-                throw FrameworkOAuth2TokenException.invalidClient(
-                        "Client authentication failed: Client assertion JWT signature verification failed");
-            }
-
-        } catch (FrameworkOAuth2TokenException e) {
-            throw e;
-        } catch (IOException e) {
-            logger.error("Failed to retrieve JWKS from provider for client: {}", client.getClientId(), e);
-            throw FrameworkOAuth2TokenException.invalidClient(
-                    "Client authentication failed: Failed to retrieve JWKS: " + e.getMessage());
-        } catch (Exception e) {
-            logger.error("Failed to verify client assertion signature for client: {}", client.getClientId(), e);
-            throw FrameworkOAuth2TokenException.invalidClient(
-                    "Client authentication failed: Failed to verify client assertion signature: " + e.getMessage());
         }
+
+        // Priority 2: Fall back to KeyManager infrastructure
+        logger.debug("Client '{}' has no inline jwks, falling back to KeyManager for signature verification", clientId);
+        logger.debug("Using KeyManager - verificationKeyId: {}", verificationKeyId);
+
+        boolean isValid = SignatureVerificationUtils.verifySignature(signedJwt, keyManager, verificationKeyId);
+
+        if (!isValid) {
+            logger.error("Client assertion JWT signature verification failed for client: {}", clientId);
+            throw FrameworkOAuth2TokenException.invalidClient(
+                    "Client authentication failed: Client assertion JWT signature verification failed");
+        }
+
+        logger.debug("Client assertion JWT signature verified successfully using KeyManager for client: {}", clientId);
+    }
+
+    /**
+     * Verifies the JWT signature using the client's inline jwks.
+     * <p>
+     * This method parses the inline jwks from the client registration and uses them
+     * to verify the JWT signature. It supports both EC and RSA keys.
+     * </p>
+     *
+     * @param signedJwt the signed JWT to verify
+     * @param inlineJwks the inline jwks from client registration
+     * @param clientId the client ID for logging
+     * @throws Exception if verification fails
+     */
+    private void verifyWithInlineJwks(SignedJWT signedJwt, Map<String, Object> inlineJwks, String clientId) throws Exception {
+
+        // Parse jwks Map to JSON string
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jwksJson = objectMapper.writeValueAsString(inlineJwks);
+
+        // Parse JWKSet
+        JWKSet jwkSet = JWKSet.parse(jwksJson);
+
+        // Get the key to use for verification
+        JWK verificationKey = JwkUtils.selectVerificationKey(jwkSet, signedJwt.getHeader().getKeyID());
+
+        // Create appropriate verifier based on key type
+        JWSVerifier verifier = SignatureVerificationUtils.createVerifier(verificationKey);
+
+        // Verify signature
+        boolean isValid = signedJwt.verify(verifier);
+        if (!isValid) {
+            throw new Exception("Signature verification failed");
+        }
+
+        logger.debug("Signature verified successfully using inline jwk - kid: {}, kty: {}",
+                verificationKey.getKeyID(), verificationKey.getKeyType());
     }
 
 }

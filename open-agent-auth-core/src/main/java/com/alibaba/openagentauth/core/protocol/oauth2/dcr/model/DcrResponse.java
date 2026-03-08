@@ -250,10 +250,23 @@ public class DcrResponse {
 
     /**
      * Converts this DcrResponse to an OAuth2RegisteredClient.
+     * <p>
+     * If the original DCR request contained a {@code jwks} field, it can be passed
+     * via {@code additionalMetadata} to preserve the client's public keys for
+     * subsequent {@code private_key_jwt} authentication.
+     * </p>
      *
      * @return the converted OAuth2RegisteredClient
      */
+    @SuppressWarnings("unchecked")
     public OAuth2RegisteredClient toRegisteredClient() {
+        Map<String, Object> clientJwks = null;
+        if (additionalMetadata != null && additionalMetadata.containsKey("jwks")) {
+            Object jwksObj = additionalMetadata.get("jwks");
+            if (jwksObj instanceof Map) {
+                clientJwks = (Map<String, Object>) jwksObj;
+            }
+        }
         return OAuth2RegisteredClient.builder()
                 .clientId(this.clientId)
                 .clientSecret(this.clientSecret)
@@ -263,6 +276,7 @@ public class DcrResponse {
                 .responseTypes(this.responseTypes)
                 .tokenEndpointAuthMethod(this.tokenEndpointAuthMethod)
                 .scope(this.scope)
+                .jwks(clientJwks)
                 .build();
     }
 

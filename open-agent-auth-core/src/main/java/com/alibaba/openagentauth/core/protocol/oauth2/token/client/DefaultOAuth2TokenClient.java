@@ -108,9 +108,8 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
      * OAuth2ClientAuthentication auth = new BasicAuthAuthentication(clientId, clientSecret);
      * OAuth2TokenClient client = new DefaultOAuth2TokenClient(resolver, "authorization-server", auth);
      *
-     * // Private Key JWT Authentication
-     * ClientAssertionGenerator generator = new ClientAssertionGenerator(clientId, signingKey, JWSAlgorithm.RS256);
-     * OAuth2ClientAuthentication auth = new ClientAssertionAuthentication(clientId, generator, tokenEndpoint);
+     * // Per-request Client Assertion Authentication (e.g., WIMSE WIT)
+     * OAuth2ClientAuthentication auth = new ClientAssertionAuthentication();
      * OAuth2TokenClient client = new DefaultOAuth2TokenClient(resolver, "authorization-server", auth);
      * }</pre>
      *
@@ -263,11 +262,15 @@ public class DefaultOAuth2TokenClient implements OAuth2TokenClient {
             builder.addEncoded("client_id", request.getClientId());
         }
 
-        // Extract scope from additional parameters if present
-        if (request.getAdditionalParameters() != null && request.getAdditionalParameters().containsKey("scope")) {
-            Object scope = request.getAdditionalParameters().get("scope");
-            if (scope != null) {
-                builder.addEncoded("scope", scope.toString());
+        // Propagate additional parameters into the request body.
+        // This includes per-request credentials (e.g., WIT for client assertion authentication)
+        // and standard OAuth parameters (e.g., scope). The authentication strategy can then
+        // extract per-request credentials from the parsed body map without relying on global state.
+        if (request.getAdditionalParameters() != null) {
+            for (Map.Entry<String, Object> entry : request.getAdditionalParameters().entrySet()) {
+                if (entry.getValue() != null) {
+                    builder.addEncoded(entry.getKey(), entry.getValue().toString());
+                }
             }
         }
 

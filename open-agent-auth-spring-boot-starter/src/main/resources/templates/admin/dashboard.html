@@ -349,27 +349,33 @@
             }
         });
 
-        function isSafeFrameUrl(rawUrl) {
+        function sanitizeFrameUrl(rawUrl) {
             if (!rawUrl || typeof rawUrl !== 'string') {
-                return false;
+                return null;
             }
-            var url = rawUrl.trim();
-            if (url === '') {
-                return false;
+            var trimmed = rawUrl.trim();
+            if (trimmed === '') {
+                return null;
             }
             try {
-                var parsed = new URL(url, window.location.origin);
-                return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+                var parsed = new URL(trimmed, window.location.origin);
+                if (parsed.origin !== window.location.origin) {
+                    return null;
+                }
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                    return null;
+                }
+                return parsed.href;
             } catch (e) {
-                return false;
+                return null;
             }
         }
 
         function navigateTo(element) {
-            var url = element.getAttribute('data-url');
+            var sanitizedUrl = sanitizeFrameUrl(element.getAttribute('data-url'));
             var frame = document.getElementById('contentFrame');
-            if (frame && isSafeFrameUrl(url)) {
-                frame.src = url;
+            if (frame && sanitizedUrl) {
+                frame.src = sanitizedUrl;
             }
 
             document.querySelectorAll('.nav-item').forEach(function(item) {

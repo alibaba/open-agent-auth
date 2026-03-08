@@ -16,17 +16,15 @@
 package com.alibaba.openagentauth.core.protocol.oauth2.client;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
-import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpRequest;
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,29 +33,22 @@ import static org.assertj.core.api.Assertions.*;
 /**
  * Unit tests for ClientAssertionAuthentication.
  * <p>
- * This test class verifies the functionality of applying client assertion
- * authentication to HTTP requests.
+ * This test class verifies the functionality of applying WIMSE-based
+ * client assertion authentication to HTTP requests.
  * </p>
  */
 @DisplayName("ClientAssertionAuthentication Tests")
 class ClientAssertionAuthenticationTest {
 
     private ClientAssertionAuthentication authentication;
-    private ClientAssertionGenerator generator;
-    private String clientId;
-    private String tokenEndpoint;
+    private ClientAssertionAuthentication authenticationWithAuthServerUrl;
+    private String sampleWit;
 
     @BeforeEach
-    void setUp() throws JOSEException {
-        clientId = "test-client-123";
-        tokenEndpoint = "https://example.com/token";
-        
-        RSAKey signingKey = new RSAKeyGenerator(2048)
-                .keyID("test-key-id")
-                .generate();
-        
-        generator = new ClientAssertionGenerator(clientId, signingKey, JWSAlgorithm.RS256);
-        authentication = new ClientAssertionAuthentication(clientId, generator, tokenEndpoint);
+    void setUp() {
+        authentication = new ClientAssertionAuthentication();
+        authenticationWithAuthServerUrl = new ClientAssertionAuthentication("https://auth-server.example.com/token");
+        sampleWit = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5LWlkIn0.eyJpc3MiOiJhZ2VudC1pZHAtZXhhbXBsZSIsInN1YiI6Indvcmtsb2FkLXN1YmplY3QiLCJhdWQiOiJodHRwczovL2FzLmV4YW1wbGUuY29tL3Rva2VuIiwiZXhwIjoxNzMxNjY4MTAwLCJpYXQiOjE3MzE2NjQ1MDAsImp0aSI6InVybjp1dWlkOjEyMzQ1Njc4LTkwYWItY2RlZi0xMjM0LTU2Nzg5MGFiY2RlZiJ9.signature";
     }
 
     @Nested
@@ -65,63 +56,15 @@ class ClientAssertionAuthenticationTest {
     class ConstructorTests {
 
         @Test
-        @DisplayName("Should create authentication with valid parameters")
-        void shouldCreateAuthenticationWithValidParameters() {
+        @DisplayName("Should create authentication with no-arg constructor")
+        void shouldCreateAuthenticationWithNoArgConstructor() {
             assertThat(authentication).isNotNull();
-            assertThat(authentication.getClientId()).isEqualTo(clientId);
-            assertThat(authentication.getAuthenticationMethod()).isEqualTo("private_key_jwt");
         }
 
         @Test
-        @DisplayName("Should throw exception when clientId is null")
-        void shouldThrowExceptionWhenClientIdIsNull() throws JOSEException {
-            RSAKey key = new RSAKeyGenerator(2048).keyID("key").generate();
-            ClientAssertionGenerator gen = new ClientAssertionGenerator("client", key, JWSAlgorithm.RS256);
-            
-            assertThatThrownBy(() -> new ClientAssertionAuthentication(null, gen, tokenEndpoint))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client ID");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when clientId is empty")
-        void shouldThrowExceptionWhenClientIdIsEmpty() throws JOSEException {
-            RSAKey key = new RSAKeyGenerator(2048).keyID("key").generate();
-            ClientAssertionGenerator gen = new ClientAssertionGenerator("client", key, JWSAlgorithm.RS256);
-            
-            assertThatThrownBy(() -> new ClientAssertionAuthentication("", gen, tokenEndpoint))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client ID");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when assertionGenerator is null")
-        void shouldThrowExceptionWhenAssertionGeneratorIsNull() {
-            assertThatThrownBy(() -> new ClientAssertionAuthentication(clientId, null, tokenEndpoint))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Assertion generator");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when tokenEndpoint is null")
-        void shouldThrowExceptionWhenTokenEndpointIsNull() throws JOSEException {
-            RSAKey key = new RSAKeyGenerator(2048).keyID("key").generate();
-            ClientAssertionGenerator gen = new ClientAssertionGenerator("client", key, JWSAlgorithm.RS256);
-            
-            assertThatThrownBy(() -> new ClientAssertionAuthentication(clientId, gen, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Token endpoint");
-        }
-
-        @Test
-        @DisplayName("Should throw exception when tokenEndpoint is empty")
-        void shouldThrowExceptionWhenTokenEndpointIsEmpty() throws JOSEException {
-            RSAKey key = new RSAKeyGenerator(2048).keyID("key").generate();
-            ClientAssertionGenerator gen = new ClientAssertionGenerator("client", key, JWSAlgorithm.RS256);
-            
-            assertThatThrownBy(() -> new ClientAssertionAuthentication(clientId, gen, ""))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Token endpoint");
+        @DisplayName("Should create authentication with authorization server URL")
+        void shouldCreateAuthenticationWithAuthorizationServerUrl() {
+            assertThat(authenticationWithAuthServerUrl).isNotNull();
         }
     }
 
@@ -130,39 +73,73 @@ class ClientAssertionAuthenticationTest {
     class ApplyAuthenticationTests {
 
         @Test
-        @DisplayName("Should apply authentication to request")
-        void shouldApplyAuthenticationToRequest() {
+        @DisplayName("Should apply authentication to request with client assertion in request body")
+        void shouldApplyAuthenticationToRequestWithClientAssertion() {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
+            requestBody.put(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM, sampleWit);
             
             HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
             
             assertThat(result).isNotNull();
-            assertThat(requestBody).containsKey("client_id");
             assertThat(requestBody).containsKey("client_assertion_type");
-            assertThat(requestBody).containsKey("client_assertion");
+            assertThat(requestBody).containsKey(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM);
             
-            assertThat(requestBody.get("client_id")).isEqualTo(clientId);
             assertThat(requestBody.get("client_assertion_type"))
                     .isEqualTo("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
-            assertThat(requestBody.get("client_assertion")).isNotEmpty();
+            assertThat(requestBody.get(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM)).isEqualTo(sampleWit);
         }
 
         @Test
-        @DisplayName("Should generate valid assertion in request body")
-        void shouldGenerateValidAssertionInRequestBody() {
+        @DisplayName("Should keep client assertion in request body after authentication")
+        void shouldKeepClientAssertionInRequestBodyAfterAuthentication() {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://example.com/token"));
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM, sampleWit);
+            
+            authentication.applyAuthentication(requestBuilder, requestBody);
+            
+            assertThat(requestBody).containsKey(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM);
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalStateException when client assertion is not in request body")
+        void shouldThrowIllegalStateExceptionWhenClientAssertionNotInRequestBody() {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
             
-            authentication.applyAuthentication(requestBuilder, requestBody);
+            assertThatThrownBy(() -> authentication.applyAuthentication(requestBuilder, requestBody))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("client_assertion not found in request body");
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalStateException when client assertion is null")
+        void shouldThrowIllegalStateExceptionWhenClientAssertionIsNull() {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://example.com/token"));
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM, null);
             
-            String assertion = requestBody.get("client_assertion");
-            assertThat(assertion).isNotEmpty();
+            assertThatThrownBy(() -> authentication.applyAuthentication(requestBuilder, requestBody))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("client_assertion not found in request body");
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalStateException when client assertion is blank")
+        void shouldThrowIllegalStateExceptionWhenClientAssertionIsBlank() {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://example.com/token"));
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM, "   ");
             
-            // Verify JWT structure
-            assertThat(assertion.split("\\.")).hasSize(3); // Header.Payload.Signature
+            assertThatThrownBy(() -> authentication.applyAuthentication(requestBuilder, requestBody))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("client_assertion not found in request body");
         }
 
         @Test
@@ -172,6 +149,7 @@ class ClientAssertionAuthenticationTest {
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
             requestBody.put("existing_param", "existing_value");
+            requestBody.put(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM, sampleWit);
             
             authentication.applyAuthentication(requestBuilder, requestBody);
             
@@ -185,36 +163,212 @@ class ClientAssertionAuthenticationTest {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
+            requestBody.put(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM, sampleWit);
             
             HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
             
             assertThat(result).isSameAs(requestBuilder);
         }
 
-        @Test
-        @DisplayName("Should throw runtime exception when assertion generation fails")
-        void shouldThrowRuntimeExceptionWhenAssertionGenerationFails() throws JOSEException {
-            // Create a generator that will fail — override the three-arg method since
-            // applyAuthentication now delegates to generateAssertion(endpoint, clientId, expiration)
-            RSAKey invalidKey = new RSAKeyGenerator(2048).keyID("key").generate();
-            ClientAssertionGenerator failingGenerator = new ClientAssertionGenerator(
-                    clientId, invalidKey, JWSAlgorithm.RS256) {
-                @Override
-                public String generateAssertion(String tokenEndpoint, String effectiveClientId, long expirationSeconds) {
-                    throw new RuntimeException("Simulated failure");
-                }
-            };
-            
-            ClientAssertionAuthentication failingAuth = new ClientAssertionAuthentication(
-                    clientId, failingGenerator, tokenEndpoint);
-            
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(java.net.URI.create("https://example.com/token"));
-            Map<String, String> requestBody = new HashMap<>();
-            
-            assertThatThrownBy(() -> failingAuth.applyAuthentication(requestBuilder, requestBody))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("Failed to apply client assertion authentication");
+        // This test is removed because the new implementation no longer wraps RuntimeException
+        // It only throws IllegalStateException directly
+
+        @Nested
+        @DisplayName("Apply Authentication Tests - Standard private_key_jwt Mode")
+        class StandardPrivateKeyJwtModeTests {
+
+            @Test
+            @DisplayName("Should generate client assertion from workload private key")
+            void shouldGenerateClientAssertionFromWorkloadPrivateKey() throws JOSEException {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                
+                ECKey ecKey = new ECKeyGenerator(Curve.P_256).generate();
+                requestBody.put("client_id", "test-client-id");
+                requestBody.put("workload_private_key", ecKey.toJSONString());
+                
+                // When
+                HttpRequest.Builder result = authenticationWithAuthServerUrl.applyAuthentication(requestBuilder, requestBody);
+                
+                // Then
+                assertThat(result).isNotNull();
+                assertThat(requestBody).containsKey("client_assertion");
+                assertThat(requestBody).containsKey("client_assertion_type");
+                assertThat(requestBody.get("client_assertion_type"))
+                        .isEqualTo("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+                assertThat(requestBody).doesNotContainKey("workload_private_key");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when workload_private_key is present but client_id is missing")
+            void shouldThrowExceptionWhenWorkloadPrivateKeyIsPresentButClientIdIsMissing() throws JOSEException {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                
+                ECKey ecKey = new ECKeyGenerator(Curve.P_256).generate();
+                requestBody.put("workload_private_key", ecKey.toJSONString());
+                
+                // When & Then
+                // The IllegalStateException is wrapped in a RuntimeException by the catch block
+                assertThatThrownBy(() -> 
+                        authenticationWithAuthServerUrl.applyAuthentication(requestBuilder, requestBody))
+                        .isInstanceOf(RuntimeException.class)
+                        .hasMessageContaining("client_id not found in request body");
+            }
+
+            @Test
+            @DisplayName("Should not generate assertion when authorizationServerUrl is null")
+            void shouldNotGenerateAssertionWhenAuthorizationServerUrlIsNull() throws JOSEException {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                
+                ECKey ecKey = new ECKeyGenerator(Curve.P_256).generate();
+                requestBody.put("client_id", "test-client-id");
+                requestBody.put("workload_private_key", ecKey.toJSONString());
+                requestBody.put("client_assertion", sampleWit);
+                
+                // When
+                HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
+                
+                // Then - Should use pre-signed assertion instead
+                assertThat(result).isNotNull();
+                assertThat(requestBody.get("client_assertion")).isEqualTo(sampleWit);
+                assertThat(requestBody).containsKey("workload_private_key");
+            }
+
+            @Test
+            @DisplayName("Should preserve existing request body parameters when generating assertion")
+            void shouldPreserveExistingRequestBodyParametersWhenGeneratingAssertion() throws JOSEException {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                
+                ECKey ecKey = new ECKeyGenerator(Curve.P_256).generate();
+                requestBody.put("client_id", "test-client-id");
+                requestBody.put("workload_private_key", ecKey.toJSONString());
+                requestBody.put("scope", "openid profile");
+                requestBody.put("grant_type", "client_credentials");
+                
+                // When
+                HttpRequest.Builder result = authenticationWithAuthServerUrl.applyAuthentication(requestBuilder, requestBody);
+                
+                // Then
+                assertThat(result).isNotNull();
+                assertThat(requestBody).containsKey("scope");
+                assertThat(requestBody).containsKey("grant_type");
+                assertThat(requestBody.get("scope")).isEqualTo("openid profile");
+                assertThat(requestBody.get("grant_type")).isEqualTo("client_credentials");
+            }
+        }
+
+        @Nested
+        @DisplayName("Apply Authentication Tests - Pre-signed Assertion Mode")
+        class PreSignedAssertionModeTests {
+
+            @Test
+            @DisplayName("Should apply pre-signed client assertion authentication")
+            void shouldApplyPreSignedClientAssertionAuthentication() {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                requestBody.put("client_assertion", sampleWit);
+                
+                // When
+                HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
+                
+                // Then
+                assertThat(result).isNotNull();
+                assertThat(requestBody).containsKey("client_assertion_type");
+                assertThat(requestBody.get("client_assertion_type"))
+                        .isEqualTo("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+                assertThat(requestBody.get("client_assertion")).isEqualTo(sampleWit);
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion is not in request body")
+            void shouldThrowExceptionWhenClientAssertionNotInRequestBody() {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                
+                // When & Then
+                assertThatThrownBy(() -> authentication.applyAuthentication(requestBuilder, requestBody))
+                        .isInstanceOf(IllegalStateException.class)
+                        .hasMessageContaining("client_assertion not found in request body");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion is null")
+            void shouldThrowExceptionWhenClientAssertionIsNull() {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                requestBody.put("client_assertion", null);
+                
+                // When & Then
+                assertThatThrownBy(() -> authentication.applyAuthentication(requestBuilder, requestBody))
+                        .isInstanceOf(IllegalStateException.class)
+                        .hasMessageContaining("client_assertion not found in request body");
+            }
+
+            @Test
+            @DisplayName("Should throw exception when client assertion is blank")
+            void shouldThrowExceptionWhenClientAssertionIsBlank() {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                requestBody.put("client_assertion", "   ");
+                
+                // When & Then
+                assertThatThrownBy(() -> authentication.applyAuthentication(requestBuilder, requestBody))
+                        .isInstanceOf(IllegalStateException.class)
+                        .hasMessageContaining("client_assertion not found in request body");
+            }
+
+            @Test
+            @DisplayName("Should preserve existing request body parameters")
+            void shouldPreserveExistingRequestBodyParameters() {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                requestBody.put("existing_param", "existing_value");
+                requestBody.put("client_assertion", sampleWit);
+                
+                // When
+                HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
+                
+                // Then
+                assertThat(requestBody).containsKey("existing_param");
+                assertThat(requestBody.get("existing_param")).isEqualTo("existing_value");
+            }
+
+            @Test
+            @DisplayName("Should not modify request builder")
+            void shouldNotModifyRequestBuilder() {
+                // Given
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://example.com/token"));
+                Map<String, String> requestBody = new HashMap<>();
+                requestBody.put("client_assertion", sampleWit);
+                
+                // When
+                HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
+                
+                // Then
+                assertThat(result).isSameAs(requestBuilder);
+            }
         }
     }
 
@@ -234,9 +388,20 @@ class ClientAssertionAuthenticationTest {
     class GetClientIdTests {
 
         @Test
-        @DisplayName("Should return correct client ID")
-        void shouldReturnCorrectClientId() {
-            assertThat(authentication.getClientId()).isEqualTo(clientId);
+        @DisplayName("Should return null as client ID")
+        void shouldReturnNullAsClientId() {
+            assertThat(authentication.getClientId()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Client Assertion Parameter Key Tests")
+    class ClientAssertionParameterKeyTests {
+
+        @Test
+        @DisplayName("Should have CLIENT_ASSERTION_PARAM constant")
+        void shouldHaveClientAssertionParamConstant() {
+            assertThat(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM).isEqualTo("client_assertion");
         }
     }
 
@@ -245,77 +410,81 @@ class ClientAssertionAuthenticationTest {
     class EdgeCasesTests {
 
         @Test
-        @DisplayName("Should handle empty request body")
-        void shouldHandleEmptyRequestBody() {
+        @DisplayName("Should handle request body with only client assertion")
+        void shouldHandleRequestBodyWithOnlyClientAssertion() {
+            // Given
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("client_assertion", sampleWit);
             
+            // When
             HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
             
+            // Then
             assertThat(result).isNotNull();
-            assertThat(requestBody).hasSize(3); // client_id, client_assertion_type, client_assertion
+            assertThat(requestBody).hasSize(2); // client_assertion_type, client_assertion
         }
 
         @Test
-        @DisplayName("Should handle request body with existing parameters")
-        void shouldHandleRequestBodyWithExistingParameters() {
+        @DisplayName("Should handle request body with existing parameters and client assertion")
+        void shouldHandleRequestBodyWithExistingParametersAndClientAssertion() {
+            // Given
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
             requestBody.put("scope", "openid profile");
             requestBody.put("response_type", "code");
+            requestBody.put("client_assertion", sampleWit);
             
+            // When
             HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
             
+            // Then
             assertThat(result).isNotNull();
-            assertThat(requestBody).hasSize(5);
+            assertThat(requestBody).hasSize(4);
             assertThat(requestBody).containsKey("scope");
             assertThat(requestBody).containsKey("response_type");
         }
 
         @Test
-        @DisplayName("Should respect existing client_id in request body (DCR dynamic client_id)")
-        void shouldRespectExistingClientIdInRequestBody() throws ParseException {
+        @DisplayName("Should handle client assertion with special characters")
+        void shouldHandleClientAssertionWithSpecialCharacters() {
+            // Given
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
-            String dcrClientId = "dcr-dynamic-client-id-12345";
-            requestBody.put("client_id", dcrClientId);
+            String specialWit = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+            requestBody.put("client_assertion", specialWit);
             
-            authentication.applyAuthentication(requestBuilder, requestBody);
+            // When
+            HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
             
-            // The DCR-registered dynamic client_id should be preserved
-            assertThat(requestBody.get("client_id")).isEqualTo(dcrClientId);
-            // Other assertion parameters should still be added
-            assertThat(requestBody).containsKey("client_assertion_type");
-            assertThat(requestBody).containsKey("client_assertion");
-            
-            // Verify that the JWT's iss and sub claims use the DCR client_id, not the default one
-            String assertion = requestBody.get("client_assertion");
-            SignedJWT signedJwt = SignedJWT.parse(assertion);
-            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isEqualTo(dcrClientId);
-            assertThat(signedJwt.getJWTClaimsSet().getSubject()).isEqualTo(dcrClientId);
-            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isNotEqualTo(clientId);
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(requestBody.get("client_assertion")).isEqualTo(specialWit);
         }
 
         @Test
-        @DisplayName("Should use default client_id when none is present in request body")
-        void shouldUseDefaultClientIdWhenNonePresent() throws ParseException {
+        @DisplayName("Should handle blank authorizationServerUrl when workload_private_key is present")
+        void shouldHandleBlankAuthorizationServerUrlWhenWorkloadPrivateKeyIsPresent() throws JOSEException {
+            // Given
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(java.net.URI.create("https://example.com/token"));
             Map<String, String> requestBody = new HashMap<>();
             
-            authentication.applyAuthentication(requestBuilder, requestBody);
+            ECKey ecKey = new ECKeyGenerator(Curve.P_256).generate();
+            requestBody.put("client_id", "test-client-id");
+            requestBody.put("workload_private_key", ecKey.toJSONString());
+            requestBody.put("client_assertion", sampleWit);
             
-            // When no client_id is pre-set, the default static client_id should be used
-            assertThat(requestBody.get("client_id")).isEqualTo(clientId);
+            // When
+            HttpRequest.Builder result = authentication.applyAuthentication(requestBuilder, requestBody);
             
-            // Verify that the JWT's iss and sub claims use the default client_id
-            String assertion = requestBody.get("client_assertion");
-            SignedJWT signedJwt = SignedJWT.parse(assertion);
-            assertThat(signedJwt.getJWTClaimsSet().getIssuer()).isEqualTo(clientId);
-            assertThat(signedJwt.getJWTClaimsSet().getSubject()).isEqualTo(clientId);
+            // Then - Should use pre-signed assertion instead
+            assertThat(result).isNotNull();
+            assertThat(requestBody.get("client_assertion")).isEqualTo(sampleWit);
+            assertThat(requestBody).containsKey("workload_private_key");
         }
     }
 }

@@ -28,6 +28,7 @@ import com.alibaba.openagentauth.core.model.proposal.AgentUserBindingProposal;
 import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.ClientAssertionAuthentication;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.client.OAuth2DcrClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrRequest;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
@@ -36,6 +37,7 @@ import com.alibaba.openagentauth.core.protocol.oauth2.par.jwt.AapParJwtGenerator
 import com.alibaba.openagentauth.core.protocol.oauth2.token.client.OAuth2TokenClient;
 import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenValidator;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitRequest;
 import com.alibaba.openagentauth.core.token.TokenService;
 import com.alibaba.openagentauth.core.token.common.TokenValidationResult;
@@ -142,6 +144,7 @@ public class DefaultAgent implements Agent {
      * @param parClient the PAR client
      * @param dcrClient the DCR client
      * @param userAuthenticationTokenClient the token client for user authentication OIDC flow
+     * @param agentOperationAuthorizationTokenClient the token client for agent operation authorization flow
      * @param aapParJwtGenerator the AAP PAR-JWT generator
      * @param authorizationServerUrl the authorization server URL
      * @param agentUserIdpUrl the agent user IDP URL
@@ -380,12 +383,24 @@ public class DefaultAgent implements Agent {
         logger.debug("Registering OAuth client for workload: {}", workloadContext.getWorkloadId());
 
         try {
-            // Build DCR request with WIT as authentication (RFC 7591)
+            // Build DCR request using WIMSE Path A (Software Statement mode, RFC 7591).
+            // The WIT is set as the software_statement, and the workload's public key
+            // is provided as inline JWKS. The AS-side WimseOAuth2DcrAuthenticator:
+            //   1. Extracts and validates the WIT from software_statement
+            //   2. Verifies cnf.jwk in WIT matches the provided JWKS
+            //   3. Uses WIT.sub (workload ID) as the client_id
+            //   4. Stores the JWKS for subsequent client_assertion signature verification
+
+            // Build inline JWKS containing the workload's public key
+            Map<String, Object> inlineJwks = buildInlineJwks(workloadContext.getPublicKey());
+
             DcrRequest dcrRequest = DcrRequest.builder()
                     .redirectUris(List.of(oAuthCallbacksRedirectUri))
                     .clientName(CLIENT_NAME_PREFIX + workloadContext.getWorkloadId())
                     .grantTypes(List.of(GRANT_TYPE_AUTHORIZATION_CODE))
                     .tokenEndpointAuthMethod(AUTH_METHOD_PRIVATE_KEY_JWT)
+                    .softwareStatement(workloadContext.getWit())
+                    .jwks(inlineJwks)
                     .build();
 
             // Submit DCR request
@@ -512,21 +527,37 @@ public class DefaultAgent implements Agent {
                 throw new FrameworkAuthorizationException("Authorization code is missing");
             }
 
-            // Use the DCR-registered client_id from the AuthorizationResponse if available,
-            // falling back to the static clientId for backward compatibility.
-            // This ensures the token exchange uses the same client_id that was bound
-            // to the authorization code during the PAR/authorization flow.
-            String effectiveClientId = !ValidationUtils.isNullOrEmpty(response.getClientId())
-                    ? response.getClientId()
+            // Resolve the effective client_id: prefer the dynamic client_id from
+            // additionalParameters (e.g., DCR-registered), fall back to the static default.
+            Map<String, Object> responseParams = response.getAdditionalParameters();
+            String dynamicClientId = responseParams.containsKey("client_id")
+                    ? (String) responseParams.get("client_id")
+                    : null;
+            String effectiveClientId = !ValidationUtils.isNullOrEmpty(dynamicClientId)
+                    ? dynamicClientId
                     : clientId;
-            logger.debug("Token exchange using client_id: {} (DCR: {})", effectiveClientId,
-                    !ValidationUtils.isNullOrEmpty(response.getClientId()));
+            logger.debug("Token exchange using client_id: {} (dynamic: {})", effectiveClientId,
+                    !ValidationUtils.isNullOrEmpty(dynamicClientId));
+
+            // Build token request with the workload's private key for standard
+            // private_key_jwt authentication (RFC 7523). The ClientAssertionAuthentication
+            // strategy will generate a client_assertion JWT signed with this key.
+            Map<String, Object> tokenAdditionalParams = new HashMap<>(responseParams);
+            // Propagate workload_private_key from the authorization response params
+            // so that ClientAssertionAuthentication can generate a standard client_assertion
+            if (!tokenAdditionalParams.containsKey(ClientAssertionAuthentication.WORKLOAD_PRIVATE_KEY_PARAM)) {
+                // If workload_private_key is not in response params, check if it was
+                // forwarded from the PAR request via state or other mechanism
+                logger.debug("workload_private_key not found in authorization response params, " +
+                        "relying on pre-existing client_assertion if available");
+            }
 
             TokenRequest tokenRequest = TokenRequest.builder()
                     .grantType(GRANT_TYPE_AUTHORIZATION_CODE)
                     .code(code)
                     .redirectUri(response.getRedirectUri())
                     .clientId(effectiveClientId)
+                    .additionalParameters(tokenAdditionalParams.isEmpty() ? null : tokenAdditionalParams)
                     .build();
 
             // Exchange code for AOAT using agent operation authorization token client
@@ -682,16 +713,23 @@ public class DefaultAgent implements Agent {
             String parJwt = aapParJwtGenerator.generateParJwt(parameters);
             logger.debug("Generated PAR-JWT for workload: {}", workloadContext.getWorkloadId());
 
-            // Build the PAR request with the DCR-registered client_id
-            // Client authentication (client_assertion per RFC 7523) is handled by the
-            // OAuth2ClientAuthentication strategy configured on the PAR client, following the
-            // separation of concerns principle.
+            // Build the PAR request with the DCR-registered client_id.
+            // The workload's private key is placed into additionalParameters so that
+            // the PAR client's ClientAssertionAuthentication strategy can generate a
+            // standard RFC 7523 client_assertion JWT signed with the workload's private
+            // key. This follows the WIMSE Path A pattern where:
+            //   - DCR uses software_statement (WIT) for registration
+            //   - PAR/Token uses private_key_jwt (client_assertion) for authentication
+            Map<String, Object> additionalParams = new HashMap<>();
+            additionalParams.put(ClientAssertionAuthentication.WORKLOAD_PRIVATE_KEY_PARAM, workloadContext.getPrivateKey());
+
             ParRequest.Builder parRequestBuilder = ParRequest.builder()
                     .responseType(RESPONSE_TYPE_CODE)
                     .requestJwt(parJwt)
                     .clientId(effectiveClientId)
                     .redirectUri(oAuthCallbacksRedirectUri)
-                    .scope(SCOPE_OPENID_PROFILE);
+                    .scope(SCOPE_OPENID_PROFILE)
+                    .additionalParameters(additionalParams);
 
             // Add state parameter if provided
             if (!ValidationUtils.isNullOrEmpty(request.getState())) {
@@ -786,6 +824,30 @@ public class DefaultAgent implements Agent {
         } catch (Exception e) {
             logger.error("Failed to parse WIT", e);
             return TokenValidationResult.failure("Failed to parse WIT: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Builds an inline JWKS (JSON Web Key Set) map from a public key JSON string.
+     * <p>
+     * The resulting map follows the JWK Set format (RFC 7517 Section 5) with a single
+     * "keys" array containing the provided public key. This is used in DCR requests
+     * to provide the client's public key for subsequent {@code private_key_jwt} authentication.
+     * </p>
+     *
+     * @param publicKeyJson the public key in JWK JSON format
+     * @return a map representing the JWK Set with the public key
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> buildInlineJwks(String publicKeyJson) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, Object> publicKeyMap = objectMapper.readValue(publicKeyJson, Map.class);
+            Map<String, Object> jwks = new HashMap<>();
+            jwks.put("keys", List.of(publicKeyMap));
+            return jwks;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build inline JWKS from public key", e);
         }
     }
 

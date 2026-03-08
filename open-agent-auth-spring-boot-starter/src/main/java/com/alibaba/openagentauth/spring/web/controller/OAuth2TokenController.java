@@ -154,18 +154,25 @@ public class OAuth2TokenController {
         String redirectUri = requestMap.get("redirect_uri");
         String requestClientId = requestMap.get("client_id");
 
-        logger.info("Received token request with grant_type: {}", grantType);
+        logger.info("Received token request - grant_type: {}, Authorization header present: {}",
+                grantType, authorizationHeader != null);
+        logger.debug("Token request parameters: grant_type={}, code={}, redirect_uri={}, client_id={}",
+                grantType,
+                code != null ? code.substring(0, Math.min(code.length(), 10)) + "..." : null,
+                redirectUri, requestClientId);
 
         // Step 2: Authenticate client
         // When OAuth2ClientAuthenticator is available (authorization-server role), supports both
         // client_secret_basic and private_key_jwt. Otherwise, falls back to Basic Auth only.
+        logger.debug("Authenticating client for token request (authenticator available: {})...",
+                clientAuthenticator != null);
         String authenticatedClientId;
         if (clientAuthenticator != null) {
             authenticatedClientId = clientAuthenticator.authenticateClient(authorizationHeader, requestMap, clientStore);
         } else {
             authenticatedClientId = OAuth2ClientAuthenticator.authenticateWithBasicAuth(authorizationHeader, clientStore);
         }
-        logger.debug("Client authenticated: {}", authenticatedClientId);
+        logger.info("Token request client authenticated successfully: {}", authenticatedClientId);
 
         // Step 3: Determine the effective client_id for authorization code binding validation.
         // Per RFC 6749 Section 4.1.3, the token request MAY include a client_id parameter.
@@ -177,9 +184,10 @@ public class OAuth2TokenController {
                 ? requestClientId
                 : authenticatedClientId;
         if (!effectiveClientId.equals(authenticatedClientId)) {
-            logger.debug("Using request body client_id for code binding: {} (authenticated as: {})",
+            logger.info("Using DCR client_id for code binding: {} (authenticated as: {})",
                     effectiveClientId, authenticatedClientId);
         }
+        logger.debug("Effective client_id for token exchange: {}", effectiveClientId);
 
         // Step 4: Parse the token request
         TokenRequest request = TokenRequest.builder()
@@ -188,11 +196,15 @@ public class OAuth2TokenController {
                 .redirectUri(redirectUri)
                 .clientId(effectiveClientId)
                 .build();
+        logger.debug("Token request built - grant_type: {}, client_id: {}, redirect_uri: {}",
+                request.getGrantType(), request.getClientId(), request.getRedirectUri());
 
         // Step 5: Submit to token server
+        logger.debug("Submitting token request to server for client: {}", effectiveClientId);
         TokenResponse response = tokenServer.issueToken(request, effectiveClientId);
 
-        logger.info("Token issued successfully for grant_type: {}", request.getGrantType());
+        logger.info("Token issued successfully - grant_type: {}, client: {}, token_type: {}, expires_in: {}",
+                request.getGrantType(), effectiveClientId, response.getTokenType(), response.getExpiresIn());
 
         // Step 6: Build response body per RFC 6749 Section 5.1 and OIDC Core 1.0 Section 3.1.3.3
         Map<String, Object> responseBody = new HashMap<>();
