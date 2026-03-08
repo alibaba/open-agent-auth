@@ -136,7 +136,7 @@ class WimseOAuth2DcrAuthenticatorTest {
         @Test
         @DisplayName("Should return correct authentication method")
         void shouldReturnCorrectAuthenticationMethod() {
-            assertThat(authenticator.getAuthenticationMethod()).isEqualTo("private_key_jwt");
+            assertThat(authenticator.getAuthenticationMethod()).isEqualTo("software_statement");
         }
     }
 
@@ -285,10 +285,27 @@ class WimseOAuth2DcrAuthenticatorTest {
     class CanAuthenticateTests {
 
         @Test
-        @DisplayName("Should return true when WIT is present in request")
+        @DisplayName("Should return true when WIT is present via legacy wit parameter")
         void shouldReturnTrueWhenWitIsPresent() throws Exception {
             // Given
             DcrRequest request = createDcrRequestWithValidWit();
+
+            // When
+            boolean canAuthenticate = authenticator.canAuthenticate(request);
+
+            // Then
+            assertThat(canAuthenticate).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should return true when WIT is present via softwareStatement field")
+        void shouldReturnTrueWhenSoftwareStatementFieldIsPresent() throws Exception {
+            // Given
+            String wit = witGenerator.generateWitAsString("agent-ss", wptPublicKey.toJSONString(), 3600);
+            DcrRequest request = DcrRequest.builder()
+                    .redirectUris(List.of("https://example.com/callback"))
+                    .softwareStatement(wit)
+                    .build();
 
             // When
             boolean canAuthenticate = authenticator.canAuthenticate(request);

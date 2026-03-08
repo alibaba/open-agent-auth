@@ -242,13 +242,18 @@ public class SharedCapabilityAutoConfiguration {
         }
 
         /**
-         * Creates the OAuth2 Client Store bean if not already defined.
+         * Creates the unified OAuth2 Client Store bean if not already defined.
+         * <p>
+         * This bean serves as both {@link OAuth2ClientStore} and
+         * {@link com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore},
+         * providing a single store for pre-registered and dynamically registered clients.
+         * </p>
          *
-         * @return the OAuth2 Client Store bean
+         * @return the unified OAuth2 Client Store bean
          */
         @Bean
-        @ConditionalOnMissingBean
-        public OAuth2ClientStore clientStore() {
+        @ConditionalOnMissingBean({OAuth2ClientStore.class})
+        public InMemoryOAuth2ClientStore clientStore() {
             logger.info("Creating shared OAuth2ClientStore");
             return new InMemoryOAuth2ClientStore();
         }

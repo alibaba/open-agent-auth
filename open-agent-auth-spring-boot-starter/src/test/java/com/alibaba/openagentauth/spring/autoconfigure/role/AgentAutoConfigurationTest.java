@@ -1204,6 +1204,28 @@ class AgentAutoConfigurationTest {
         @ConditionalOnMissingBean
         public ServiceProperties serviceProperties() {
             ServiceProperties props = new ServiceProperties();
+
+            // Configure authorization-server consumer endpoints required by
+            // agentOperationAuthorizationParClient and agentOperationAuthorizationTokenClient
+            ServiceProperties.ConsumerServiceProperties authorizationServer = new ServiceProperties.ConsumerServiceProperties();
+            authorizationServer.setBaseUrl("http://localhost:8083");
+            authorizationServer.getEndpoints().put("oauth2.par", "/oauth2/par");
+            authorizationServer.getEndpoints().put("oauth2.token", "/oauth2/token");
+            props.getConsumers().put("authorization-server", authorizationServer);
+
+            // Configure agent-idp consumer endpoints required by workloadClient and tokenClient
+            ServiceProperties.ConsumerServiceProperties agentIdp = new ServiceProperties.ConsumerServiceProperties();
+            agentIdp.setBaseUrl("http://localhost:8082");
+            agentIdp.getEndpoints().put("oauth2.token", "/oauth2/token");
+            agentIdp.getEndpoints().put("oauth2.par", "/oauth2/par");
+            props.getConsumers().put("agent-idp", agentIdp);
+
+            // Configure agent-user-idp consumer endpoints
+            ServiceProperties.ConsumerServiceProperties agentUserIdp = new ServiceProperties.ConsumerServiceProperties();
+            agentUserIdp.setBaseUrl("http://localhost:8083");
+            agentUserIdp.getEndpoints().put("oauth2.token", "/oauth2/token");
+            props.getConsumers().put("agent-user-idp", agentUserIdp);
+
             props.postProcess();
             return props;
         }

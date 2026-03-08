@@ -17,7 +17,9 @@ package com.alibaba.openagentauth.spring.web.controller;
 
 import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.model.OAuth2RegisteredClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.spring.util.OAuth2ClientAuthenticator;
@@ -27,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -67,14 +70,24 @@ public class OAuth2ParController {
     private final OAuth2ClientStore clientStore;
 
     /**
+     * The client authenticator for verifying client credentials.
+     */
+    private final OAuth2ClientAuthenticator clientAuthenticator;
+
+    /**
      * Creates a new PAR controller.
      *
      * @param parServer the PAR server
      * @param clientStore the client store for client authentication
+     * @param clientAuthenticator the client authenticator
      */
-    public OAuth2ParController(OAuth2ParServer parServer, OAuth2ClientStore clientStore) {
+    public OAuth2ParController(
+            OAuth2ParServer parServer,
+            OAuth2ClientStore clientStore,
+            OAuth2ClientAuthenticator clientAuthenticator) {
         this.parServer = ValidationUtils.validateNotNull(parServer, "PAR server");
         this.clientStore = ValidationUtils.validateNotNull(clientStore, "Client store");
+        this.clientAuthenticator = ValidationUtils.validateNotNull(clientAuthenticator, "Client authenticator");
         logger.info("OAuth2ParController initialized with client store");
     }
 
@@ -87,8 +100,8 @@ public class OAuth2ParController {
      * <b>Client Authentication (RFC 9126 Section 2.1):</b></p>
      * <ul>
      *   <li>Client authentication is REQUIRED for PAR requests</li>
-     *   <li>Confidential clients MUST authenticate using HTTP Basic authentication</li>
-     *   <li>Authorization header format: Basic base64(client_id:client_secret)</li>
+     *   <li>Confidential clients MUST authenticate using a supported method</li>
+     *   <li>Supported methods: client_secret_basic (HTTP Basic), private_key_jwt (RFC 7523)</li>
      *   <li>Client credentials are validated against the client store</li>
      * </ul>
      *
@@ -97,19 +110,18 @@ public class OAuth2ParController {
      * @return the PAR response containing request_uri and expires_in
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc9126#section-2.1">RFC 9126 - Client Authentication</a>
      */
-    @PostMapping(value = "${open-agent-auth.capabilities.oauth2-server.endpoints.oauth2.par:/par}", consumes = "application/x-www-form-urlencoded")
+    @PostMapping(
+            value = "${open-agent-auth.capabilities.oauth2-server.endpoints.oauth2.par:/par}",
+            consumes = "application/x-www-form-urlencoded"
+    )
     public ResponseEntity<Map<String, Object>> par(
             @RequestBody MultiValueMap<String, String> requestBody,
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
         logger.info("Received PAR request");
+        logger.debug("PAR request Authorization header present: {}", authorizationHeader != null);
 
-        // Step 1: Authenticate client using Basic Auth (RFC 9126 Section 2.1)
-        String authenticatedClientId = OAuth2ClientAuthenticator.authenticateWithBasicAuth(
-                authorizationHeader, clientStore);
-        logger.debug("Client authenticated: {}", authenticatedClientId);
-
-        // Step 2: Convert MultiValueMap to Map for processing
+        // Step 1: Convert MultiValueMap to Map for processing
         Map<String, String> requestMap = new HashMap<>();
         if (requestBody != null) {
             requestBody.forEach((key, values) -> {
@@ -118,17 +130,28 @@ public class OAuth2ParController {
                 }
             });
         }
+        logger.debug("PAR request parameters: {}", requestMap.keySet());
+
+        // Step 2: Authenticate client (supports client_secret_basic and private_key_jwt)
+        logger.debug("Authenticating client for PAR request...");
+        String authenticatedClientId = clientAuthenticator.authenticateClient(authorizationHeader, requestMap, clientStore);
+        logger.info("PAR client authenticated successfully: {}", authenticatedClientId);
 
         // Step 3: Parse the PAR request with authenticated client ID
+        logger.debug("Parsing PAR request for client: {}", authenticatedClientId);
         ParRequest request = parseParRequest(requestMap, authenticatedClientId);
+        logger.debug("PAR request parsed - response_type: {}, redirect_uri: {}, state: {}",
+                request.getResponseType(), request.getRedirectUri(), request.getState());
 
         // Step 4: Submit to PAR server with authenticated client ID
+        logger.debug("Submitting PAR request to server for client: {}", authenticatedClientId);
         ParResponse response = parServer.processParRequest(request, authenticatedClientId);
 
-        logger.info("PAR request processed successfully, request_uri: {}", response.getRequestUri());
+        logger.info("PAR request processed successfully - client: {}, request_uri: {}, expires_in: {}",
+                authenticatedClientId, response.getRequestUri(), response.getExpiresIn());
 
-        // Step 5: Return response
-        return ResponseEntity.ok(Map.of(
+        // Step 5: Return response (RFC 9126 Section 2.2 requires 201 Created)
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "request_uri", response.getRequestUri(),
                 "expires_in", response.getExpiresIn()
         ));
@@ -231,7 +254,6 @@ public class OAuth2ParController {
      * @return the claims as a map
      * @throws IllegalArgumentException if the JWT is malformed or cannot be parsed
      */
-    @SuppressWarnings("unchecked")
     private Map<String, Object> extractJwtClaims(String jwt) {
         try {
             // Parse JWT using NimbusDS library (no signature verification)

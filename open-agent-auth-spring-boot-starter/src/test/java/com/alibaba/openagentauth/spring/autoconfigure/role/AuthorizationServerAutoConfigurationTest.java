@@ -28,7 +28,8 @@ import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.InMe
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationCodeStorage;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.DefaultOAuth2DcrServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.OAuth2DcrServer;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.InMemoryOAuth2DcrClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.InMemoryOAuth2ClientStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.store.OAuth2ClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.store.OAuth2DcrClientStore;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.DefaultOAuth2ParServer;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.server.OAuth2ParServer;
@@ -50,7 +51,6 @@ import com.alibaba.openagentauth.core.protocol.wimse.wit.WitValidator;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import com.alibaba.openagentauth.core.token.TokenService;
 import com.alibaba.openagentauth.core.token.aoat.AoatGenerator;
-import com.alibaba.openagentauth.core.trust.model.TrustAnchor;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.framework.actor.AuthorizationServer;
 import com.alibaba.openagentauth.framework.model.request.ExchangeCodeForTokenRequest;
@@ -80,7 +80,6 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 
 import java.security.PrivateKey;
-import java.security.PublicKey;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -229,6 +228,12 @@ class AuthorizationServerAutoConfigurationTest {
             props.postProcess();
             return props;
         }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public OAuth2ClientStore oAuth2ClientStore() {
+            return new InMemoryOAuth2ClientStore();
+        }
     }
 
     @Nested
@@ -354,7 +359,7 @@ class AuthorizationServerAutoConfigurationTest {
                 .run(context -> {
                     assertThat(context).hasSingleBean(OAuth2DcrClientStore.class);
                     OAuth2DcrClientStore store = context.getBean(OAuth2DcrClientStore.class);
-                    assertThat(store).isInstanceOf(InMemoryOAuth2DcrClientStore.class);
+                    assertThat(store).isInstanceOf(InMemoryOAuth2ClientStore.class);
                 });
         }
     }

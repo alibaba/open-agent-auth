@@ -39,11 +39,24 @@ public final class WitExtractor {
     }
 
     /**
+     * The OAuth 2.0 parameter name for software statement (RFC 7591).
+     */
+    private static final String SOFTWARE_STATEMENT_PARAM = "software_statement";
+
+    /**
      * Extracts the Workload Identity Token (WIT) from a DCR request.
      * <p>
-     * The WIT is stored in the additionalParameters map under the "wit" key
-     * as part of the WIMSE protocol extension.
+     * This method supports multiple extraction modes with the following priority order:
      * </p>
+     * <ol>
+     *   <li><b>Software Statement mode (highest priority)</b>: The WIT is sent as a
+     *       {@code software_statement} parameter in {@code DcrRequest.softwareStatement} field.
+     *       This is the preferred mode for WIMSE + DCR integration (RFC 7591 Section 2.3).</li>
+     *   <li><b>Software Statement in additionalParameters</b>: The WIT is sent under the
+     *       {@code software_statement} key in {@code additionalParameters} for backward compatibility.</li>
+     *   <li><b>Legacy wit mode (fallback)</b>: The WIT is sent under the {@code wit} key
+     *       in {@code additionalParameters}.</li>
+     * </ol>
      *
      * @param request the DCR request
      * @return the WIT string, or null if not present
@@ -54,13 +67,24 @@ public final class WitExtractor {
         // Validate request
         ValidationUtils.validateNotNull(request, "DCR request");
 
+        // Priority 1: Extract from DcrRequest.softwareStatement field (preferred path)
+        if (request.getSoftwareStatement() != null && !request.getSoftwareStatement().trim().isEmpty()) {
+            return request.getSoftwareStatement();
+        }
+
         // Extract WIT from additional parameters
         Map<String, Object> additionalParameters = request.getAdditionalParameters();
         if (additionalParameters == null) {
             return null;
         }
 
-        // Extract WIT from additional parameters
+        // Priority 2: Extract from software_statement in additionalParameters (backward compatibility)
+        Object softwareStatementObj = additionalParameters.get(SOFTWARE_STATEMENT_PARAM);
+        if (softwareStatementObj instanceof String softwareStatement && !softwareStatement.trim().isEmpty()) {
+            return softwareStatement;
+        }
+
+        // Priority 3: Fall back to legacy "wit" parameter
         Object witObj = additionalParameters.get(WitConstants.WIT_PARAM);
         if (witObj instanceof String) {
             return (String) witObj;
@@ -72,8 +96,8 @@ public final class WitExtractor {
     /**
      * Checks if a DCR request contains a valid WIT.
      * <p>
-     * A valid WIT must be present and non-empty. Empty strings are considered invalid
-     * according to WIMSE protocol requirements.
+     * A valid WIT must be present and non-empty. This method checks all supported
+     * extraction modes: software_statement and legacy wit parameter.
      * </p>
      *
      * @param request the DCR request
@@ -81,18 +105,7 @@ public final class WitExtractor {
      * @throws IllegalArgumentException if request is null
      */
     public static boolean hasWitInDcrRequest(DcrRequest request) {
-        ValidationUtils.validateNotNull(request, "DCR request");
-
-        Map<String, Object> additionalParameters = request.getAdditionalParameters();
-        if (additionalParameters == null) {
-            return false;
-        }
-
-        Object witObj = additionalParameters.get(WitConstants.WIT_PARAM);
-        if (witObj instanceof String wit) {
-            return !wit.trim().isEmpty();
-        }
-
-        return false;
+        String wit = extractFromDcrRequest(request);
+        return wit != null && !wit.trim().isEmpty();
     }
 }

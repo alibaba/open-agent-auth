@@ -169,7 +169,23 @@ public class OAuth2DcrController {
     }
 
     /**
+     * Standard DCR metadata field names defined by RFC 7591.
+     * Any request body keys not in this set are treated as additional parameters
+     * (e.g., WIMSE {@code wit} token).
+     */
+    private static final java.util.Set<String> STANDARD_DCR_FIELDS = java.util.Set.of(
+            "redirect_uris", "client_name", "scope", "grant_types",
+            "response_types", "token_endpoint_auth_method",
+            "software_statement", "jwks"
+    );
+
+    /**
      * Parses the DCR request from the request body.
+     * <p>
+     * Standard RFC 7591 fields are mapped to their corresponding builder methods.
+     * All non-standard fields are collected into {@code additionalParameters} to support
+     * protocol extensions such as WIMSE (e.g., the {@code wit} parameter).
+     * </p>
      *
      * @param requestBody the request body
      * @return the parsed DcrRequest
@@ -209,6 +225,26 @@ public class OAuth2DcrController {
         }
         if (requestBody.containsKey("token_endpoint_auth_method")) {
             builder.tokenEndpointAuthMethod((String) requestBody.get("token_endpoint_auth_method"));
+        }
+        if (requestBody.containsKey("software_statement")) {
+            builder.softwareStatement((String) requestBody.get("software_statement"));
+        }
+        if (requestBody.containsKey("jwks")) {
+            Object jwksObj = requestBody.get("jwks");
+            if (jwksObj instanceof Map) {
+                builder.jwks((Map<String, Object>) jwksObj);
+            }
+        }
+
+        // Collect non-standard parameters (e.g., WIMSE "wit") into additionalParameters
+        Map<String, Object> additionalParameters = new HashMap<>();
+        for (Map.Entry<String, Object> entry : requestBody.entrySet()) {
+            if (!STANDARD_DCR_FIELDS.contains(entry.getKey())) {
+                additionalParameters.put(entry.getKey(), entry.getValue());
+            }
+        }
+        if (!additionalParameters.isEmpty()) {
+            builder.additionalParameters(additionalParameters);
         }
 
         return builder.build();

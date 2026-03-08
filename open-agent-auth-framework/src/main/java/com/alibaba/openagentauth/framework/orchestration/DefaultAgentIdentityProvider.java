@@ -142,19 +142,17 @@ public class DefaultAgentIdentityProvider implements AgentIdentityProvider {
             String trustDomain = tokenService.getWitGenerator().getTrustDomain().getDomainName();
             
             // Create workload with provided public key (no private key - Agent keeps it)
-            WorkloadInfo updatedWorkload = new WorkloadInfo(
-                    workloadId,
-                    userId,
-                    trustDomain,
-                    issuer,
-                    publicKey,
-                    null, // Private key is not stored on IDP side
-                    now,
-                    now.plusSeconds(DEFAULT_EXPIRATION_SECONDS),
-                    WORKLOAD_STATUS_ACTIVE,
-                    OperationRequestContext.builder().build(),
-                    null // metadata
-            );
+            WorkloadInfo updatedWorkload = WorkloadInfo.builder()
+                    .workloadId(workloadId)
+                    .userId(userId)
+                    .trustDomain(trustDomain)
+                    .issuer(issuer)
+                    .publicKey(publicKey)
+                    .createdAt(now)
+                    .expiresAt(now.plusSeconds(DEFAULT_EXPIRATION_SECONDS))
+                    .status(WORKLOAD_STATUS_ACTIVE)
+                    .context(OperationRequestContext.builder().build())
+                    .build();
 
             // Store workload
             workloadRegistry.save(updatedWorkload);
@@ -369,6 +367,17 @@ public class DefaultAgentIdentityProvider implements AgentIdentityProvider {
             
             // Check if workload is active (not expired)
             if (workload.isActive()) {
+                // Update the workload's public key to match the new key pair generated
+                // by the Agent. Each issueWit call from the Agent generates a fresh key
+                // pair, so the IDP must bind the latest public key into the WIT's cnf.jwk.
+                String newPublicKey = request.getPublicKey();
+                if (newPublicKey != null && !newPublicKey.equals(workload.getPublicKey())) {
+                    logger.info("Updating public key for existing workload: {}", workload.getWorkloadId());
+                    workload = workload.toBuilder()
+                            .publicKey(newPublicKey)
+                            .build();
+                    workloadRegistry.save(workload);
+                }
                 logger.debug("Reusing existing workload: {} for userId: {}, agentContext: {}", 
                         workload.getWorkloadId(), userId, agentContext);
                 return workload;
@@ -416,19 +425,18 @@ public class DefaultAgentIdentityProvider implements AgentIdentityProvider {
             String trustDomain = tokenService.getWitGenerator().getTrustDomain().getDomainName();
 
             // Create workload with independent expiration time
-            WorkloadInfo workload = new WorkloadInfo(
-                workloadId,
-                userId,
-                trustDomain,
-                issuer,
-                request.getPublicKey(),
-                null, // Private key is not stored on IDP side
-                now,
-                now.plusSeconds(DEFAULT_EXPIRATION_SECONDS),
-                WORKLOAD_STATUS_ACTIVE,
-                request.getContext(),
-                metadata
-            );
+            WorkloadInfo workload = WorkloadInfo.builder()
+                    .workloadId(workloadId)
+                    .userId(userId)
+                    .trustDomain(trustDomain)
+                    .issuer(issuer)
+                    .publicKey(request.getPublicKey())
+                    .createdAt(now)
+                    .expiresAt(now.plusSeconds(DEFAULT_EXPIRATION_SECONDS))
+                    .status(WORKLOAD_STATUS_ACTIVE)
+                    .context(request.getContext())
+                    .metadata(metadata)
+                    .build();
 
             // Store workload
             workloadRegistry.save(workload);

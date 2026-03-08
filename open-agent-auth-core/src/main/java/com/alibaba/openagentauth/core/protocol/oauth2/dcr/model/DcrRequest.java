@@ -15,6 +15,8 @@
  */
 package com.alibaba.openagentauth.core.protocol.oauth2.dcr.model;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -96,10 +98,42 @@ public class DcrRequest {
     private final String scope;
 
     /**
-     * Additional custom parameters for the registration request.
-     * This field allows extensions for protocol-specific features (e.g., WIMSE, SPIFFE).
+     * A software statement (RFC 7591 Section 2.3) containing client metadata
+     * assertions made by a third-party software publisher.
+     * <p>
+     * In the WIMSE + DCR integration (Path A), the Workload Identity Token (WIT)
+     * is used as the software statement. The Authorization Server validates the
+     * WIT signature and extracts the workload identity from its {@code sub} claim.
+     * </p>
+     * OPTIONAL by RFC 7591.
      */
-    @JsonProperty("additional_parameters")
+    @JsonProperty("software_statement")
+    private final String softwareStatement;
+
+    /**
+     * Client's JSON Web Key Set (RFC 7517) containing the public keys used for
+     * {@code private_key_jwt} client authentication at the Token and PAR endpoints.
+     * <p>
+     * In the WIMSE + DCR integration, this MUST contain the same public key that
+     * is bound in the WIT's {@code cnf.jwk} claim, ensuring cryptographic binding
+     * between the workload identity and the OAuth client.
+     * </p>
+     * OPTIONAL by RFC 7591. Mutually exclusive with {@code jwks_uri}.
+     */
+    @JsonProperty("jwks")
+    private final Map<String, Object> jwks;
+
+    /**
+     * Additional custom parameters for the registration request.
+     * <p>
+     * This field allows extensions for protocol-specific features (e.g., WIMSE, SPIFFE).
+     * When serialized to JSON, these parameters are flattened into the top-level object
+     * (via {@link JsonAnyGetter}) rather than nested under a separate key. This ensures
+     * compatibility with RFC 7591 Section 2, which allows arbitrary top-level metadata
+     * fields in the registration request.
+     * </p>
+     */
+    @JsonIgnore
     private final Map<String, Object> additionalParameters;
 
     private DcrRequest(Builder builder) {
@@ -109,6 +143,8 @@ public class DcrRequest {
         this.responseTypes = builder.responseTypes;
         this.tokenEndpointAuthMethod = builder.tokenEndpointAuthMethod;
         this.scope = builder.scope;
+        this.softwareStatement = builder.softwareStatement;
+        this.jwks = builder.jwks;
         this.additionalParameters = builder.additionalParameters;
     }
 
@@ -136,6 +172,26 @@ public class DcrRequest {
         return scope;
     }
 
+    public String getSoftwareStatement() {
+        return softwareStatement;
+    }
+
+    public Map<String, Object> getJwks() {
+        return jwks;
+    }
+
+    /**
+     * Returns additional parameters for JSON serialization.
+     * <p>
+     * The {@link JsonAnyGetter} annotation causes Jackson to flatten these entries
+     * into the top-level JSON object, matching RFC 7591's extensible metadata model.
+     * For example, a WIMSE {@code wit} parameter will appear as {@code "wit": "..."} at
+     * the top level rather than nested under {@code "additional_parameters"}.
+     * </p>
+     *
+     * @return the additional parameters map, or null if empty
+     */
+    @JsonAnyGetter
     public Map<String, Object> getAdditionalParameters() {
         return additionalParameters;
     }
@@ -160,6 +216,8 @@ public class DcrRequest {
         private List<String> responseTypes;
         private String tokenEndpointAuthMethod;
         private String scope;
+        private String softwareStatement;
+        private Map<String, Object> jwks;
         private Map<String, Object> additionalParameters;
 
         public Builder redirectUris(List<String> redirectUris) {
@@ -189,6 +247,16 @@ public class DcrRequest {
 
         public Builder scope(String scope) {
             this.scope = scope;
+            return this;
+        }
+
+        public Builder softwareStatement(String softwareStatement) {
+            this.softwareStatement = softwareStatement;
+            return this;
+        }
+
+        public Builder jwks(Map<String, Object> jwks) {
+            this.jwks = jwks;
             return this;
         }
 

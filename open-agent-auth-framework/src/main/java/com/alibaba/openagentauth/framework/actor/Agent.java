@@ -18,7 +18,6 @@ package com.alibaba.openagentauth.framework.actor;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
 import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.framework.exception.auth.FrameworkAuthorizationException;
 import com.alibaba.openagentauth.framework.exception.validation.FrameworkAuthorizationContextException;
 import com.alibaba.openagentauth.core.exception.workload.WorkloadCreationException;
@@ -202,10 +201,10 @@ public interface Agent extends FrameworkOAuth2TokenClient {
      * </p>
      *
      * @param workloadContext the workload context containing the WIT for client assertion
-     * @return the DCR response containing client_id and registration metadata
+     * @return a new WorkloadContext with the DCR-assigned oauthClientId populated
      * @throws FrameworkAuthorizationException if client registration fails
      */
-    DcrResponse registerOAuthClient(WorkloadContext workloadContext) throws FrameworkAuthorizationException;
+    WorkloadContext registerOAuthClient(WorkloadContext workloadContext) throws FrameworkAuthorizationException;
     
     /**
      * Submits a PAR (Pushed Authorization Request) to the Authorization Server.

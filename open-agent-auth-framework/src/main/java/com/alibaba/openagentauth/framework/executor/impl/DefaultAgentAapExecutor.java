@@ -19,19 +19,21 @@ import com.alibaba.openagentauth.core.model.context.OperationRequestContext;
 import com.alibaba.openagentauth.core.model.evidence.Evidence;
 import com.alibaba.openagentauth.core.model.evidence.UserInputEvidence;
 import com.alibaba.openagentauth.core.model.evidence.VerifiableCredential;
-import com.alibaba.openagentauth.core.model.proposal.AgentUserBindingProposal;
-import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
-import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
+import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
 import com.alibaba.openagentauth.core.model.proposal.AgentOperationProposal;
-import com.alibaba.openagentauth.core.util.ValidationUtils;
+import com.alibaba.openagentauth.core.model.proposal.AgentUserBindingProposal;
+import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.ClientAssertionAuthentication;
 import com.alibaba.openagentauth.core.protocol.vc.VcSigner;
-import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitRequest;
 import com.alibaba.openagentauth.core.protocol.vc.chain.PromptProtectionChain;
 import com.alibaba.openagentauth.core.protocol.vc.model.ProtectionContext;
 import com.alibaba.openagentauth.core.protocol.vc.model.SanitizationLevel;
+import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitRequest;
+import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.framework.actor.Agent;
-import com.alibaba.openagentauth.framework.model.workload.WorkloadContext;
 import com.alibaba.openagentauth.framework.exception.auth.FrameworkAuthorizationException;
 import com.alibaba.openagentauth.framework.executor.AgentAapExecutor;
 import com.alibaba.openagentauth.framework.executor.config.AgentAapExecutorConfig;
@@ -43,14 +45,13 @@ import com.alibaba.openagentauth.framework.model.request.ParSubmissionRequest;
 import com.alibaba.openagentauth.framework.model.request.PrepareAuthorizationContextRequest;
 import com.alibaba.openagentauth.framework.model.request.RequestAuthUrlRequest;
 import com.alibaba.openagentauth.framework.model.response.RequestAuthUrlResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
-import com.alibaba.openagentauth.core.model.oauth2.authorization.OAuth2AuthorizationRequest;
-import com.alibaba.openagentauth.core.protocol.oauth2.authorization.storage.OAuth2AuthorizationRequestStorage;
-
+import com.alibaba.openagentauth.framework.model.workload.WorkloadContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -144,8 +145,8 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
             logger.debug("Workload context created: workloadId={}, userId={}",
                     workloadContext.getWorkloadId(), workloadContext.getUserId());
 
-            // Step 2: Register OAuth client
-            registerOAuthClient(workloadContext);
+            // Step 2: Register OAuth client (DCR) and update workload context with client_id
+            workloadContext = registerOAuthClient(workloadContext);
 
             // Step 3: Build authorization components
             AuthorizationComponents components = buildAuthorizationComponents(workloadContext, request);
@@ -288,13 +289,20 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
     }
 
     /**
-     * Registers OAuth client for the workload.
+     * Registers OAuth client for the workload via DCR (RFC 7591).
+     * <p>
+     * Returns a new {@link WorkloadContext} with the DCR-assigned {@code oauthClientId}
+     * populated, and updates the internal {@code currentWorkloadContext} reference.
+     * </p>
      *
      * @param workloadContext the workload context
+     * @return a new WorkloadContext with the DCR-assigned oauthClientId
      */
-    private void registerOAuthClient(WorkloadContext workloadContext) {
-        DcrResponse dcrResponse = agent.registerOAuthClient(workloadContext);
-        logger.debug("OAuth client registered: clientId={}", dcrResponse.getClientId());
+    private WorkloadContext registerOAuthClient(WorkloadContext workloadContext) {
+        WorkloadContext updatedContext = agent.registerOAuthClient(workloadContext);
+        this.currentWorkloadContext = updatedContext;
+        logger.debug("OAuth client registered: clientId={}", updatedContext.getOauthClientId());
+        return updatedContext;
     }
 
     // ===== Authorization Component Building Methods =====
@@ -323,11 +331,18 @@ public class DefaultAgentAapExecutor implements AgentAapExecutor {
         // Store authorization request with flow type and session metadata in the storage.
         // This follows the RFC 6749-compliant opaque state pattern where flow routing
         // metadata is stored server-side rather than encoded in the state parameter.
+        // The workload_private_key is stored so that the Token Exchange callback can
+        // generate a standard RFC 7523 client_assertion JWT signed with the workload's
+        // private key (private_key_jwt authentication).
         OAuth2AuthorizationRequestStorage requestStorage = config.getAuthorizationRequestStorage();
+        Map<String, Object> additionalParams = new HashMap<>();
+        additionalParams.put("client_id", workloadContext.getOauthClientId());
+        additionalParams.put(ClientAssertionAuthentication.WORKLOAD_PRIVATE_KEY_PARAM, workloadContext.getPrivateKey());
         OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.builder()
                 .state(state)
                 .flowType(OAuth2AuthorizationRequest.FlowType.AGENT_OPERATION_AUTH)
                 .sessionId(request.getSessionId())
+                .additionalParameters(additionalParams)
                 .build();
         requestStorage.save(authorizationRequest);
 

@@ -19,13 +19,18 @@ import com.alibaba.openagentauth.core.audit.api.AuditService;
 import com.alibaba.openagentauth.core.audit.impl.RemoteAuditService;
 import com.alibaba.openagentauth.core.binding.BindingInstanceStore;
 import com.alibaba.openagentauth.core.binding.RemoteBindingInstanceStore;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.ClientAssertionAuthentication;
+import com.alibaba.openagentauth.core.protocol.oauth2.dcr.client.authentication.WimseOAuth2DcrClientAuthentication;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.store.RemoteWorkloadRegistry;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.store.WorkloadRegistry;
 import com.alibaba.openagentauth.core.crypto.key.KeyManager;
 import com.alibaba.openagentauth.core.crypto.key.model.KeyAlgorithm;
 import com.alibaba.openagentauth.core.exception.crypto.KeyManagementException;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.BasicAuthAuthentication;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.OAuth2ClientAuthentication;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.client.DefaultOAuth2DcrClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.client.OAuth2DcrClient;
+import com.alibaba.openagentauth.core.protocol.oauth2.dcr.client.authentication.WimseOAuth2DcrClientAuthentication;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.client.DefaultOAuth2ParClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.client.OAuth2ParClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.jwt.AapParJwtGenerator;
@@ -299,20 +304,22 @@ public class AgentAutoConfiguration {
         }
 
         /**
-         * Creates the OAuth2DcrClient bean for DCR registration with Agent User IDP.
+         * Creates the OAuth2DcrClient bean for DCR registration with Authorization Server.
          * <p>
-         * This client is used to register the Agent as an OAuth 2.0 client with the
-         * Agent User IDP using Dynamic Client Registration (DCR) protocol.
+         * This client uses WIMSE authentication to include the Workload Identity Token (WIT)
+         * in DCR requests. The WIT is sent in the {@code Workload-Identity-Token} HTTP header,
+         * enabling the Authorization Server to authenticate the workload and use the WIT subject
+         * as the {@code client_id}.
          * </p>
          *
          * @param serviceEndpointResolver the service endpoint resolver
-         * @return the OAuth2DcrClient bean
+         * @return the OAuth2DcrClient bean with WIMSE authentication
          */
         @Bean
         @ConditionalOnMissingBean
         public OAuth2DcrClient oauth2DcrClient(ServiceEndpointResolver serviceEndpointResolver) {
-            logger.info("Creating OAuth2DcrClient bean with ServiceEndpointResolver");
-            return new DefaultOAuth2DcrClient(serviceEndpointResolver);
+            logger.info("Creating OAuth2DcrClient bean with WIMSE authentication");
+            return new DefaultOAuth2DcrClient(serviceEndpointResolver, new WimseOAuth2DcrClientAuthentication());
         }
 
         /**
@@ -343,7 +350,8 @@ public class AgentAutoConfiguration {
             }
             logger.info("Creating userAuthenticationTokenClient bean with ServiceEndpointResolver, " +
                     "serviceName: agent-user-idp, clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AGENT_USER_IDP, clientId, clientSecret);
+            OAuth2ClientAuthentication userIdpAuthentication = new BasicAuthAuthentication(clientId, clientSecret);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AGENT_USER_IDP, userIdpAuthentication);
         }
 
         /**
@@ -354,7 +362,6 @@ public class AgentAutoConfiguration {
          * </p>
          *
          * @param serviceEndpointResolver the service endpoint resolver
-         * @param openAgentAuthProperties the global configuration properties
          * @return the OAuth2TokenClient bean for agent operation authorization
          */
         @Bean(name = "agentOperationAuthorizationTokenClient")
@@ -363,18 +370,16 @@ public class AgentAutoConfiguration {
                 ServiceEndpointResolver serviceEndpointResolver,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
-            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
-            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientSecret();
-            if (clientId == null || clientId.isBlank()) {
-                throw new IllegalStateException(
-                        "OAuth client ID is not configured. " +
-                                "Please set 'open-agent-auth.capabilities.oauth2-client.client-id' in your configuration. " +
-                                "This is a required configuration for OAuth 2.0 flows."
-                );
-            }
-            logger.info("Creating agentOperationAuthorizationTokenClient bean with ServiceEndpointResolver, " +
-                    "serviceName: authorization-server, clientId: {}", clientId);
-            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AUTHORIZATION_SERVER, clientId, clientSecret);
+            // Use standard private_key_jwt authentication (RFC 7523) for token exchange.
+            // The workload's private key is propagated per-request through
+            // TokenRequest.additionalParameters by the DefaultAgent orchestration layer.
+            // ClientAssertionAuthentication generates a standard client_assertion JWT
+            // signed with the workload's private key.
+            String authorizationServerUrl = openAgentAuthProperties.getServiceUrl(SERVICE_AUTHORIZATION_SERVER);
+            OAuth2ClientAuthentication authServerAuthentication = new ClientAssertionAuthentication(authorizationServerUrl);
+            logger.info("Creating agentOperationAuthorizationTokenClient bean with standard " +
+                    "private_key_jwt authentication, authorizationServerUrl: {}", authorizationServerUrl);
+            return new DefaultOAuth2TokenClient(serviceEndpointResolver, SERVICE_AUTHORIZATION_SERVER, authServerAuthentication);
         }
 
         /**
@@ -506,7 +511,6 @@ public class AgentAutoConfiguration {
          * </ul>
          *
          * @param serviceEndpointResolver the service endpoint resolver for resolving PAR endpoint
-         * @param openAgentAuthProperties the global configuration properties containing client credentials
          * @return the configured OAuth2ParClient bean
          */
         @Bean
@@ -515,9 +519,17 @@ public class AgentAutoConfiguration {
                 ServiceEndpointResolver serviceEndpointResolver,
                 OpenAgentAuthProperties openAgentAuthProperties
         ) {
-            String clientId = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientId();
-            String clientSecret = openAgentAuthProperties.getCapabilities().getOAuth2Client().getClientSecret();
-            return new DefaultOAuth2ParClient(serviceEndpointResolver, clientId, clientSecret);
+            // Use standard private_key_jwt authentication (RFC 7523) for PAR requests.
+            // The workload's private key is propagated per-request through
+            // ParRequest.additionalParameters by the DefaultAgent orchestration layer.
+            // ClientAssertionAuthentication generates a standard client_assertion JWT
+            // signed with the workload's private key.
+            String authorizationServerUrl = openAgentAuthProperties.getServiceUrl(SERVICE_AUTHORIZATION_SERVER);
+            OAuth2ClientAuthentication parAuthentication = new ClientAssertionAuthentication(authorizationServerUrl);
+
+            logger.info("Creating PAR client with standard private_key_jwt authentication, " +
+                    "authorizationServerUrl: {}", authorizationServerUrl);
+            return new DefaultOAuth2ParClient(serviceEndpointResolver, parAuthentication);
         }
 
         /**

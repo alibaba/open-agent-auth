@@ -18,6 +18,8 @@ package com.alibaba.openagentauth.core.protocol.oauth2.token.client;
 import com.alibaba.openagentauth.core.exception.oauth2.OAuth2TokenException;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenRequest;
 import com.alibaba.openagentauth.core.model.oauth2.token.TokenResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.BasicAuthAuthentication;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.OAuth2ClientAuthentication;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,8 +61,10 @@ class DefaultOAuth2TokenClientTest {
         mockServiceEndpointResolver = mock(ServiceEndpointResolver.class);
         when(mockServiceEndpointResolver.resolveConsumer(anyString(), anyString()))
                 .thenReturn(TOKEN_ENDPOINT);
-        publicClient = new DefaultOAuth2TokenClient(mockServiceEndpointResolver, "authorization-server", CLIENT_ID,CLIENT_ID);
-        confidentialClient = new DefaultOAuth2TokenClient(mockServiceEndpointResolver, "authorization-server", CLIENT_ID, CLIENT_SECRET);
+        OAuth2ClientAuthentication publicAuth = new BasicAuthAuthentication(CLIENT_ID, CLIENT_ID);
+        publicClient = new DefaultOAuth2TokenClient(mockServiceEndpointResolver, "authorization-server", publicAuth);
+        OAuth2ClientAuthentication confidentialAuth = new BasicAuthAuthentication(CLIENT_ID, CLIENT_SECRET);
+        confidentialClient = new DefaultOAuth2TokenClient(mockServiceEndpointResolver, "authorization-server", confidentialAuth);
     }
 
     @Nested
@@ -68,19 +72,21 @@ class DefaultOAuth2TokenClientTest {
     class Constructor {
 
         @Test
-        @DisplayName("Should create confidential client with client secret")
-        void shouldCreateConfidentialClientWithClientSecret() {
+        @DisplayName("Should create confidential client with client authentication")
+        void shouldCreateConfidentialClientWithClientAuthentication() {
             // Act & Assert
             assertThat(confidentialClient).isNotNull();
             assertThat(confidentialClient.getClientId()).isEqualTo(CLIENT_ID);
-            assertThat(confidentialClient.getClientSecret()).isEqualTo(CLIENT_SECRET);
+            assertThat(confidentialClient.getAuthentication()).isNotNull();
+            assertThat(confidentialClient.getAuthentication().getAuthenticationMethod()).isEqualTo("client_secret_basic");
         }
 
         @Test
         @DisplayName("Should throw exception when service endpoint resolver is null")
         void shouldThrowExceptionWhenServiceEndpointResolverIsNull() {
+            OAuth2ClientAuthentication auth = new BasicAuthAuthentication(CLIENT_ID, CLIENT_SECRET);
             // Act & Assert
-            assertThatThrownBy(() -> new DefaultOAuth2TokenClient(null, "authorization-server", CLIENT_ID, CLIENT_SECRET))
+            assertThatThrownBy(() -> new DefaultOAuth2TokenClient(null, "authorization-server", auth))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Service endpoint resolver");
         }
@@ -88,19 +94,20 @@ class DefaultOAuth2TokenClientTest {
         @Test
         @DisplayName("Should throw exception when service name is null")
         void shouldThrowExceptionWhenServiceNameIsNull() {
+            OAuth2ClientAuthentication auth = new BasicAuthAuthentication(CLIENT_ID, CLIENT_SECRET);
             // Act & Assert
-            assertThatThrownBy(() -> new DefaultOAuth2TokenClient(mockServiceEndpointResolver, null, CLIENT_ID, CLIENT_SECRET))
+            assertThatThrownBy(() -> new DefaultOAuth2TokenClient(mockServiceEndpointResolver, null, auth))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Service name");
         }
 
         @Test
-        @DisplayName("Should throw exception when client ID is null")
-        void shouldThrowExceptionWhenClientIdIsNull() {
+        @DisplayName("Should throw exception when authentication is null")
+        void shouldThrowExceptionWhenAuthenticationIsNull() {
             // Act & Assert
-            assertThatThrownBy(() -> new DefaultOAuth2TokenClient(mockServiceEndpointResolver, "authorization-server", null, CLIENT_SECRET))
+            assertThatThrownBy(() -> new DefaultOAuth2TokenClient(mockServiceEndpointResolver, "authorization-server", (OAuth2ClientAuthentication) null))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Client ID");
+                    .hasMessageContaining("Client authentication");
         }
     }
 
@@ -262,12 +269,9 @@ class DefaultOAuth2TokenClientTest {
             assertThat(tokenWithSpecialChars).isNotNull();
         }
     }
-
     @Nested
     @DisplayName("Getter Methods")
     class GetterMethods {
-
-
 
         @Test
         @DisplayName("Should return client ID")
@@ -280,13 +284,15 @@ class DefaultOAuth2TokenClientTest {
         }
 
         @Test
-        @DisplayName("Should return client secret for confidential client")
-        void shouldReturnClientSecretForConfidentialClient() {
+        @DisplayName("Should return authentication strategy")
+        void shouldReturnAuthenticationStrategy() {
             // Act
-            String secret = confidentialClient.getClientSecret();
+            OAuth2ClientAuthentication auth = confidentialClient.getAuthentication();
 
             // Assert
-            assertThat(secret).isEqualTo(CLIENT_SECRET);
+            assertThat(auth).isNotNull();
+            assertThat(auth).isInstanceOf(BasicAuthAuthentication.class);
+            assertThat(auth.getAuthenticationMethod()).isEqualTo("client_secret_basic");
         }
     }
 
@@ -295,14 +301,12 @@ class DefaultOAuth2TokenClientTest {
     class AuthenticationMethods {
 
         @Test
-        @DisplayName("Confidential client should have client secret")
-        void confidentialClientShouldHaveClientSecret() {
+        @DisplayName("Confidential client should have authentication strategy")
+        void confidentialClientShouldHaveAuthenticationStrategy() {
             // Act & Assert
-            assertThat(confidentialClient.getClientSecret()).isNotNull();
-            assertThat(confidentialClient.getClientSecret()).isEqualTo(CLIENT_SECRET);
+            assertThat(confidentialClient.getAuthentication()).isNotNull();
+            assertThat(confidentialClient.getAuthentication().getClientId()).isEqualTo(CLIENT_ID);
         }
-
-
 
         @Test
         @DisplayName("Both clients should have same client ID")

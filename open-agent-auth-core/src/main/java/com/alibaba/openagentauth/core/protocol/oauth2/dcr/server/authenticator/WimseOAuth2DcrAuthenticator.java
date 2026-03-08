@@ -18,6 +18,7 @@ package com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.authenticator;
 import com.alibaba.openagentauth.core.exception.oauth2.DcrException;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrRequest;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
+import com.alibaba.openagentauth.core.model.jwk.Jwk;
 import com.alibaba.openagentauth.core.token.common.TokenValidationResult;
 import com.alibaba.openagentauth.core.trust.model.TrustDomain;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
@@ -25,10 +26,14 @@ import com.alibaba.openagentauth.core.protocol.wimse.wit.WitExtractor;
 import com.alibaba.openagentauth.core.protocol.wimse.wit.WitFormatValidator;
 import com.alibaba.openagentauth.core.protocol.wimse.wit.WitValidator;
 import com.alibaba.openagentauth.core.crypto.key.KeyManager;
+import com.alibaba.openagentauth.core.crypto.jwk.JwkUtils;
+import com.nimbusds.jose.jwk.JWK;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * WIMSE-based DCR authenticator.
@@ -93,7 +98,7 @@ public class WimseOAuth2DcrAuthenticator implements OAuth2DcrAuthenticator {
         ValidationUtils.validateNotNull(request, "DCR request");
         logger.debug("Authenticating DCR request using WIMSE protocol");
 
-        // Extract WIT from additional parameters
+        // Extract WIT from additional parameters (WitExtractor now prioritizes software_statement)
         String wit = WitExtractor.extractFromDcrRequest(request);
         if (ValidationUtils.isNullOrEmpty(wit)) {
             throw DcrException.invalidClientMetadata("WIT is required for WIMSE authentication");
@@ -104,6 +109,9 @@ public class WimseOAuth2DcrAuthenticator implements OAuth2DcrAuthenticator {
 
         // Validate WIT signature and claims
         String subject = validateWitClaims(wit);
+
+        // Verify cnf.jwk consistency with jwks in DCR request
+        verifyCnfJwkConsistency(wit, request);
 
         logger.info("WIMSE authentication successful for subject: {}", subject);
         return subject;
@@ -116,7 +124,22 @@ public class WimseOAuth2DcrAuthenticator implements OAuth2DcrAuthenticator {
 
     @Override
     public String getAuthenticationMethod() {
-        return "private_key_jwt";
+        return "software_statement";
+    }
+
+    /**
+     * Returns {@code true} because WIMSE authentication provides a stable workload identity
+     * (the WIT subject) that should be used as the OAuth {@code client_id}.
+     * <p>
+     * This ensures identity consistency between the WIMSE workload identity layer
+     * and the OAuth client layer, as recommended by the WIMSE specification.
+     * </p>
+     *
+     * @return {@code true} always
+     */
+    @Override
+    public boolean providesClientIdentity() {
+        return true;
     }
 
     /**
@@ -161,4 +184,68 @@ public class WimseOAuth2DcrAuthenticator implements OAuth2DcrAuthenticator {
             throw DcrException.invalidClientMetadata("Failed to parse WIT: " + e.getMessage());
         }
     }
+
+    /**
+     * Verifies that the cnf.jwk in the WIT matches the jwks in the DCR request.
+     * <p>
+     * This ensures that the public key in the software statement (WIT) matches
+     * the public key the client is registering for private_key_jwt authentication.
+     * </p>
+     *
+     * @param wit the Workload Identity Token
+     * @param request the DCR request containing jwks
+     * @throws DcrException if validation fails
+     */
+    private void verifyCnfJwkConsistency(String wit, DcrRequest request) throws DcrException {
+        try {
+            // Skip validation if jwks is not provided (backward compatibility)
+            Map<String, Object> jwks = request.getJwks();
+            if (jwks == null) {
+                logger.debug("Skipping cnf.jwk consistency check - jwks not provided in DCR request");
+                return;
+            }
+
+            // Parse WIT to get cnf.jwk
+            TokenValidationResult<WorkloadIdentityToken> result = witValidator.validate(wit);
+            if (!result.isValid()) {
+                throw DcrException.invalidClientMetadata("WIT validation failed: " + result.getErrorMessage());
+            }
+
+            WorkloadIdentityToken validatedWit = result.getToken();
+            Jwk cnfJwk = validatedWit.getJwk();
+            
+            if (cnfJwk == null) {
+                throw DcrException.invalidClientMetadata("WIT cnf claim does not contain jwk");
+            }
+
+            // Get the first key from jwks
+            List<Map<String, Object>> keys = (List<Map<String, Object>>) jwks.get("keys");
+            if (keys == null || keys.isEmpty()) {
+                throw DcrException.invalidClientMetadata("jwks in DCR request must contain at least one key");
+            }
+
+            Map<String, Object> firstKey = keys.get(0);
+            JWK jwksKey = JWK.parse(firstKey);
+
+            // Compare the cryptographic key material (kty, crv, x, y for EC; kty, n, e for RSA).
+            // We intentionally compare only the core public key parameters, not metadata
+            // fields like kid, alg, or use, because the WIT cnf.jwk and the DCR jwks may
+            // carry different metadata while representing the same underlying public key.
+            if (!JwkUtils.publicKeysMatch(cnfJwk, jwksKey)) {
+                logger.error("cnf.jwk in WIT does not match jwks in DCR request");
+                throw DcrException.invalidClientMetadata(
+                    "cnf.jwk in software statement does not match jwks in DCR request");
+            }
+
+            logger.debug("cnf.jwk consistency check passed - WIT cnf.jwk matches DCR request jwks");
+
+        } catch (ParseException e) {
+            logger.error("Failed to parse WIT during cnf.jwk consistency check", e);
+            throw DcrException.invalidClientMetadata("Failed to parse WIT: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Failed to verify cnf.jwk consistency", e);
+            throw DcrException.invalidClientMetadata("Failed to verify cnf.jwk consistency: " + e.getMessage());
+        }
+    }
+
 }

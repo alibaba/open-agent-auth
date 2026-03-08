@@ -18,19 +18,18 @@ package com.alibaba.openagentauth.core.protocol.oauth2.par.client;
 import com.alibaba.openagentauth.core.exception.oauth2.ParException;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParRequest;
 import com.alibaba.openagentauth.core.model.oauth2.par.ParResponse;
-import com.alibaba.openagentauth.core.protocol.oauth2.client.BasicAuthAuthentication;
-import com.alibaba.openagentauth.core.protocol.oauth2.client.ParClientAuthentication;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.OAuth2ClientAuthentication;
 import com.alibaba.openagentauth.core.util.ValidationUtils;
 import com.alibaba.openagentauth.core.resolver.ServiceEndpointResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.alibaba.openagentauth.core.util.UriQueryBuilder;
+
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,14 +47,14 @@ import java.util.Map;
  *   <li>Supports pluggable client authentication strategies (Basic Auth, Client Assertion)</li>
  *   <li>Handles standard OAuth 2.0 error responses</li>
  *   <li>Follows RFC 9126 request/response format requirements</li>
- *   <li>Backward compatible with existing Basic Auth implementations</li>
+ *   <li>Follows RFC 9126 request/response format requirements</li>
  * </ul>
  * <p>
  * <b>Authentication Methods:</b></p>
  * <ul>
  *   <li><b>Basic Auth (client_secret_basic)</b>: Traditional client_id and client_secret authentication</li>
  *   <li><b>Client Assertion (private_key_jwt)</b>: JWT-based authentication per RFC 7523</li>
- *   <li><b>Custom</b>: Implement ParClientAuthentication interface for custom authentication</li>
+ *   <li><b>Custom</b>: Implement OAuth2ClientAuthentication interface for custom authentication</li>
  * </ul>
  *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc9126">RFC 9126 - OAuth 2.0 Pushed Authorization Requests</a>
@@ -81,112 +80,44 @@ public class DefaultOAuth2ParClient implements OAuth2ParClient {
     private final ServiceEndpointResolver serviceEndpointResolver;
 
     /**
-     * OAuth 2.0 client identifier registered with the Authorization Server.
-     * Used for client authentication and for request validation.
-     * May be null when using client_assertion authentication.
-     */
-    private final String clientId;
-
-    /**
-     * OAuth 2.0 client secret for authentication with the Authorization Server.
-     * Combined with clientId to form Basic Auth credentials for PAR endpoint access.
-     * May be null when using client_assertion authentication.
-     */
-    private final String clientSecret;
-
-    /**
      * Authentication strategy for PAR client authentication.
-     * Supports pluggable authentication methods including Basic Auth and Client Assertion.
-     * Defaults to BasicAuthAuthentication for backward compatibility.
-     */
-    private final ParClientAuthentication authentication;
-
-    /**
-     * Creates a new DefaultParClient with Basic Authentication.
      * <p>
-     * This constructor is provided for backward compatibility and uses BasicAuthAuthentication
-     * as the authentication strategy. For new code, consider using the constructor with
-     * ParClientAuthentication parameter for more flexibility.
+     * Supports pluggable authentication methods including Basic Auth and Client Assertion.
+     * Per RFC 9126 Section 2.1, the PAR endpoint uses the same client authentication
+     * methods as the Token endpoint.
      * </p>
-     *
-     * @param serviceEndpointResolver the service endpoint resolver
-     * @param clientId the client identifier
-     * @param clientSecret the client secret for authentication
-     * @throws IllegalArgumentException if any parameter is null or blank
      */
-    public DefaultOAuth2ParClient(ServiceEndpointResolver serviceEndpointResolver, String clientId, String clientSecret) {
-
-        // Validate parameters
-        this.serviceEndpointResolver = ValidationUtils.validateNotNull(serviceEndpointResolver, "Service endpoint resolver");
-        this.clientId = ValidationUtils.validateNotEmpty(clientId, "Client ID");
-        this.clientSecret = ValidationUtils.validateNotEmpty(clientSecret, "Client secret");
-
-        // Create HTTP client
-        this.httpClient = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_2)
-                .connectTimeout(Duration.ofSeconds(30))
-                .build();
-
-        // Use BasicAuthAuthentication for backward compatibility
-        this.authentication = new BasicAuthAuthentication(clientId, clientSecret);
-
-        logger.info("DefaultParClient initialized with Basic Authentication");
-    }
-
-    /**
-     * Creates a new DefaultParClient with custom HttpClient and Basic Authentication.
-     *
-     * @param httpClient the HTTP client to use
-     * @param serviceEndpointResolver the service endpoint resolver
-     * @param clientId the client identifier
-     * @param clientSecret the client secret for authentication
-     */
-    public DefaultOAuth2ParClient(HttpClient httpClient, ServiceEndpointResolver serviceEndpointResolver, String clientId, String clientSecret) {
-        this.httpClient = ValidationUtils.validateNotNull(httpClient, "HTTP client");
-        this.serviceEndpointResolver = ValidationUtils.validateNotNull(serviceEndpointResolver, "Service endpoint resolver");
-        this.clientId = ValidationUtils.validateNotEmpty(clientId, "Client ID");
-        this.clientSecret = ValidationUtils.validateNotEmpty(clientSecret, "Client secret");
-
-        // Use BasicAuthAuthentication for backward compatibility
-        this.authentication = new BasicAuthAuthentication(clientId, clientSecret);
-    }
+    private final OAuth2ClientAuthentication authentication;
 
     /**
      * Creates a new DefaultParClient with pluggable authentication strategy.
      * <p>
-     * This constructor allows using different authentication methods such as Basic Auth,
-     * Client Assertion (private_key_jwt), or custom implementations. The authentication
-     * strategy is applied when building HTTP requests for PAR submission.
+     * This is the preferred constructor that supports any OAuth 2.0 client authentication
+     * method through the {@link OAuth2ClientAuthentication} strategy interface. Per RFC 9126
+     * Section 2.1, the PAR endpoint uses the same client authentication methods as the
+     * Token endpoint.
      * </p>
      * <p>
      * <b>Usage Example:</b></p>
      * <pre>{@code
-     * // Create client with Client Assertion authentication
-     * ClientAssertionGenerator assertionGenerator = new ClientAssertionGenerator(
-     *     clientId, signingKey, JWSAlgorithm.RS256
-     * );
-     * ParClientAuthentication auth = new ClientAssertionAuthentication(
-     *     clientId, tokenEndpoint, assertionGenerator
-     * );
-     * ParClient client = new DefaultParClient(serviceEndpointResolver, auth);
+     * // Basic Authentication
+     * OAuth2ClientAuthentication auth = new BasicAuthAuthentication(clientId, clientSecret);
+     * OAuth2ParClient client = new DefaultOAuth2ParClient(resolver, auth);
+     *
+     * // Per-request Client Assertion Authentication (e.g., WIMSE WIT)
+     * OAuth2ClientAuthentication auth = new ClientAssertionAuthentication();
+     * OAuth2ParClient client = new DefaultOAuth2ParClient(resolver, auth);
      * }</pre>
      *
      * @param serviceEndpointResolver the service endpoint resolver
-     * @param authentication the authentication strategy (e.g., BasicAuthAuthentication, ClientAssertionAuthentication)
-     * @throws IllegalArgumentException if serviceEndpointResolver is null
-     * @throws NullPointerException if authentication is null
+     * @param authentication the client authentication strategy
+     * @throws IllegalArgumentException if any required parameter is null
      */
-    public DefaultOAuth2ParClient(ServiceEndpointResolver serviceEndpointResolver, ParClientAuthentication authentication) {
+    public DefaultOAuth2ParClient(ServiceEndpointResolver serviceEndpointResolver, OAuth2ClientAuthentication authentication) {
 
-        // Validate parameters
         this.serviceEndpointResolver = ValidationUtils.validateNotNull(serviceEndpointResolver, "Service endpoint resolver");
         this.authentication = ValidationUtils.validateNotNull(authentication, "Authentication strategy");
 
-        // Extract client ID from authentication if available
-        this.clientId = authentication.getClientId();
-        this.clientSecret = null;
-
-        // Create HTTP client
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(30))
@@ -201,20 +132,17 @@ public class DefaultOAuth2ParClient implements OAuth2ParClient {
      *
      * @param httpClient the HTTP client to use
      * @param serviceEndpointResolver the service endpoint resolver
-     * @param authentication the authentication strategy
-     * @throws IllegalArgumentException if serviceEndpointResolver is null
-     * @throws NullPointerException if httpClient or authentication is null
+     * @param authentication the client authentication strategy
+     * @throws IllegalArgumentException if any required parameter is null
      */
-    public DefaultOAuth2ParClient(HttpClient httpClient, ServiceEndpointResolver serviceEndpointResolver, ParClientAuthentication authentication) {
+    public DefaultOAuth2ParClient(
+            HttpClient httpClient,
+            ServiceEndpointResolver serviceEndpointResolver,
+            OAuth2ClientAuthentication authentication) {
 
-        // Validate parameters
         this.httpClient = ValidationUtils.validateNotNull(httpClient, "HTTP client");
         this.serviceEndpointResolver = ValidationUtils.validateNotNull(serviceEndpointResolver, "Service endpoint resolver");
         this.authentication = ValidationUtils.validateNotNull(authentication, "Authentication strategy");
-
-        // Extract client ID from authentication if available
-        this.clientId = authentication.getClientId();
-        this.clientSecret = null;
     }
 
     @Override
@@ -222,7 +150,7 @@ public class DefaultOAuth2ParClient implements OAuth2ParClient {
 
         // Validate request
         ValidationUtils.validateNotNull(request, "PAR request");
-        logger.debug("Submitting PAR request for client: {}", clientId);
+        logger.debug("Submitting PAR request for client: {}", authentication.getClientId());
 
         try {
             // Build HTTP request
@@ -252,6 +180,12 @@ public class DefaultOAuth2ParClient implements OAuth2ParClient {
      * The authentication strategy may add headers (e.g., Authorization for Basic Auth)
      * or modify the request body (e.g., client_assertion parameters for private_key_jwt).
      * </p>
+     * <p>
+     * <b>Client ID Propagation:</b> The {@code client_id} from the {@link ParRequest}
+     * is placed into the request body map <em>before</em> the authentication strategy
+     * is applied. This ensures that a DCR-registered dynamic {@code client_id} takes
+     * precedence over the static client ID configured in the authentication strategy.
+     * </p>
      *
      * @param request the PAR request
      * @return the HTTP request
@@ -262,11 +196,29 @@ public class DefaultOAuth2ParClient implements OAuth2ParClient {
         Map<String, String> requestBodyMap = new HashMap<>();
         requestBodyMap.put("request", request.getRequestJwt());
 
+        // Propagate client_id from PAR request into the body map so that the
+        // authentication strategy (e.g., ClientAssertionAuthentication) respects
+        // the DCR-registered dynamic client_id instead of overwriting it with
+        // the static default.
+        if (!ValidationUtils.isNullOrEmpty(request.getClientId())) {
+            requestBodyMap.put("client_id", request.getClientId());
+        }
+
         // Add state parameter if provided (RFC 6749 Section 4.1.1)
-        // State parameter should be sent as a separate parameter, not just in the JWT
         if (!ValidationUtils.isNullOrEmpty(request.getState())) {
             requestBodyMap.put("state", request.getState());
             logger.debug("State parameter added to PAR request body: {}", request.getState());
+        }
+
+        // Propagate additional parameters (e.g., WIT for client assertion authentication)
+        // into the request body map. This allows the authentication strategy to extract
+        // per-request credentials from the body map without relying on global state.
+        if (request.getAdditionalParameters() != null) {
+            for (Map.Entry<String, Object> entry : request.getAdditionalParameters().entrySet()) {
+                if (entry.getValue() instanceof String stringValue) {
+                    requestBodyMap.put(entry.getKey(), stringValue);
+                }
+            }
         }
 
         // Build HTTP request builder
@@ -279,29 +231,24 @@ public class DefaultOAuth2ParClient implements OAuth2ParClient {
         // Apply authentication strategy (may add headers or modify request body)
         requestBuilder = authentication.applyAuthentication(requestBuilder, requestBodyMap);
 
-        // Build request body from map
+        // Build request body from map using UriQueryBuilder
         String requestBody = buildFormUrlEncodedBody(requestBodyMap);
 
         return requestBuilder.POST(HttpRequest.BodyPublishers.ofString(requestBody)).build();
     }
 
     /**
-     * Builds a URL-encoded form body from a map of parameters.
+     * Builds a URL-encoded form body from a map of parameters using {@link UriQueryBuilder}.
      *
      * @param parameters the map of parameters
      * @return the URL-encoded form body
      */
     private String buildFormUrlEncodedBody(Map<String, String> parameters) {
-        StringBuilder body = new StringBuilder();
+        UriQueryBuilder queryBuilder = new UriQueryBuilder();
         for (Map.Entry<String, String> entry : parameters.entrySet()) {
-            if (!body.isEmpty()) {
-                body.append("&");
-            }
-            body.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
-            body.append("=");
-            body.append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+            queryBuilder.addEncoded(entry.getKey(), entry.getValue());
         }
-        return body.toString();
+        return queryBuilder.build();
     }
 
     /**

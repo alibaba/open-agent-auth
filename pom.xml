@@ -51,7 +51,7 @@
 
         <!-- Testing -->
         <junit.version>5.10.1</junit.version>
-        <mockito.version>5.8.0</mockito.version>
+        <mockito.version>5.20.0</mockito.version>
         <spring-boot-starter-test.version>3.3.11</spring-boot-starter-test.version>
 
         <!-- MCP SDK (Only used in mcp-adapter module) -->
@@ -133,6 +133,18 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.3</version>
+                    <configuration>
+                        <argLine>
+                            @{argLine}
+                            -Dnet.bytebuddy.experimental=true
+                            --add-opens java.base/java.lang=ALL-UNNAMED
+                            --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                            --add-opens java.base/java.util=ALL-UNNAMED
+                            --add-opens java.base/java.io=ALL-UNNAMED
+                            --add-opens java.base/java.net=ALL-UNNAMED
+                            --add-opens java.base/sun.net.www.protocol.https=ALL-UNNAMED
+                        </argLine>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.springframework.boot</groupId>

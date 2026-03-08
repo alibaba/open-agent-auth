@@ -31,6 +31,7 @@ import com.alibaba.openagentauth.core.model.token.AgentOperationAuthToken;
 import com.alibaba.openagentauth.core.model.token.WorkloadIdentityToken;
 import com.alibaba.openagentauth.core.model.proposal.AgentUserBindingProposal;
 import com.alibaba.openagentauth.core.protocol.oauth2.authorization.model.AuthorizationResponse;
+import com.alibaba.openagentauth.core.protocol.oauth2.client.ClientAssertionAuthentication;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.client.OAuth2DcrClient;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.par.client.OAuth2ParClient;
@@ -39,9 +40,6 @@ import com.alibaba.openagentauth.core.protocol.oauth2.token.client.OAuth2TokenCl
 import com.alibaba.openagentauth.core.protocol.oidc.api.IdTokenValidator;
 import com.alibaba.openagentauth.core.protocol.wimse.wit.WitValidator;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.client.WorkloadClient;
-import com.alibaba.openagentauth.core.protocol.wimse.workload.model.AgentRequestContext;
-import com.alibaba.openagentauth.core.protocol.wimse.workload.model.CreateWorkloadRequest;
-import com.alibaba.openagentauth.core.protocol.wimse.workload.model.CreateWorkloadResponse;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitRequest;
 import com.alibaba.openagentauth.core.protocol.wimse.workload.model.IssueWitResponse;
 import com.alibaba.openagentauth.core.token.TokenService;
@@ -78,6 +76,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+
+import java.util.Map;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -587,6 +588,7 @@ class DefaultAgentTest {
                     .redirectUri(OAUTH_CALLBACKS_REDIRECT_URI)
                     .authorizationCode(AUTH_CODE)
                     .state(STATE)
+                    .additionalParameters(Map.of(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM, WIT))
                     .build();
 
             // Create a valid AOAT token with agent_identity and agent_operation_authorization claims using AoatGenerator
@@ -627,8 +629,13 @@ class DefaultAgentTest {
             // Assert
             assertThat(result).isNotNull();
 
+            // Verify that the TokenRequest includes client_assertion in additionalParameters
             verify(mockAgentOperationAuthorizationTokenClient, times(1))
-                    .exchangeCodeForToken(any(TokenRequest.class));
+                    .exchangeCodeForToken(argThat(tokenRequest -> {
+                        Map<String, Object> additionalParams = tokenRequest.getAdditionalParameters();
+                        return additionalParams != null 
+                            && WIT.equals(additionalParams.get(ClientAssertionAuthentication.CLIENT_ASSERTION_PARAM));
+                    }));
         }
 
         @Test
@@ -894,11 +901,11 @@ class DefaultAgentTest {
                     .thenReturn(expectedResponse);
 
             // Act
-            DcrResponse result = agent.registerOAuthClient(workloadContext);
+            WorkloadContext result = agent.registerOAuthClient(workloadContext);
 
             // Assert
             assertThat(result).isNotNull();
-            assertThat(result.getClientId()).isEqualTo(CLIENT_ID);
+            assertThat(result.getOauthClientId()).isEqualTo(CLIENT_ID);
 
             verify(mockDcrClient, times(1)).registerClient(any());
         }
@@ -980,7 +987,13 @@ class DefaultAgentTest {
             assertThat(result.getRequestUri()).isNotNull();
             assertThat(result.getExpiresIn()).isEqualTo(600);
 
-            verify(mockParClient, times(1)).submitParRequest(any(ParRequest.class));
+            // Verify that the ParRequest includes workload_private_key in additionalParameters
+            // for standard private_key_jwt authentication (RFC 7523)
+            verify(mockParClient, times(1)).submitParRequest(argThat(parRequest -> {
+                Map<String, Object> additionalParams = parRequest.getAdditionalParameters();
+                return additionalParams != null 
+                    && PRIVATE_KEY.equals(additionalParams.get(ClientAssertionAuthentication.WORKLOAD_PRIVATE_KEY_PARAM));
+            }));
         }
 
         @Test
