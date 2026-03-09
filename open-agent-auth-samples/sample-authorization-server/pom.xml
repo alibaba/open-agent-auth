@@ -34,10 +34,23 @@
             <artifactId>open-agent-auth-spring-boot-starter</artifactId>
         </dependency>
 
+        <!-- Qwen SDK for LLM-based operation text rendering -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>qwencode-sdk</artifactId>
+            <version>0.0.1-alpha</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>5.2.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
