@@ -47,6 +47,13 @@ jobs:
           cd open-agent-auth-integration-tests
           ./scripts/run-e2e-tests.sh --skip-build
 
+      - name: Run Protocol Conformance tests
+        run: |
+          chmod +x open-agent-auth-integration-tests/scripts/run-conformance-tests.sh
+          chmod +x open-agent-auth-samples/scripts/*.sh
+          cd open-agent-auth-integration-tests
+          ./scripts/run-conformance-tests.sh --skip-build
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
