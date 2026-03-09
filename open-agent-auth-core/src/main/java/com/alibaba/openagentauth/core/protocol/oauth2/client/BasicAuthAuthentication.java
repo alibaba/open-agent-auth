@@ -24,7 +24,7 @@ import java.util.Base64;
 import java.util.Map;
 
 /**
- * Basic Authentication implementation for PAR client authentication.
+ * Basic Authentication implementation for OAuth 2.0 client authentication.
  * <p>
  * This implementation uses HTTP Basic Authentication with client_id and client_secret
  * as credentials, following OAuth 2.0 specification (RFC 6749 Section 2.3.1).
@@ -33,7 +33,7 @@ import java.util.Map;
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3.1">RFC 6749 - Client Authentication</a>
  * @since 1.0
  */
-public class BasicAuthAuthentication implements ParClientAuthentication {
+public class BasicAuthAuthentication implements OAuth2ClientAuthentication {
 
     private static final Logger logger = LoggerFactory.getLogger(BasicAuthAuthentication.class);
 

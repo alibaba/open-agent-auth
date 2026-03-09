@@ -114,12 +114,16 @@
             <p>Identity Provider for AI Agent Platform</p>
         </div>
 
-        <div class="user-info">
+        <div class="user-info" th:if="${session != null and session.user != null}">
             <h2>User Information</h2>
             <p><strong>Subject:</strong> <span th:text="${session.user.subject}"></span></p>
             <p><strong>Username:</strong> <span th:text="${session.user.username}"></span></p>
             <p><strong>Name:</strong> <span th:text="${session.user.name}"></span></p>
             <p><strong>Email:</strong> <span th:text="${session.user.email}"></span></p>
+        </div>
+        <div class="user-info" th:unless="${session != null and session.user != null}">
+            <h2>User Information</h2>
+            <p>Not logged in. Please <a href="/oauth2/authorize" style="color: #667eea;">sign in</a> first.</p>
         </div>
 
         <a href="/oauth2/logout" class="btn-logout">Logout</a>

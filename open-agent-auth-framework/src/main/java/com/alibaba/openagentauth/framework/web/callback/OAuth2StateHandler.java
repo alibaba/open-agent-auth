@@ -22,6 +22,9 @@ import com.alibaba.openagentauth.core.util.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
+import java.util.Map;
+
 /**
  * OAuth2 State parameter handler.
  * <p>
@@ -86,6 +89,7 @@ public class OAuth2StateHandler {
                 .flowType(mapFlowType(flowType))
                 .originalState(state)
                 .sessionId(authorizationRequest.getSessionId())
+                .additionalParameters(authorizationRequest.getAdditionalParameters())
                 .build();
     }
 
@@ -127,15 +131,17 @@ public class OAuth2StateHandler {
         private final FlowType flowType;
         private final String originalState;
         private final String sessionId;
+        private final Map<String, Object> additionalParameters;
 
-        private StateInfo(FlowType flowType, String originalState, String sessionId) {
+        private StateInfo(FlowType flowType, String originalState, String sessionId, Map<String, Object> additionalParameters) {
             this.flowType = flowType;
             this.originalState = originalState;
             this.sessionId = sessionId;
+            this.additionalParameters = additionalParameters != null ? additionalParameters : Collections.emptyMap();
         }
 
         public static StateInfo unknown() {
-            return new StateInfo(FlowType.UNKNOWN, null, null);
+            return new StateInfo(FlowType.UNKNOWN, null, null, null);
         }
 
         public static StateInfoBuilder builder() {
@@ -164,12 +170,27 @@ public class OAuth2StateHandler {
         }
 
         /**
+         * Returns additional parameters from the authorization request.
+         * <p>
+         * Carries flow-specific metadata (e.g., {@code client_id},
+         * {@code client_assertion}) through the callback chain using
+         * standard OAuth 2.0 parameter names as keys.
+         * </p>
+         *
+         * @return an unmodifiable map of additional parameters
+         */
+        public Map<String, Object> getAdditionalParameters() {
+            return additionalParameters;
+        }
+
+        /**
          * StateInfo builder.
          */
         public static class StateInfoBuilder {
             private FlowType flowType;
             private String originalState;
             private String sessionId;
+            private Map<String, Object> additionalParameters;
 
             public StateInfoBuilder flowType(FlowType flowType) {
                 this.flowType = flowType;
@@ -186,8 +207,13 @@ public class OAuth2StateHandler {
                 return this;
             }
 
+            public StateInfoBuilder additionalParameters(Map<String, Object> additionalParameters) {
+                this.additionalParameters = additionalParameters;
+                return this;
+            }
+
             public StateInfo build() {
-                return new StateInfo(flowType, originalState, sessionId);
+                return new StateInfo(flowType, originalState, sessionId, additionalParameters);
             }
         }
     }

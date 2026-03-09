@@ -143,7 +143,8 @@ public class JweEncryptionAutoConfiguration {
             logger.info("Successfully resolved encryption key by definition name");
             return encryptionJwk;
         } catch (KeyManagementException e) {
-            logger.debug("Could not resolve encryption key by definition name, trying local decryption key", e);
+            logger.debug("Could not resolve encryption key by definition name '{}', trying local decryption key: {}",
+                    ConfigConstants.KEY_JWE_ENCRYPTION, e.getMessage());
         }
 
         // Strategy 2: Use local jwe-decryption key (Authorization Server role — local key pair)

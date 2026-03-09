@@ -18,6 +18,8 @@ package com.alibaba.openagentauth.core.protocol.oauth2.authorization.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -113,6 +115,22 @@ public class AuthorizationResponse {
     @JsonProperty("error_uri")
     private final String errorUri;
 
+    /**
+     * Additional parameters for extensible metadata propagation.
+     * <p>
+     * This map carries flow-specific parameters through the callback chain without
+     * requiring dedicated fields for each protocol extension. Standard OAuth 2.0
+     * parameter names should be used as keys (e.g., {@code client_id},
+     * {@code client_assertion}) to maintain protocol-level abstraction.
+     * </p>
+     * <p>
+     * This design is consistent with {@code ParRequest.additionalParameters},
+     * {@code TokenRequest.additionalParameters}, and
+     * {@code OAuth2AuthorizationRequest.additionalParameters}.
+     * </p>
+     */
+    private final Map<String, Object> additionalParameters;
+
     private AuthorizationResponse(Builder builder) {
         this.redirectUri = builder.redirectUri;
         this.authorizationCode = builder.authorizationCode;
@@ -120,6 +138,9 @@ public class AuthorizationResponse {
         this.error = builder.error;
         this.errorDescription = builder.errorDescription;
         this.errorUri = builder.errorUri;
+        this.additionalParameters = builder.additionalParameters != null
+                ? Collections.unmodifiableMap(builder.additionalParameters)
+                : Collections.emptyMap();
     }
 
     public String getRedirectUri() {
@@ -147,6 +168,20 @@ public class AuthorizationResponse {
     }
 
     /**
+     * Returns additional parameters associated with this authorization response.
+     * <p>
+     * This extensible map carries flow-specific metadata (e.g., {@code client_id},
+     * {@code client_assertion}) through the callback chain without coupling the
+     * core model to specific protocol extensions.
+     * </p>
+     *
+     * @return an unmodifiable map of additional parameters, never null
+     */
+    public Map<String, Object> getAdditionalParameters() {
+        return additionalParameters;
+    }
+
+    /**
      * Checks if this is a successful authorization response.
      *
      * @return true if the response is successful (no error), false otherwise
@@ -165,12 +200,13 @@ public class AuthorizationResponse {
                 Objects.equals(state, that.state) &&
                 Objects.equals(error, that.error) &&
                 Objects.equals(errorDescription, that.errorDescription) &&
-                Objects.equals(errorUri, that.errorUri);
+                Objects.equals(errorUri, that.errorUri) &&
+                Objects.equals(additionalParameters, that.additionalParameters);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(redirectUri, authorizationCode, state, error, errorDescription, errorUri);
+        return Objects.hash(redirectUri, authorizationCode, state, error, errorDescription, errorUri, additionalParameters);
     }
 
     @Override
@@ -182,6 +218,7 @@ public class AuthorizationResponse {
                 ", error='" + error + '\'' +
                 ", errorDescription='" + errorDescription + '\'' +
                 ", errorUri='" + errorUri + '\'' +
+                ", additionalParameters=" + additionalParameters +
                 '}';
     }
 
@@ -204,6 +241,7 @@ public class AuthorizationResponse {
         private String error;
         private String errorDescription;
         private String errorUri;
+        private Map<String, Object> additionalParameters;
 
         /**
          * Sets the redirect URI.
@@ -268,6 +306,17 @@ public class AuthorizationResponse {
          */
         public Builder errorUri(String errorUri) {
             this.errorUri = errorUri;
+            return this;
+        }
+
+        /**
+         * Sets additional parameters for extensible metadata propagation.
+         *
+         * @param additionalParameters the additional parameters map
+         * @return this builder instance
+         */
+        public Builder additionalParameters(Map<String, Object> additionalParameters) {
+            this.additionalParameters = additionalParameters;
             return this;
         }
 

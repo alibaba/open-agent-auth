@@ -328,4 +328,148 @@ public class WorkloadInfo {
                 ", status='" + status + '\'' +
                 '}';
     }
+
+    /**
+     * Creates a new builder for constructing WorkloadInfo instances.
+     *
+     * @return a new Builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Creates a new builder initialized with values from this WorkloadInfo.
+     * <p>
+     * This is useful for creating modified copies of existing WorkloadInfo instances
+     * without manually passing all constructor parameters.
+     * </p>
+     *
+     * @return a new Builder initialized with this instance's values
+     */
+    public Builder toBuilder() {
+        return new Builder(this);
+    }
+
+    /**
+     * Builder for creating WorkloadInfo instances.
+     * <p>
+     * Provides a fluent API for constructing WorkloadInfo objects with optional fields.
+     * Supports copy-on-write pattern via {@link WorkloadInfo#toBuilder()}.
+     * </p>
+     *
+     * <p><b>Usage examples:</b></p>
+     * <pre>{@code
+     * // Create a new instance
+     * WorkloadInfo workload = WorkloadInfo.builder()
+     *     .workloadId("wimse://example.com/workload/123")
+     *     .userId("user-1")
+     *     .trustDomain("example.com")
+     *     .status("active")
+     *     .build();
+     *
+     * // Create a modified copy (e.g., update public key)
+     * WorkloadInfo updated = workload.toBuilder()
+     *     .publicKey(newPublicKey)
+     *     .build();
+     * }</pre>
+     */
+    public static class Builder {
+        private String workloadId;
+        private String userId;
+        private String trustDomain;
+        private String issuer;
+        private String publicKey;
+        private String privateKey;
+        private Instant createdAt;
+        private Instant expiresAt;
+        private String status;
+        private OperationRequestContext context;
+        private Map<String, Object> metadata;
+
+        private Builder() {
+        }
+
+        private Builder(WorkloadInfo source) {
+            this.workloadId = source.workloadId;
+            this.userId = source.userId;
+            this.trustDomain = source.trustDomain;
+            this.issuer = source.issuer;
+            this.publicKey = source.publicKey;
+            this.privateKey = source.privateKey;
+            this.createdAt = source.createdAt;
+            this.expiresAt = source.expiresAt;
+            this.status = source.status;
+            this.context = source.context;
+            this.metadata = source.metadata;
+        }
+
+        public Builder workloadId(String workloadId) {
+            this.workloadId = workloadId;
+            return this;
+        }
+
+        public Builder userId(String userId) {
+            this.userId = userId;
+            return this;
+        }
+
+        public Builder trustDomain(String trustDomain) {
+            this.trustDomain = trustDomain;
+            return this;
+        }
+
+        public Builder issuer(String issuer) {
+            this.issuer = issuer;
+            return this;
+        }
+
+        public Builder publicKey(String publicKey) {
+            this.publicKey = publicKey;
+            return this;
+        }
+
+        public Builder privateKey(String privateKey) {
+            this.privateKey = privateKey;
+            return this;
+        }
+
+        public Builder createdAt(Instant createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public Builder expiresAt(Instant expiresAt) {
+            this.expiresAt = expiresAt;
+            return this;
+        }
+
+        public Builder status(String status) {
+            this.status = status;
+            return this;
+        }
+
+        public Builder context(OperationRequestContext context) {
+            this.context = context;
+            return this;
+        }
+
+        public Builder metadata(Map<String, Object> metadata) {
+            this.metadata = metadata;
+            return this;
+        }
+
+        /**
+         * Builds a new WorkloadInfo instance from the builder's current state.
+         *
+         * @return a new WorkloadInfo instance
+         */
+        public WorkloadInfo build() {
+            return new WorkloadInfo(
+                    workloadId, userId, trustDomain, issuer,
+                    publicKey, privateKey, createdAt, expiresAt,
+                    status, context, metadata
+            );
+        }
+    }
 }

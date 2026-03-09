@@ -16,6 +16,7 @@
 package com.alibaba.openagentauth.core.protocol.oauth2.dcr.server;
 
 import com.alibaba.openagentauth.core.exception.oauth2.DcrException;
+import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrAuthenticationResult;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrRequest;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.model.DcrResponse;
 import com.alibaba.openagentauth.core.protocol.oauth2.dcr.server.authenticator.OAuth2DcrAuthenticator;
@@ -28,7 +29,9 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -109,12 +112,17 @@ public class DefaultOAuth2DcrServer implements OAuth2DcrServer {
             validateRegistrationRequest(request);
 
             // Step 2: Authenticate client using strategy pattern
-            String authenticatedSubject = authenticateClient(request);
-            logger.debug("Client authenticated: subject={}", authenticatedSubject);
+            DcrAuthenticationResult authResult = authenticateClient(request);
+            logger.debug("Client authenticated: subject={}, providesClientIdentity={}",
+                    authResult.subject(), authResult.providesClientIdentity());
 
-            // Step 3: Generate client_id
-            String clientId = generateClientId();
-            logger.debug("Generated client_id: {}", clientId);
+            // Step 3: Determine client_id
+            // When the authenticator declares that it provides a client identity
+            // (e.g., WIMSE workload ID, SPIFFE ID), use the authenticated subject as the
+            // client_id. Otherwise, generate a random UUID. This is compliant with
+            // RFC 7591 Section 3.2.1 which allows the AS to assign any client_id value.
+            String clientId = authResult.providesClientIdentity() ? authResult.subject() : generateClientId();
+            logger.debug("Determined client_id: {} (identity-based: {})", clientId, authResult.providesClientIdentity());
 
             // Step 4: Generate client_secret if needed
             String clientSecret = null;
@@ -129,6 +137,16 @@ public class DefaultOAuth2DcrServer implements OAuth2DcrServer {
             logger.debug("Generated registration access token for client_id: {}", clientId);
 
             // Step 6: Build response
+            // Preserve the client's JWKS in additionalMetadata so that
+            // DcrResponse.toRegisteredClient() can propagate it to OAuth2RegisteredClient.
+            // This enables the AS to verify client_assertion signatures using the
+            // client's registered public keys (RFC 7591 + WIMSE Path A).
+            Map<String, Object> metadata = null;
+            if (request.getJwks() != null) {
+                metadata = new HashMap<>();
+                metadata.put("jwks", request.getJwks());
+            }
+
             long now = Instant.now().getEpochSecond();
             DcrResponse.Builder responseBuilder = DcrResponse.builder()
                     .clientId(clientId)
@@ -142,7 +160,8 @@ public class DefaultOAuth2DcrServer implements OAuth2DcrServer {
                     .grantTypes(request.getGrantTypes())
                     .responseTypes(request.getResponseTypes())
                     .tokenEndpointAuthMethod(authMethod)
-                    .scope(request.getScope());
+                    .scope(request.getScope())
+                    .additionalMetadata(metadata);
 
             DcrResponse response = responseBuilder.build();
 
@@ -361,26 +380,25 @@ public class DefaultOAuth2DcrServer implements OAuth2DcrServer {
      * <p>
      * This method uses the Strategy Pattern to try each authenticator in order
      * until one can handle the request. If no authenticator can handle the request,
-     * a default authentication is performed (no authentication).
+     * a default (unauthenticated) result is returned.
      * </p>
      *
      * @param request the DCR request
-     * @return the authenticated subject identifier
+     * @return the authentication result containing the subject and identity binding flag
      * @throws DcrException if authentication fails
      */
-    private String authenticateClient(DcrRequest request) throws DcrException {
+    private DcrAuthenticationResult authenticateClient(DcrRequest request) throws DcrException {
 
-        // Try each authenticator in order
         for (OAuth2DcrAuthenticator authenticator : authenticators) {
             if (authenticator.canAuthenticate(request)) {
                 logger.debug("Using authenticator: {}", authenticator.getAuthenticationMethod());
-                return authenticator.authenticate(request);
+                String subject = authenticator.authenticate(request);
+                return new DcrAuthenticationResult(subject, authenticator.providesClientIdentity());
             }
         }
 
-        // No authenticator could handle the request - use default (no authentication)
         logger.debug("No authenticator matched, using default authentication");
-        return "default-client";
+        return DcrAuthenticationResult.unauthenticated();
     }
 
     /**
@@ -391,7 +409,6 @@ public class DefaultOAuth2DcrServer implements OAuth2DcrServer {
      */
     private boolean needsClientSecret(String authMethod) {
         if (authMethod == null) {
-            // Default to client_secret_basic
             return true;
         }
         return !authMethod.equals("none") && !authMethod.equals("private_key_jwt");

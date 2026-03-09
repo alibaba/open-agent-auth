@@ -92,4 +92,32 @@ public interface OAuth2DcrAuthenticator {
      */
     String getAuthenticationMethod();
 
+    /**
+     * Indicates whether the authenticated subject returned by {@link #authenticate(DcrRequest)}
+     * should be used as the OAuth {@code client_id} during Dynamic Client Registration.
+     * <p>
+     * When this method returns {@code true}, the DCR server will use the authenticated
+     * subject identifier (e.g., a WIMSE workload ID or SPIFFE ID) as the {@code client_id}
+     * instead of generating a random UUID. This maintains identity consistency between
+     * the workload identity layer and the OAuth client layer.
+     * </p>
+     * <p>
+     * This is compliant with RFC 7591 Section 3.2.1, which allows the Authorization Server
+     * to assign any {@code client_id} value.
+     * </p>
+     * <p>
+     * The default implementation returns {@code false}, meaning a random {@code client_id}
+     * will be generated. Authenticators that provide a stable, externally-meaningful identity
+     * (such as WIMSE or SPIFFE) should override this to return {@code true}.
+     * </p>
+     *
+     * @return {@code true} if the authenticated subject should be used as the {@code client_id},
+     *         {@code false} if a random {@code client_id} should be generated
+     * @since 2.1
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7591#section-3.2.1">RFC 7591 Section 3.2.1</a>
+     */
+    default boolean providesClientIdentity() {
+        return false;
+    }
+
 }
