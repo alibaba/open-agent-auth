@@ -43,29 +43,21 @@ the integrity verification model, the cross-domain projection
 mechanism for federated trust environments, and the conformance
 requirements for implementers.
 
-### Status of This Memo
+### Status
 
-This Internet-Draft is submitted in full conformance with the
-provisions of BCP 78 and BCP 79.
+This document is a **Specification Enhancement Proposal (SEP)** for the
+[Open Agent Auth](https://github.com/alibaba/open-agent-auth) project.
+It is currently in **Draft** status and open for community review.
 
-Internet-Drafts are working documents of the Internet Engineering
-Task Force (IETF).  Note that other groups MAY also distribute
-working documents as Internet-Drafts.  The list of current Internet-
-Drafts is at https://datatracker.ietf.org/drafts/current/.
-
-Internet-Drafts are draft documents valid for a maximum of six months
-and MAY be updated, replaced, or obsoleted by other documents at any
-time.  It is inappropriate to use Internet-Drafts as reference
-material or to cite them other than as "work in progress."
-
-This document obsoletes draft-aip-agent-identity-profile-01.
+- **Tracking Issue**: [GitHub Issue #16](https://github.com/alibaba/open-agent-auth/issues/16)
+- **Discussion**: Comments and feedback are welcome via GitHub Issues and Pull Requests
 
 ### Copyright Notice
 
-Copyright (c) 2026 IETF Trust and the persons identified as the
-document authors.  All rights reserved.
+Copyright (c) 2026 Alibaba Group and the persons identified as the
+document authors. Licensed under the Apache License 2.0.
 
-### Changes from draft-aip-agent-identity-profile-01
+### Changes from Previous Revision
 
 The following changes were made from the -01 revision:
 
