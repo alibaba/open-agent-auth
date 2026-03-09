@@ -30,7 +30,7 @@ export default withMermaid(defineConfig({
     '**/*.sh',
     '**/*.bat',
     '**/scripts/**',
-    'docs/standard/**',
+
     'docs/guide/start/**',
     'docs/guide/configuration/**',
     'docs/guide/extension/**',
@@ -59,6 +59,7 @@ export default withMermaid(defineConfig({
       { text: 'Guide', link: '/docs/guide/01-quick-start', activeMatch: '/docs/guide/' },
       { text: 'API', link: '/docs/api/00-api-overview', activeMatch: '/docs/api/' },
       { text: 'Architecture', link: '/docs/architecture/', activeMatch: '/docs/architecture/' },
+      { text: 'Standards', link: '/docs/standard/', activeMatch: '/docs/standard/' },
       { text: 'Blog', link: '/blogs/', activeMatch: '/blogs/' },
     ],
 
@@ -346,6 +347,44 @@ export default withMermaid(defineConfig({
                 { text: 'Design Decisions', link: '/docs/architecture/09-wimse-dcr-integration#design-decisions' },
               ],
             },
+          ],
+        },
+      ],
+
+      '/docs/standard/': [
+        {
+          text: 'Standards & Proposals',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/docs/standard/' },
+          ],
+        },
+        {
+          text: 'SEP (Proposals)',
+          collapsed: false,
+          items: [
+            {
+              text: 'SEP-0001: Agent Identity Profile',
+              link: '/docs/standard/sep/sep-0001-agent-identity-profile',
+              collapsed: true,
+              items: [
+                { text: 'Introduction', link: '/docs/standard/sep/sep-0001-agent-identity-profile#introduction' },
+                { text: 'Architecture Overview', link: '/docs/standard/sep/sep-0001-agent-identity-profile#architecture-overview' },
+                { text: 'AIP Data Model', link: '/docs/standard/sep/sep-0001-agent-identity-profile#aip-data-model' },
+                { text: 'Document Partitioning', link: '/docs/standard/sep/sep-0001-agent-identity-profile#aip-document-partitioning' },
+                { text: 'Lifecycle State Machine', link: '/docs/standard/sep/sep-0001-agent-identity-profile#aip-lifecycle-state-machine' },
+                { text: 'Discovery & Resolution', link: '/docs/standard/sep/sep-0001-agent-identity-profile#aip-discovery-and-resolution-protocol' },
+                { text: 'Delegation Chains', link: '/docs/standard/sep/sep-0001-agent-identity-profile#delegation-chains-and-multi-agent-identity' },
+                { text: 'Security Considerations', link: '/docs/standard/sep/sep-0001-agent-identity-profile#security-considerations' },
+              ],
+            },
+          ],
+        },
+        {
+          text: 'IETF Standards & Drafts',
+          collapsed: false,
+          items: [
+            { text: 'Agent Operation Authorization (draft-01)', link: '/docs/standard/ietf/draft-liu-agent-operation-authorization-01' },
           ],
         },
       ],
