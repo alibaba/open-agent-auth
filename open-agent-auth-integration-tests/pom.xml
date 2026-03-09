@@ -141,10 +141,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!-- Include E2E tests when running mvn test -->
+                    <!-- Include E2E, Integration, and Conformance tests when running mvn test -->
                     <includes>
                         <include>**/*E2ETest.java</include>
                         <include>**/*IntegrationTest.java</include>
+                        <include>**/*ConformanceTest.java</include>
                     </includes>
                 </configuration>
             </plugin>
@@ -165,6 +166,23 @@
                             <skipITs>false</skipITs>
                             <includes>
                                 <include>**/*IntegrationTest.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- Profile for running protocol conformance tests -->
+        <profile>
+            <id>protocol-conformance</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/*ConformanceTest.java</include>
                             </includes>
                         </configuration>
                     </plugin>
