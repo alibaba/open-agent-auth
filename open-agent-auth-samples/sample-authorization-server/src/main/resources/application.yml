@@ -84,6 +84,17 @@ open-agent-auth:
       instance-id: authorization-server-1
       issuer: http://localhost:8085
   
+# LLM-based operation text renderer configuration (uses qwencode-sdk, consistent with sample-agent)
+# Set 'enabled: true' to use Qwen LLM for generating human-readable operation descriptions
+# on the consent page. When disabled, the framework uses the default PatternBasedOperationTextRenderer.
+sample:
+  llm-renderer:
+    enabled: true
+    # Qwen model to use. Consistent with sample-agent's default model.
+    model: qwen3-coder-flash
+    # Timeout in seconds for LLM calls
+    timeout: 120
+
 logging:
   level:
     com.alibaba.openagentauth: DEBUG

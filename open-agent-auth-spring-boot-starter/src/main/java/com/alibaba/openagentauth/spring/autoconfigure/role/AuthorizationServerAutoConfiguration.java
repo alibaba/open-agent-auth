@@ -665,9 +665,11 @@ public class AuthorizationServerAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        public ConsentPageProvider consentPageProvider(PromptDecryptionService promptDecryptionService) {
+        public ConsentPageProvider consentPageProvider(PromptDecryptionService promptDecryptionService,
+                                                       OperationTextRenderer operationTextRenderer) {
             logger.info("Creating ConsentPageProvider bean with DefaultConsentPageProvider for Authorization Server");
-            return new DefaultConsentPageProvider(CONSENT_TEMPLATE_AOA, "Authorization Server", promptDecryptionService);
+            return new DefaultConsentPageProvider(CONSENT_TEMPLATE_AOA, "Authorization Server",
+                    promptDecryptionService, operationTextRenderer);
         }
     }
 }

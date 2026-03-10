@@ -15,6 +15,9 @@
  */
 package com.alibaba.openagentauth.spring.web.provider;
 
+import com.alibaba.openagentauth.core.audit.api.OperationTextRenderer;
+import com.alibaba.openagentauth.core.audit.model.OperationTextRenderContext;
+import com.alibaba.openagentauth.core.audit.model.OperationTextRenderResult;
 import com.alibaba.openagentauth.core.model.context.OperationRequestContext;
 import com.alibaba.openagentauth.core.model.evidence.Evidence;
 import com.alibaba.openagentauth.core.model.evidence.VerifiableCredential;
@@ -26,6 +29,7 @@ import com.alibaba.openagentauth.framework.web.provider.ConsentPageProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.Nullable;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.time.Instant;
@@ -96,10 +100,21 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
     private final PromptDecryptionService promptDecryptionService;
 
     /**
+     * Optional renderer for generating human-readable operation text from agent operation proposals.
+     * <p>
+     * When configured, the consent page will display a rendered natural-language description
+     * of the operation policy alongside the raw Rego policy. This follows the AOA protocol's
+     * {@code renderedText} field requirement in the {@code context} and {@code auditTrail} claims.
+     * </p>
+     */
+    @Nullable
+    private final OperationTextRenderer operationTextRenderer;
+
+    /**
      * Creates a new DefaultConsentPageProvider with default view name.
      */
     public DefaultConsentPageProvider() {
-        this(DEFAULT_VIEW_NAME, "Identity Provider", null);
+        this(DEFAULT_VIEW_NAME, "Identity Provider", null, null);
     }
 
     /**
@@ -108,7 +123,7 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
      * @param viewName the Thymeleaf template view name
      */
     public DefaultConsentPageProvider(String viewName) {
-        this(viewName, "Identity Provider", null);
+        this(viewName, "Identity Provider", null, null);
     }
 
     /**
@@ -118,7 +133,7 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
      * @param displayName the display name for the IDP
      */
     public DefaultConsentPageProvider(String viewName, String displayName) {
-        this(viewName, displayName, null);
+        this(viewName, displayName, null, null);
     }
 
     /**
@@ -131,9 +146,24 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
      */
     public DefaultConsentPageProvider(String viewName, String displayName,
                                       PromptDecryptionService promptDecryptionService) {
+        this(viewName, displayName, promptDecryptionService, null);
+    }
+
+    /**
+     * Creates a new DefaultConsentPageProvider with all configurable dependencies.
+     *
+     * @param viewName the Thymeleaf template view name
+     * @param displayName the display name for the IDP
+     * @param promptDecryptionService the service for decrypting JWE-encrypted prompts (nullable)
+     * @param operationTextRenderer the renderer for generating human-readable operation text (nullable)
+     */
+    public DefaultConsentPageProvider(String viewName, String displayName,
+                                      PromptDecryptionService promptDecryptionService,
+                                      @Nullable OperationTextRenderer operationTextRenderer) {
         this.viewName = viewName;
         this.displayName = displayName;
         this.promptDecryptionService = promptDecryptionService;
+        this.operationTextRenderer = operationTextRenderer;
     }
 
     @Override
@@ -198,6 +228,9 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
                 mv.addObject("context", context);
             }
 
+            // Render human-readable operation text using the configured renderer
+            renderAndAddOperationText(mv, parClaims);
+
             AgentUserBindingProposal bindingProposal = parClaims.getAgentUserBindingProposal();
             if (bindingProposal != null) {
                 mv.addObject("agentUserBindingProposal", bindingProposal);
@@ -217,6 +250,59 @@ public class DefaultConsentPageProvider implements ConsentPageProvider {
 
         logger.info("User consent action: {}, approved: {}", action, approved);
         return approved;
+    }
+
+    /**
+     * Renders human-readable operation text from the PAR claims and adds it to the model.
+     * <p>
+     * According to draft-liu-agent-operation-authorization-01 Section 4, the Authorization Server
+     * generates a {@code renderedText} that describes the authorized operation in a human-readable
+     * format. This method uses the configured {@link OperationTextRenderer} to produce that text
+     * for display on the consent page.
+     * </p>
+     * <p>
+     * The following model attributes are added when rendering succeeds:
+     * </p>
+     * <ul>
+     *   <li>{@code renderedOperationText} — the human-readable description</li>
+     *   <li>{@code semanticExpansionLevel} — the level of semantic interpretation applied</li>
+     * </ul>
+     *
+     * @param modelAndView the ModelAndView to add rendered text to
+     * @param parClaims the PAR JWT claims containing the operation proposal and context
+     */
+    private void renderAndAddOperationText(ModelAndView modelAndView, ParJwtClaims parClaims) {
+
+        if (operationTextRenderer == null) {
+            logger.debug("No OperationTextRenderer configured, skipping operation text rendering");
+            return;
+        }
+
+        try {
+            // Retrieve the already-decoded original user prompt from the model (if available)
+            String originalPrompt = null;
+            if (modelAndView.getModel().containsKey("originalUserPrompt")) {
+                originalPrompt = (String) modelAndView.getModel().get("originalUserPrompt");
+            }
+
+            OperationTextRenderContext renderContext = OperationTextRenderContext.builder()
+                    .operationProposal(parClaims.getOperationProposal())
+                    .originalPrompt(originalPrompt)
+                    .requestContext(parClaims.getContext())
+                    .build();
+
+            OperationTextRenderResult renderResult = operationTextRenderer.render(renderContext);
+
+            modelAndView.addObject("renderedOperationText", renderResult.getRenderedText());
+            modelAndView.addObject("semanticExpansionLevel",
+                    renderResult.getSemanticExpansionLevel().getValue());
+
+            logger.info("Successfully rendered operation text: '{}' (expansion: {})",
+                    renderResult.getRenderedText(), renderResult.getSemanticExpansionLevel());
+        } catch (Exception e) {
+            logger.warn("Failed to render operation text, consent page will show raw policy only. Error: {}",
+                    e.getMessage());
+        }
     }
 
     /**

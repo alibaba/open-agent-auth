@@ -15,6 +15,10 @@
  */
 package com.alibaba.openagentauth.spring.web.provider;
 
+import com.alibaba.openagentauth.core.audit.api.OperationTextRenderer;
+import com.alibaba.openagentauth.core.audit.model.OperationTextRenderContext;
+import com.alibaba.openagentauth.core.audit.model.OperationTextRenderResult;
+import com.alibaba.openagentauth.core.audit.model.SemanticExpansionLevel;
 import com.alibaba.openagentauth.core.crypto.jwe.JweDecoder;
 import com.alibaba.openagentauth.core.model.context.OperationRequestContext;
 import com.alibaba.openagentauth.core.model.evidence.Evidence;
@@ -61,6 +65,9 @@ class DefaultConsentPageProviderTest {
     @Mock
     private JweDecoder jweDecoder;
 
+    @Mock
+    private OperationTextRenderer operationTextRenderer;
+
     private PromptDecryptionService promptDecryptionService;
 
     private DefaultConsentPageProvider provider;
@@ -105,6 +112,26 @@ class DefaultConsentPageProviderTest {
                 new DefaultConsentPageProvider("consent", "Test IDP", null);
 
             assertThat(providerWithNull).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Should create provider with OperationTextRenderer")
+        void shouldCreateProviderWithOperationTextRenderer() {
+            DefaultConsentPageProvider providerWithRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP",
+                        promptDecryptionService, operationTextRenderer);
+
+            assertThat(providerWithRenderer).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Should create provider with null OperationTextRenderer")
+        void shouldCreateProviderWithNullOperationTextRenderer() {
+            DefaultConsentPageProvider providerWithNullRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP",
+                        promptDecryptionService, null);
+
+            assertThat(providerWithNullRenderer).isNotNull();
         }
     }
 
@@ -415,6 +442,165 @@ class DefaultConsentPageProviderTest {
 
             assertThat(mv.getModel()).doesNotContainKey("decodedCredential");
             assertThat(mv.getModel()).doesNotContainKey("originalUserPrompt");
+        }
+    }
+
+    @Nested
+    @DisplayName("Operation Text Rendering Tests")
+    class OperationTextRenderingTests {
+
+        @Test
+        @DisplayName("Should add rendered operation text when renderer is configured")
+        void shouldAddRenderedOperationTextWhenRendererConfigured() {
+            DefaultConsentPageProvider providerWithRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP", null, operationTextRenderer);
+
+            OperationTextRenderResult renderResult = new OperationTextRenderResult(
+                    "The agent can search for programming books.", SemanticExpansionLevel.MEDIUM);
+            when(operationTextRenderer.render(any(OperationTextRenderContext.class)))
+                    .thenReturn(renderResult);
+
+            ParJwtClaims parClaims = createTestParClaims();
+
+            ModelAndView mv = providerWithRenderer.renderConsentPage(
+                    request, "urn:req:1", "user1", "client1", "openid", parClaims);
+
+            assertThat(mv.getModel()).containsEntry("renderedOperationText",
+                    "The agent can search for programming books.");
+            assertThat(mv.getModel()).containsEntry("semanticExpansionLevel", "medium");
+        }
+
+        @Test
+        @DisplayName("Should not add rendered text when renderer is null")
+        void shouldNotAddRenderedTextWhenRendererIsNull() {
+            DefaultConsentPageProvider providerWithoutRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP", null, null);
+
+            ParJwtClaims parClaims = createTestParClaims();
+
+            ModelAndView mv = providerWithoutRenderer.renderConsentPage(
+                    request, "urn:req:1", "user1", "client1", "openid", parClaims);
+
+            assertThat(mv.getModel()).doesNotContainKey("renderedOperationText");
+            assertThat(mv.getModel()).doesNotContainKey("semanticExpansionLevel");
+        }
+
+        @Test
+        @DisplayName("Should handle renderer exception gracefully")
+        void shouldHandleRendererExceptionGracefully() {
+            DefaultConsentPageProvider providerWithRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP", null, operationTextRenderer);
+
+            when(operationTextRenderer.render(any(OperationTextRenderContext.class)))
+                    .thenThrow(new RuntimeException("LLM call failed"));
+
+            ParJwtClaims parClaims = createTestParClaims();
+
+            ModelAndView mv = providerWithRenderer.renderConsentPage(
+                    request, "urn:req:1", "user1", "client1", "openid", parClaims);
+
+            assertThat(mv).isNotNull();
+            assertThat(mv.getModel()).doesNotContainKey("renderedOperationText");
+            assertThat(mv.getModel()).doesNotContainKey("semanticExpansionLevel");
+        }
+
+        @Test
+        @DisplayName("Should pass operation proposal to render context")
+        void shouldPassOperationProposalToRenderContext() {
+            DefaultConsentPageProvider providerWithRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP", null, operationTextRenderer);
+
+            OperationTextRenderResult renderResult = new OperationTextRenderResult(
+                    "Rendered text", SemanticExpansionLevel.LOW);
+            when(operationTextRenderer.render(any(OperationTextRenderContext.class)))
+                    .thenReturn(renderResult);
+
+            ParJwtClaims parClaims = createTestParClaims();
+
+            providerWithRenderer.renderConsentPage(
+                    request, "urn:req:1", "user1", "client1", "openid", parClaims);
+
+            verify(operationTextRenderer).render(argThat(context ->
+                    context.getOperationProposal() != null
+                    && context.getOperationProposal().contains("input.operationType")));
+        }
+
+        @Test
+        @DisplayName("Should pass request context to render context")
+        void shouldPassRequestContextToRenderContext() {
+            DefaultConsentPageProvider providerWithRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP", null, operationTextRenderer);
+
+            OperationTextRenderResult renderResult = new OperationTextRenderResult(
+                    "Rendered text", SemanticExpansionLevel.MEDIUM);
+            when(operationTextRenderer.render(any(OperationTextRenderContext.class)))
+                    .thenReturn(renderResult);
+
+            ParJwtClaims parClaims = createTestParClaims();
+
+            providerWithRenderer.renderConsentPage(
+                    request, "urn:req:1", "user1", "client1", "openid", parClaims);
+
+            verify(operationTextRenderer).render(argThat(context ->
+                    context.getRequestContext() != null
+                    && "web".equals(context.getRequestContext().getChannel())));
+        }
+
+        @Test
+        @DisplayName("Should not call renderer when PAR claims are null")
+        void shouldNotCallRendererWhenParClaimsAreNull() {
+            DefaultConsentPageProvider providerWithRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP", null, operationTextRenderer);
+
+            ModelAndView mv = providerWithRenderer.renderConsentPage(
+                    request, "urn:req:1", "user1", "client1", "openid", null);
+
+            verifyNoInteractions(operationTextRenderer);
+            assertThat(mv.getModel()).doesNotContainKey("renderedOperationText");
+        }
+
+        @Test
+        @DisplayName("Should pass decoded user prompt to render context when available")
+        void shouldPassDecodedUserPromptToRenderContextWhenAvailable() {
+            DefaultConsentPageProvider providerWithRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP", null, operationTextRenderer);
+
+            OperationTextRenderResult renderResult = new OperationTextRenderResult(
+                    "Rendered text", SemanticExpansionLevel.MEDIUM);
+            when(operationTextRenderer.render(any(OperationTextRenderContext.class)))
+                    .thenReturn(renderResult);
+
+            String testJwtVc = createTestJwtVcString();
+            Evidence evidence = Evidence.builder()
+                    .sourcePromptCredential(testJwtVc)
+                    .build();
+            ParJwtClaims parClaims = createTestParClaims(evidence);
+
+            providerWithRenderer.renderConsentPage(
+                    request, "urn:req:1", "user1", "client1", "openid", parClaims);
+
+            verify(operationTextRenderer).render(argThat(context ->
+                    "Test user prompt".equals(context.getOriginalPrompt())));
+        }
+
+        @Test
+        @DisplayName("Should render with HIGH expansion level")
+        void shouldRenderWithHighExpansionLevel() {
+            DefaultConsentPageProvider providerWithRenderer =
+                new DefaultConsentPageProvider("consent", "Test IDP", null, operationTextRenderer);
+
+            OperationTextRenderResult renderResult = new OperationTextRenderResult(
+                    "High expansion text", SemanticExpansionLevel.HIGH);
+            when(operationTextRenderer.render(any(OperationTextRenderContext.class)))
+                    .thenReturn(renderResult);
+
+            ParJwtClaims parClaims = createTestParClaims();
+
+            ModelAndView mv = providerWithRenderer.renderConsentPage(
+                    request, "urn:req:1", "user1", "client1", "openid", parClaims);
+
+            assertThat(mv.getModel()).containsEntry("renderedOperationText", "High expansion text");
+            assertThat(mv.getModel()).containsEntry("semanticExpansionLevel", "high");
         }
     }
 
