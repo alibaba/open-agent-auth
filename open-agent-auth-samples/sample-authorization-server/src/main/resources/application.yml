@@ -36,6 +36,7 @@ open-agent-auth:
         refresh-token-expiry: 2592000
         id-token-expiry: 3600
         authorization-code-expiry: 600
+        par-request-expiry: 600
       auto-register-clients:
         enabled: true
         clients:

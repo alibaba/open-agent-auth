@@ -469,6 +469,22 @@ public class OAuth2ServerProperties {
         private int authorizationCodeExpiry = 600;
 
         /**
+         * Pushed Authorization Request (PAR) expiry in seconds.
+         * <p>
+         * The lifetime of PAR request URIs issued by the authorization server.
+         * PAR requests must be used within this time window. In flows involving
+         * user authentication redirects (e.g., to an external IDP), this value
+         * should be large enough to accommodate the entire authentication flow.
+         * </p>
+         * <p>
+         * Default value: {@code 600} (10 minutes)
+         * </p>
+         *
+         * @see <a href="https://datatracker.ietf.org/doc/html/rfc9126">RFC 9126 - OAuth 2.0 Pushed Authorization Requests</a>
+         */
+        private int parRequestExpiry = 600;
+
+        /**
          * Gets the access token expiry in seconds.
          *
          * @return the access token expiry in seconds
@@ -538,6 +554,24 @@ public class OAuth2ServerProperties {
          */
         public void setAuthorizationCodeExpiry(int authorizationCodeExpiry) {
             this.authorizationCodeExpiry = authorizationCodeExpiry;
+        }
+
+        /**
+         * Gets the PAR request expiry in seconds.
+         *
+         * @return the PAR request expiry in seconds
+         */
+        public int getParRequestExpiry() {
+            return parRequestExpiry;
+        }
+
+        /**
+         * Sets the PAR request expiry in seconds.
+         *
+         * @param parRequestExpiry the PAR request expiry in seconds to set
+         */
+        public void setParRequestExpiry(int parRequestExpiry) {
+            this.parRequestExpiry = parRequestExpiry;
         }
     }
 
