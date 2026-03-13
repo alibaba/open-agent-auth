@@ -86,14 +86,14 @@ class QwenLlmOperationTextRendererTest {
                         .thenAnswer(invocation -> {
                             AssistantContentSimpleConsumers consumers = invocation.getArgument(2);
                             // Simulate text callback via mock AssistantContent
-                            simulateTextResponse(consumers, "What this authorizes: The agent can search for books.");
+                            simulateTextResponse(consumers, "Search for programming books.");
                             return null;
                         });
 
                 OperationTextRenderResult result = renderer.render(context);
 
                 assertThat(result).isNotNull();
-                assertThat(result.getRenderedText()).isEqualTo("What this authorizes: The agent can search for books.");
+                assertThat(result.getRenderedText()).isEqualTo("Search for programming books.");
                 assertThat(result.getSemanticExpansionLevel()).isEqualTo(SemanticExpansionLevel.MEDIUM);
             }
         }
@@ -112,7 +112,7 @@ class QwenLlmOperationTextRendererTest {
                         anyString(), any(TransportOptions.class), any(AssistantContentSimpleConsumers.class)))
                         .thenAnswer(invocation -> {
                             AssistantContentSimpleConsumers consumers = invocation.getArgument(2);
-                            simulateTextResponse(consumers, "What this authorizes: Agent can search.");
+                            simulateTextResponse(consumers, "Search for items.");
                             return null;
                         });
 

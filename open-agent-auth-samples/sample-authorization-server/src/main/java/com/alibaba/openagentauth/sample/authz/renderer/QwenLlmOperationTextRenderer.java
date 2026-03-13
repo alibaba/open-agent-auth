@@ -62,29 +62,26 @@ public class QwenLlmOperationTextRenderer implements OperationTextRenderer {
     private static final Logger logger = LoggerFactory.getLogger(QwenLlmOperationTextRenderer.class);
 
     private static final String SYSTEM_INSTRUCTION = """
-            You are an authorization consent page assistant. Translate a machine-readable Rego policy \
-            into a concise, scannable explanation for a non-technical user.
+            You are an authorization consent page assistant. Convert a Rego policy into a brief, \
+            plain-language explanation a non-technical user can understand in under 5 seconds.
             
-            Output MUST use this exact structure:
+            Output a short paragraph (1–3 sentences). No headings, labels, bullet points, or \
+            markdown — just plain sentences.
             
-            What this authorizes: [ONE sentence. State the action, the target resource, and any scope \
-            in a single concise sentence. Do NOT repeat or paraphrase the same information twice.]
+            Sentence 1: State what the agent will be allowed to do and on which resource. \
+            Use a verb-first style. Example: "Search and purchase books priced under $50."
             
-            Key constraints: [Bullet each REAL constraint from the policy, prefixed with "- ". \
-            Only list limits that ARE explicitly present (e.g., spending caps, time windows, category \
-            restrictions, rate limits, geographic bounds). NEVER list the absence of a constraint \
-            (e.g., do NOT write "No spending cap is set"). If no constraints exist beyond what is \
-            already stated above, omit this section entirely.]
-            
-            What this means for you: [ONE sentence. State what the agent can do after approval. \
-            Only mention token expiration if an explicit expiration time is provided in the input.]
+            Sentence 2–3 (optional): Only if the policy contains explicit constraints such as \
+            spending caps, time windows, category restrictions, rate limits, or geographic bounds, \
+            state them naturally. Omit if no constraints exist.
             
             Rules:
-            1. Be extremely concise. The user should grasp the meaning within 5 seconds of reading.
-            2. No greetings, no markdown, no extra commentary.
-            3. Use plain language. Avoid jargon like "Rego", "OPA", "policy", "predicate".
-            4. Never repeat information across sections. Each section adds NEW information only.
-            5. Prefer concrete terms: "search for books" over "perform search operations".
+            1. Plain language only — no jargon (Rego, OPA, policy, predicate, input).
+            2. Concrete nouns and verbs — "buy books" not "perform purchase operations".
+            3. Never state the absence of a constraint ("No spending cap" is forbidden).
+            4. Never add greetings, markdown formatting, or commentary.
+            5. If a token expiration time is provided in the input, mention it naturally \
+            (e.g., "This authorization expires at 23:59.").
             6. Respond in English.
             """;
 
@@ -171,7 +168,7 @@ public class QwenLlmOperationTextRenderer implements OperationTextRenderer {
             prompt.append("\nAuthorization valid until: ").append(context.getTokenExpiration()).append("\n");
         }
 
-        prompt.append("\nPlease provide the three-part explanation (What this authorizes / Key constraints / What this means for you).");
+        prompt.append("\nProvide the ACTION line and, only if applicable, the LIMITS section.");
         return prompt.toString();
     }
 
