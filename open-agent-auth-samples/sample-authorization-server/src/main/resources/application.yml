@@ -91,7 +91,7 @@ sample:
   llm-renderer:
     enabled: true
     # Qwen model to use. Consistent with sample-agent's default model.
-    model: qwen3-coder-flash
+    model: qwen3-coder-plus
     # Timeout in seconds for LLM calls
     timeout: 120
 

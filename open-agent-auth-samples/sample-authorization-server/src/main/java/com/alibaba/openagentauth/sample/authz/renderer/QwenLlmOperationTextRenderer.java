@@ -80,8 +80,8 @@ public class QwenLlmOperationTextRenderer implements OperationTextRenderer {
             2. Concrete nouns and verbs — "buy books" not "perform purchase operations".
             3. Never state the absence of a constraint ("No spending cap" is forbidden).
             4. Never add greetings, markdown formatting, or commentary.
-            5. If a token expiration time is provided in the input, mention it naturally \
-            (e.g., "This authorization expires at 23:59.").
+            5. Only describe what the Rego policy itself permits or restricts. Do not infer \
+            or mention information not present in the policy (such as token expiration).
             6. Respond in English.
             """;
 
@@ -164,11 +164,7 @@ public class QwenLlmOperationTextRenderer implements OperationTextRenderer {
             }
         }
 
-        if (context.getTokenExpiration() != null) {
-            prompt.append("\nAuthorization valid until: ").append(context.getTokenExpiration()).append("\n");
-        }
-
-        prompt.append("\nProvide the ACTION line and, only if applicable, the LIMITS section.");
+        prompt.append("\nDescribe what this policy permits in plain language.");
         return prompt.toString();
     }
 
