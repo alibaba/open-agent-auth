@@ -364,8 +364,8 @@ class QwenLlmOperationTextRendererTest {
         }
 
         @Test
-        @DisplayName("Should include token expiration in prompt when available")
-        void shouldIncludeTokenExpirationInPrompt() {
+        @DisplayName("Should not include token expiration in prompt (policy-only rendering)")
+        void shouldNotIncludeTokenExpirationInPrompt() {
             QwenLlmOperationTextRenderer renderer = new QwenLlmOperationTextRenderer(TEST_MODEL, TEST_TIMEOUT);
 
             java.time.Instant expiration = java.time.Instant.parse("2026-12-31T23:59:59Z");
@@ -379,7 +379,7 @@ class QwenLlmOperationTextRendererTest {
                         anyString(), any(TransportOptions.class), any(AssistantContentSimpleConsumers.class)))
                         .thenAnswer(invocation -> {
                             String prompt = invocation.getArgument(0);
-                            assertThat(prompt).contains("Authorization valid until:");
+                            assertThat(prompt).doesNotContain("Authorization valid until:");
 
                             AssistantContentSimpleConsumers consumers = invocation.getArgument(2);
                             simulateTextResponse(consumers, "Rendered");
