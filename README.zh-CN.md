@@ -24,7 +24,7 @@
 
 Open Agent Auth 是一款企业级授权框架，为代表用户执行操作的 AI 智能体提供密码学身份绑定、细粒度授权、请求级隔离与语义审计追踪能力。**该框架构建了一个协作生态系统，人类、智能体与资源提供方以平等伙伴的身份，在相互信任与问责机制下共同协作**。
 
-本框架基于 [IETF 草案：智能体操作授权（draft-liu-agent-operation-authorization-00）](https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/draft-liu-agent-operation-authorization-00.xml) 标准实现并对其进行扩展，融合 OAuth 2.0、OpenID Connect、WIMSE、W3C VC 等行业标准协议，并集成模型上下文协议（MCP），确保智能体执行的每一项操作均可追溯至明确的用户授权。
+本框架基于 [IETF 草案：智能体操作授权（draft-liu-agent-operation-authorization-01）](https://datatracker.ietf.org/doc/draft-liu-agent-operation-authorization/) 标准实现并对其进行扩展，融合 OAuth 2.0、OpenID Connect、WIMSE、W3C VC 等行业标准协议，并集成模型上下文协议（MCP），确保智能体执行的每一项操作均可追溯至明确的用户授权。
 
 ### 项目状态
 
@@ -326,7 +326,7 @@ Open Agent Auth 在所有层级实施全面的安全措施：
 
 ### 标准规范
 
-- [智能体操作授权草案](https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/draft-liu-agent-operation-authorization-00.xml)
+- [智能体操作授权草案](https://datatracker.ietf.org/doc/draft-liu-agent-operation-authorization/)
 
 ---
 
