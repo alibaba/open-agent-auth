@@ -607,6 +607,44 @@
             transform: translateY(0);
         }
 
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        .btn .btn-spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .btn.is-loading .btn-spinner {
+            display: inline-block;
+        }
+
+        .btn.is-loading .btn-label {
+            display: none;
+        }
+
+        .btn.is-loading .btn-loading-text {
+            display: inline;
+        }
+
+        .btn .btn-loading-text {
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .footer {
             text-align: center;
             margin-top: var(--space-4);
@@ -908,10 +946,14 @@
                     
                     <div class="button-group">
                         <button type="submit" name="action" value="deny" class="btn btn-deny">
-                            <i class="bi bi-x-lg"></i> Deny
+                            <span class="btn-spinner"></span>
+                            <span class="btn-label"><i class="bi bi-x-lg"></i> Deny</span>
+                            <span class="btn-loading-text">Denying…</span>
                         </button>
                         <button type="submit" name="action" value="approve" class="btn btn-approve">
-                            <i class="bi bi-check-lg"></i> Approve
+                            <span class="btn-spinner"></span>
+                            <span class="btn-label"><i class="bi bi-check-lg"></i> Approve</span>
+                            <span class="btn-loading-text">Approving…</span>
                         </button>
                     </div>
                 </form>
@@ -925,6 +967,26 @@
             const content = header.nextElementSibling;
             content.classList.toggle('show');
         }
+
+        document.querySelectorAll('form').forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                var clickedButton = event.submitter || document.activeElement;
+                if (clickedButton && clickedButton.name && clickedButton.value) {
+                    var hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = clickedButton.name;
+                    hiddenInput.value = clickedButton.value;
+                    form.appendChild(hiddenInput);
+                }
+                var buttons = form.querySelectorAll('button[type="submit"]');
+                buttons.forEach(function(button) {
+                    button.disabled = true;
+                    if (button === clickedButton) {
+                        button.classList.add('is-loading');
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
