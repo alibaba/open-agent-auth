@@ -86,14 +86,14 @@ class QwenLlmOperationTextRendererTest {
                         .thenAnswer(invocation -> {
                             AssistantContentSimpleConsumers consumers = invocation.getArgument(2);
                             // Simulate text callback via mock AssistantContent
-                            simulateTextResponse(consumers, "What this authorizes: The agent can search for books.");
+                            simulateTextResponse(consumers, "Search for programming books.");
                             return null;
                         });
 
                 OperationTextRenderResult result = renderer.render(context);
 
                 assertThat(result).isNotNull();
-                assertThat(result.getRenderedText()).isEqualTo("What this authorizes: The agent can search for books.");
+                assertThat(result.getRenderedText()).isEqualTo("Search for programming books.");
                 assertThat(result.getSemanticExpansionLevel()).isEqualTo(SemanticExpansionLevel.MEDIUM);
             }
         }
@@ -112,7 +112,7 @@ class QwenLlmOperationTextRendererTest {
                         anyString(), any(TransportOptions.class), any(AssistantContentSimpleConsumers.class)))
                         .thenAnswer(invocation -> {
                             AssistantContentSimpleConsumers consumers = invocation.getArgument(2);
-                            simulateTextResponse(consumers, "What this authorizes: Agent can search.");
+                            simulateTextResponse(consumers, "Search for items.");
                             return null;
                         });
 
@@ -364,8 +364,8 @@ class QwenLlmOperationTextRendererTest {
         }
 
         @Test
-        @DisplayName("Should include token expiration in prompt when available")
-        void shouldIncludeTokenExpirationInPrompt() {
+        @DisplayName("Should not include token expiration in prompt (policy-only rendering)")
+        void shouldNotIncludeTokenExpirationInPrompt() {
             QwenLlmOperationTextRenderer renderer = new QwenLlmOperationTextRenderer(TEST_MODEL, TEST_TIMEOUT);
 
             java.time.Instant expiration = java.time.Instant.parse("2026-12-31T23:59:59Z");
@@ -379,7 +379,7 @@ class QwenLlmOperationTextRendererTest {
                         anyString(), any(TransportOptions.class), any(AssistantContentSimpleConsumers.class)))
                         .thenAnswer(invocation -> {
                             String prompt = invocation.getArgument(0);
-                            assertThat(prompt).contains("Authorization valid until:");
+                            assertThat(prompt).doesNotContain("Authorization valid until:");
 
                             AssistantContentSimpleConsumers consumers = invocation.getArgument(2);
                             simulateTextResponse(consumers, "Rendered");

@@ -36,6 +36,7 @@ open-agent-auth:
         refresh-token-expiry: 2592000
         id-token-expiry: 3600
         authorization-code-expiry: 600
+        par-request-expiry: 600
       auto-register-clients:
         enabled: true
         clients:
@@ -91,7 +92,7 @@ sample:
   llm-renderer:
     enabled: true
     # Qwen model to use. Consistent with sample-agent's default model.
-    model: qwen3-coder-flash
+    model: qwen3-coder-plus
     # Timeout in seconds for LLM calls
     timeout: 120
 

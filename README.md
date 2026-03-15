@@ -24,7 +24,7 @@
 
 Open Agent Auth is an enterprise-grade authorization framework that provides cryptographic identity binding, fine-grained authorization, request-level isolation, and semantic audit trails for AI agents operating on behalf of users. **It builds a collaborative ecosystem where humans, agents, and resource providers work as equal partners with mutual trust and accountability.**
 
-The framework is implemented based on [IETF Draft: Agent Operation Authorization (draft-liu-agent-operation-authorization-00)](https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/draft-liu-agent-operation-authorization-00.xml), extending upon this standard by leveraging industry-standard protocols (OAuth 2.0, OpenID Connect, WIMSE, W3C VC) and featuring Model Context Protocol (MCP) integration to ensure every agent-executed operation is traceable to explicit user consent.
+The framework is implemented based on [IETF Draft: Agent Operation Authorization (draft-liu-agent-operation-authorization-01)](https://datatracker.ietf.org/doc/draft-liu-agent-operation-authorization/), extending upon this standard by leveraging industry-standard protocols (OAuth 2.0, OpenID Connect, WIMSE, W3C VC) and featuring Model Context Protocol (MCP) integration to ensure every agent-executed operation is traceable to explicit user consent.
 
 ### Project Status
 
@@ -326,7 +326,7 @@ For detailed security architecture, see [Security Documentation](docs/architectu
 
 ### Standards
 
-- [Agent Operation Authorization Draft](https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/draft-liu-agent-operation-authorization-00.xml)
+- [Agent Operation Authorization Draft](https://datatracker.ietf.org/doc/draft-liu-agent-operation-authorization/)
 
 ---
 

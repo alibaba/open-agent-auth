@@ -233,9 +233,10 @@ public class AuthorizationServerAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        public OAuth2ParServer parServer(OAuth2ParRequestStore parRequestStore, OAuth2ParRequestValidator parRequestValidator) {
-            logger.info("Creating OAuth2ParServer bean");
-            return new DefaultOAuth2ParServer(parRequestStore, parRequestValidator);
+        public OAuth2ParServer parServer(OAuth2ParRequestStore parRequestStore, OAuth2ParRequestValidator parRequestValidator, OpenAgentAuthProperties properties) {
+            int parRequestExpiry = properties.getCapabilities().getOAuth2Server().getToken().getParRequestExpiry();
+            logger.info("Creating OAuth2ParServer bean with PAR request expiry: {} seconds", parRequestExpiry);
+            return new DefaultOAuth2ParServer(parRequestStore, parRequestValidator, parRequestExpiry);
         }
 
         @Bean
